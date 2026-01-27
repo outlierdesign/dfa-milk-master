@@ -123,7 +123,7 @@ export function AttractMode({ onStartGame, leaderboardEntries }: AttractModeProp
           TAP TO PLAY
         </button>
         <p className="text-slate-400 mt-4 text-lg">
-          Fill to the target • Closer = More money
+          Closer for more accurate loads
         </p>
       </div>
 

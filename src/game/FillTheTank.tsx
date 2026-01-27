@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useGameState } from "./hooks/useGameState";
 import { useLeaderboard } from "./hooks/useLeaderboard";
-import { AttractMode } from "./components/AttractMode";
+import { AttractMode, Difficulty } from "./components/AttractMode";
 import { GameScreen } from "./components/GameScreen";
 import { ResultsScreen } from "./components/ResultsScreen";
 import { GAME_CONFIG } from "./constants";
@@ -13,6 +13,7 @@ export function FillTheTank() {
     fillLevel,
     isFilling,
     showConfirmation,
+    difficulty,
     currentLevelConfig,
     averageAccuracy,
     startFilling,
@@ -69,6 +70,19 @@ export function FillTheTank() {
     [addEntry, session.totalMoneyKept, averageAccuracy, session.tankersFilled]
   );
 
+  // Handle starting game with difficulty
+  const handleStartGame = useCallback(
+    (selectedDifficulty: Difficulty) => {
+      startGame(selectedDifficulty);
+    },
+    [startGame]
+  );
+
+  // Handle play again (use same difficulty)
+  const handlePlayAgain = useCallback(() => {
+    startGame(difficulty);
+  }, [startGame, difficulty]);
+
   // Fullscreen toggle (F11 or double-click)
   useEffect(() => {
     const handleFullscreen = (e: KeyboardEvent) => {
@@ -89,7 +103,7 @@ export function FillTheTank() {
   return (
     <div className="w-full h-screen overflow-hidden bg-slate-900">
       {gameState === "attract" && (
-        <AttractMode onStartGame={startGame} leaderboardEntries={entries} />
+        <AttractMode onStartGame={handleStartGame} leaderboardEntries={entries} />
       )}
 
       {gameState === "playing" && (
@@ -111,7 +125,7 @@ export function FillTheTank() {
         <ResultsScreen
           session={session}
           averageAccuracy={averageAccuracy}
-          onPlayAgain={startGame}
+          onPlayAgain={handlePlayAgain}
           onAddToLeaderboard={handleAddToLeaderboard}
           isHighScore={isHighScore(session.totalMoneyKept)}
         />

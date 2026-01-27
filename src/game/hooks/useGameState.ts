@@ -2,6 +2,13 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { GameState, GameSession, LoadResult, LevelConfig } from "../types";
 import { GAME_CONFIG } from "../constants";
 
+export type Difficulty = "normal" | "fast";
+
+const DIFFICULTY_MULTIPLIERS: Record<Difficulty, number> = {
+  normal: 1,
+  fast: 4,
+};
+
 const initialSession: GameSession = {
   currentLevel: 0,
   currentCompartment: 0,
@@ -22,6 +29,7 @@ export function useGameState() {
   const [isFilling, setIsFilling] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
+  const [difficulty, setDifficulty] = useState<Difficulty>("normal");
   
   const fillIntervalRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
@@ -29,6 +37,7 @@ export function useGameState() {
 
   const currentLevelConfig = GAME_CONFIG.LEVELS[session.currentLevel] || GAME_CONFIG.LEVELS[0];
   const currentFillLevel = session.compartmentFillLevels[session.currentCompartment] || 0;
+  const speedMultiplier = DIFFICULTY_MULTIPLIERS[difficulty];
 
   // Calculate accuracy and money
   const calculateLoadResult = useCallback((actualFill: number, targetFill: number): LoadResult => {
@@ -58,7 +67,8 @@ export function useGameState() {
     }
     
     const intervalMs = 16; // ~60fps
-    const fillPerInterval = (currentLevelConfig.flowRate / 1000) * intervalMs;
+    const baseFlowRate = currentLevelConfig.flowRate * speedMultiplier;
+    const fillPerInterval = (baseFlowRate / 1000) * intervalMs;
     
     fillIntervalRef.current = window.setInterval(() => {
       setSession((prev) => {
@@ -71,7 +81,7 @@ export function useGameState() {
         return { ...prev, compartmentFillLevels: newLevels };
       });
     }, intervalMs);
-  }, [gameState, showConfirmation, demoMode, currentLevelConfig.flowRate]);
+  }, [gameState, showConfirmation, demoMode, currentLevelConfig.flowRate, speedMultiplier]);
 
   // Stop filling
   const stopFilling = useCallback(() => {
@@ -174,9 +184,10 @@ export function useGameState() {
   }, []);
 
   // Start new game
-  const startGame = useCallback(() => {
+  const startGame = useCallback((selectedDifficulty: Difficulty = "normal") => {
     setGameState("playing");
     setDemoMode(false);
+    setDifficulty(selectedDifficulty);
     
     const firstLevelConfig = GAME_CONFIG.LEVELS[0];
     setSession({
@@ -252,6 +263,7 @@ export function useGameState() {
     isFilling,
     showConfirmation,
     demoMode,
+    difficulty,
     currentLevelConfig: currentLevelConfig as LevelConfig,
     averageAccuracy,
     startFilling,

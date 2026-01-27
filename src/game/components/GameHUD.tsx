@@ -10,29 +10,29 @@ interface GameHUDProps {
 export function GameHUD({ session, levelConfig }: GameHUDProps) {
   const tankerProgress = (session.tankersFilledProgress % GAME_CONFIG.MONEY_PER_TANKER) / GAME_CONFIG.MONEY_PER_TANKER * 100;
   
-  // Format time as MM:SS
-  const minutes = Math.floor(session.timeRemaining / 60);
-  const seconds = session.timeRemaining % 60;
+  // Format elapsed time as MM:SS
+  const minutes = Math.floor(session.elapsedTime / 60);
+  const seconds = session.elapsedTime % 60;
   const timeDisplay = `${minutes}:${seconds.toString().padStart(2, "0")}`;
   
   return (
     <div className="w-full max-w-4xl mx-auto px-4">
       <div className="flex items-center justify-between gap-8">
-        {/* Timer */}
+        {/* Timer - now counts UP */}
         <div className="bg-slate-800/80 px-6 py-3 rounded-xl border border-slate-600">
           <div className="text-xs text-slate-400 text-center mb-1">TIME</div>
-          <div className={`text-3xl font-mono font-bold ${session.timeRemaining <= 10 ? "text-red-400 animate-pulse" : "text-white"}`}>
+          <div className="text-3xl font-mono font-bold text-white">
             {timeDisplay}
           </div>
         </div>
         
-        {/* Level & Trailer */}
+        {/* Level & Compartment */}
         <div className="bg-slate-800/80 px-6 py-3 rounded-xl border border-slate-600 flex-1 text-center">
           <div className="text-xs text-slate-400 mb-1">LEVEL {levelConfig.level}</div>
           <div className="text-lg font-bold text-white">{levelConfig.name}</div>
-          {levelConfig.trailers > 1 && (
+          {levelConfig.compartments > 1 && (
             <div className="text-sm text-amber-400 mt-1">
-              Trailer {session.currentTrailer + 1} of {session.totalTrailersInLevel}
+              Compartment {session.currentCompartment + 1} of {session.totalCompartmentsInLevel}
             </div>
           )}
           {levelConfig.tutorial && session.loadResults.length === 0 && (

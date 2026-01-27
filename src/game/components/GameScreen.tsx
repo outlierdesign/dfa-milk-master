@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Tank } from "./Tank";
+import { useEffect } from "react";
+import { MilkTanker } from "./MilkTanker";
 import { GameHUD } from "./GameHUD";
 import { GameControls } from "./GameControls";
 import { ConfirmationModal } from "./ConfirmationModal";
@@ -40,18 +40,19 @@ export function GameScreen({
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col p-4 select-none">
       {/* HUD */}
-      <div className="mb-8">
+      <div className="mb-4">
         <GameHUD session={session} levelConfig={levelConfig} />
       </div>
 
       {/* Main Game Area */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-8">
-        {/* Tank */}
-        <Tank
-          fillLevel={fillLevel}
+      <div className="flex-1 flex flex-col items-center justify-center gap-6">
+        {/* Milk Tanker */}
+        <MilkTanker
+          compartments={levelConfig.compartments}
+          currentCompartment={session.currentCompartment}
+          compartmentFillLevels={session.compartmentFillLevels}
           targetFill={levelConfig.targetFill}
           isFilling={isFilling}
-          showTarget={true}
         />
 
         {/* Controls */}

@@ -3,7 +3,7 @@ export type GameState = "attract" | "playing" | "results";
 export interface LevelConfig {
   level: number;
   name: string;
-  trailers: number;
+  compartments: number; // Number of compartments in the tanker
   flowRate: number;
   tolerance: number;
   targetFill: number;
@@ -21,14 +21,15 @@ export interface LoadResult {
 
 export interface GameSession {
   currentLevel: number;
-  currentTrailer: number;
-  totalTrailersInLevel: number;
+  currentCompartment: number; // Which compartment we're filling
+  totalCompartmentsInLevel: number;
+  compartmentFillLevels: number[]; // Fill level for each compartment
   loadResults: LoadResult[];
   totalMoneyKept: number;
   totalMoneyLost: number;
   tankersFilledProgress: number;
   tankersFilled: number;
-  timeRemaining: number;
+  elapsedTime: number; // Seconds elapsed (counts UP)
   isComplete: boolean;
 }
 

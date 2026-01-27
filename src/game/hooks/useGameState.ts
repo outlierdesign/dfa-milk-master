@@ -4,21 +4,21 @@ import { GAME_CONFIG } from "../constants";
 
 const initialSession: GameSession = {
   currentLevel: 0,
-  currentTrailer: 0,
-  totalTrailersInLevel: 1,
+  currentCompartment: 0,
+  totalCompartmentsInLevel: 1,
+  compartmentFillLevels: [0],
   loadResults: [],
   totalMoneyKept: 0,
   totalMoneyLost: 0,
   tankersFilledProgress: 0,
   tankersFilled: 0,
-  timeRemaining: GAME_CONFIG.ROUND_DURATION,
+  elapsedTime: 0, // Start at 0, count up
   isComplete: false,
 };
 
 export function useGameState() {
   const [gameState, setGameState] = useState<GameState>("attract");
   const [session, setSession] = useState<GameSession>(initialSession);
-  const [fillLevel, setFillLevel] = useState(0);
   const [isFilling, setIsFilling] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
@@ -27,7 +27,8 @@ export function useGameState() {
   const timerIntervalRef = useRef<number | null>(null);
   const idleTimeoutRef = useRef<number | null>(null);
 
-  const currentLevelConfig: LevelConfig = GAME_CONFIG.LEVELS[session.currentLevel] || GAME_CONFIG.LEVELS[0];
+  const currentLevelConfig = GAME_CONFIG.LEVELS[session.currentLevel] || GAME_CONFIG.LEVELS[0];
+  const currentFillLevel = session.compartmentFillLevels[session.currentCompartment] || 0;
 
   // Calculate accuracy and money
   const calculateLoadResult = useCallback((actualFill: number, targetFill: number): LoadResult => {
@@ -60,10 +61,14 @@ export function useGameState() {
     const fillPerInterval = (currentLevelConfig.flowRate / 1000) * intervalMs;
     
     fillIntervalRef.current = window.setInterval(() => {
-      setFillLevel((prev) => {
-        const newLevel = prev + fillPerInterval;
-        // Allow slight overfill for realism
-        return Math.min(newLevel, GAME_CONFIG.TANK_CAPACITY * 1.1);
+      setSession((prev) => {
+        const newLevels = [...prev.compartmentFillLevels];
+        const currentLevel = newLevels[prev.currentCompartment] || 0;
+        newLevels[prev.currentCompartment] = Math.min(
+          currentLevel + fillPerInterval,
+          GAME_CONFIG.TANK_CAPACITY * 1.1
+        );
+        return { ...prev, compartmentFillLevels: newLevels };
       });
     }, intervalMs);
   }, [gameState, showConfirmation, demoMode, currentLevelConfig.flowRate]);
@@ -82,16 +87,24 @@ export function useGameState() {
   const nudgeFill = useCallback(() => {
     if (gameState !== "playing" || isFilling || showConfirmation) return;
     
-    setFillLevel((prev) => Math.min(prev + GAME_CONFIG.NUDGE_AMOUNT, GAME_CONFIG.TANK_CAPACITY * 1.1));
+    setSession((prev) => {
+      const newLevels = [...prev.compartmentFillLevels];
+      const currentLevel = newLevels[prev.currentCompartment] || 0;
+      newLevels[prev.currentCompartment] = Math.min(
+        currentLevel + GAME_CONFIG.NUDGE_AMOUNT,
+        GAME_CONFIG.TANK_CAPACITY * 1.1
+      );
+      return { ...prev, compartmentFillLevels: newLevels };
+    });
   }, [gameState, isFilling, showConfirmation]);
 
-  // Complete current load
+  // Complete current compartment
   const completeLoad = useCallback(() => {
     if (gameState !== "playing") return;
     
     stopFilling();
     
-    const result = calculateLoadResult(fillLevel, currentLevelConfig.targetFill);
+    const result = calculateLoadResult(currentFillLevel, currentLevelConfig.targetFill);
     
     setSession((prev) => {
       const newResults = [...prev.loadResults, result];
@@ -100,11 +113,12 @@ export function useGameState() {
       const newProgress = prev.tankersFilledProgress + result.moneyKept;
       const newTankersFilled = Math.floor(newProgress / GAME_CONFIG.MONEY_PER_TANKER);
       
-      const nextTrailer = prev.currentTrailer + 1;
-      const isLevelComplete = nextTrailer >= prev.totalTrailersInLevel;
+      const nextCompartment = prev.currentCompartment + 1;
+      const isLevelComplete = nextCompartment >= prev.totalCompartmentsInLevel;
       
-      // Check if we need confirmation step
-      if (currentLevelConfig.requiresConfirmation && !isLevelComplete) {
+      // Check if we need confirmation step (only on levels that require it)
+      const levelConfig = GAME_CONFIG.LEVELS[prev.currentLevel];
+      if ('requiresConfirmation' in levelConfig && levelConfig.requiresConfirmation && !isLevelComplete) {
         setShowConfirmation(true);
       }
       
@@ -126,13 +140,13 @@ export function useGameState() {
         }
         
         const nextLevelConfig = GAME_CONFIG.LEVELS[nextLevel];
-        setFillLevel(0);
         
         return {
           ...prev,
           currentLevel: nextLevel,
-          currentTrailer: 0,
-          totalTrailersInLevel: nextLevelConfig.trailers,
+          currentCompartment: 0,
+          totalCompartmentsInLevel: nextLevelConfig.compartments,
+          compartmentFillLevels: Array(nextLevelConfig.compartments).fill(0),
           loadResults: newResults,
           totalMoneyKept: newTotalMoney,
           totalMoneyLost: newTotalLost,
@@ -141,12 +155,10 @@ export function useGameState() {
         };
       }
       
-      // Next trailer in same level
-      setFillLevel(0);
-      
+      // Next compartment in same level
       return {
         ...prev,
-        currentTrailer: nextTrailer,
+        currentCompartment: nextCompartment,
         loadResults: newResults,
         totalMoneyKept: newTotalMoney,
         totalMoneyLost: newTotalLost,
@@ -154,7 +166,7 @@ export function useGameState() {
         tankersFilled: newTankersFilled,
       };
     });
-  }, [gameState, fillLevel, currentLevelConfig, calculateLoadResult, stopFilling]);
+  }, [gameState, currentFillLevel, currentLevelConfig, calculateLoadResult, stopFilling]);
 
   // Confirm sample taken
   const confirmSample = useCallback(() => {
@@ -165,25 +177,24 @@ export function useGameState() {
   const startGame = useCallback(() => {
     setGameState("playing");
     setDemoMode(false);
+    
+    const firstLevelConfig = GAME_CONFIG.LEVELS[0];
     setSession({
       ...initialSession,
-      totalTrailersInLevel: GAME_CONFIG.LEVELS[0].trailers,
+      totalCompartmentsInLevel: firstLevelConfig.compartments,
+      compartmentFillLevels: Array(firstLevelConfig.compartments).fill(0),
     });
-    setFillLevel(0);
     setShowConfirmation(false);
     
-    // Start game timer
+    // Start game timer (counting UP)
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
     
     timerIntervalRef.current = window.setInterval(() => {
       setSession((prev) => {
-        const newTime = prev.timeRemaining - 1;
-        if (newTime <= 0) {
-          return { ...prev, timeRemaining: 0, isComplete: true };
-        }
-        return { ...prev, timeRemaining: newTime };
+        if (prev.isComplete) return prev;
+        return { ...prev, elapsedTime: prev.elapsedTime + 1 };
       });
     }, 1000);
   }, []);
@@ -204,7 +215,6 @@ export function useGameState() {
     stopFilling();
     setGameState("attract");
     setSession(initialSession);
-    setFillLevel(0);
     setShowConfirmation(false);
     setDemoMode(false);
     
@@ -238,11 +248,11 @@ export function useGameState() {
   return {
     gameState,
     session,
-    fillLevel,
+    fillLevel: currentFillLevel,
     isFilling,
     showConfirmation,
     demoMode,
-    currentLevelConfig,
+    currentLevelConfig: currentLevelConfig as LevelConfig,
     averageAccuracy,
     startFilling,
     stopFilling,
@@ -253,6 +263,5 @@ export function useGameState() {
     endGame,
     resetToAttract,
     setDemoMode,
-    setFillLevel,
   };
 }

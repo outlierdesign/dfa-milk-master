@@ -1,23 +1,32 @@
 
 
-# Increase Milk Loading Speed 4x
+# Fill The Tank - Milk Tanker Game
 
-## What We're Changing
-Multiplying all flow rates by 4 to make the tank fill faster. This is a simple update to the game constants.
+## Recent Changes
 
-## Current vs New Flow Rates
+### Horizontal Milk Tanker with Compartments
+- Created new `MilkTanker` component with realistic horizontal tanker design
+- Tanker shows truck cab with attached cylindrical tank body
+- Multiple compartments that visually divide the tank
+- Each compartment fills individually with animated liquid
 
-| Level | Current Speed | New Speed (4x) |
-|-------|---------------|----------------|
-| Level 1 - Training | 80 L/s | 320 L/s |
-| Level 2 - Two Trailers | 120 L/s | 480 L/s |
-| Level 3 - Speed Run | 180 L/s | 720 L/s |
-| Level 4 - Precision | 200 L/s | 800 L/s |
-| Level 5 - Expert | 250 L/s | 1000 L/s |
+### Level Progression
+| Level | Name | Compartments | Flow Rate | Fill Time (~per compartment) |
+|-------|------|--------------|-----------|------------------------------|
+| 1 | Single Tank | 1 | 500 L/s | ~16s |
+| 2 | Double Tank | 2 | 650 L/s | ~12s |
+| 3 | Triple Tank | 3 | 800 L/s | ~10s |
+| 4 | Quad Tank | 4 | 1000 L/s | ~8s |
+| 5 | Full Tanker | 5 | 1200 L/s | ~7s |
 
-## File to Update
-- `src/game/constants.ts` - Update the `flowRate` value for each level in the `LEVELS` array
+### Timer Change
+- Timer now counts UP (elapsed time) instead of counting down
+- Shows how fast you completed the load - lower time = better
 
-## Note
-With 4x faster flow, the game will be more challenging since players have less time to react. At Level 1 (320 L/s), a 10,000L tank will fill in about 31 seconds. At Level 5 (1000 L/s), it fills in just 10 seconds.
-
+### Files Updated
+- `src/game/components/MilkTanker.tsx` - New horizontal tanker with compartments
+- `src/game/components/GameScreen.tsx` - Uses MilkTanker instead of Tank
+- `src/game/components/GameHUD.tsx` - Shows elapsed time, compartments instead of trailers
+- `src/game/hooks/useGameState.ts` - Tracks compartment fill levels, elapsed time
+- `src/game/types.ts` - Updated types for compartments
+- `src/game/constants.ts` - New level config with compartments

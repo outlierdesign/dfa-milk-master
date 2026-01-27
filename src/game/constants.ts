@@ -21,7 +21,7 @@ export const GAME_CONFIG = {
       level: 1,
       name: "Training",
       trailers: 1,
-      flowRate: 80, // Liters per second (when holding)
+      flowRate: 320, // Liters per second (when holding) - 4x speed
       tolerance: 500, // Liters - how close is "perfect"
       targetFill: 8000, // Target fill in liters
       tutorial: "Fill to the line",
@@ -30,7 +30,7 @@ export const GAME_CONFIG = {
       level: 2,
       name: "Two Trailers",
       trailers: 2,
-      flowRate: 120,
+      flowRate: 480, // 4x speed
       tolerance: 300,
       targetFill: 7500,
       tutorial: null,
@@ -39,7 +39,7 @@ export const GAME_CONFIG = {
       level: 3,
       name: "Speed Run",
       trailers: 2,
-      flowRate: 180,
+      flowRate: 720, // 4x speed
       tolerance: 200,
       targetFill: 8500,
       tutorial: null,
@@ -49,7 +49,7 @@ export const GAME_CONFIG = {
       level: 4,
       name: "Precision",
       trailers: 3,
-      flowRate: 200,
+      flowRate: 800, // 4x speed
       tolerance: 150,
       targetFill: 9000,
       tutorial: null,
@@ -59,7 +59,7 @@ export const GAME_CONFIG = {
       level: 5,
       name: "Expert",
       trailers: 3,
-      flowRate: 250,
+      flowRate: 1000, // 4x speed
       tolerance: 100,
       targetFill: 9500,
       tutorial: null,

@@ -1,73 +1,71 @@
-# Welcome to your Lovable project
+# Fill the Tank - Trade Show Mini Game
 
-## Project info
+A 30-60 second arcade-style browser game where players fill milk tanks to precise target levels. The closer to the target, the more money they keep.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## How to Run
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Open http://localhost:8080 in your browser. Press F11 for fullscreen mode.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Game Controls
 
-**Use GitHub Codespaces**
+- **Hold to Fill**: Press and hold the fill button to start filling the tank
+- **Release to Stop**: Let go when you think you've hit the target
+- **Nudge +50L**: Fine-tune near the target
+- **Done**: Confirm your fill level
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Tuning Constants
 
-## What technologies are used for this project?
+All game constants are in `src/game/constants.ts`:
 
-This project is built with:
+### Flow Speed (per level)
+```ts
+LEVELS: [
+  { level: 1, flowRate: 80 },   // Liters per second
+  { level: 2, flowRate: 120 },
+  { level: 3, flowRate: 180 },
+  // ...
+]
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
+### Tolerance Zones
+```ts
+LEVELS: [
+  { level: 1, tolerance: 500 },  // Liters - how close is "perfect"
+  { level: 2, tolerance: 300 },
+  { level: 3, tolerance: 200 },
+  // ...
+]
+```
+
+### Money Scale
+```ts
+BASE_MONEY_PER_LOAD: 10000,     // $10,000 per load
+MONEY_PER_TANKER: 25000,        // Money needed to fill one tanker
+```
+
+### Timer
+```ts
+ROUND_DURATION: 60,             // Seconds per round
+RESULTS_DISPLAY_TIME: 8000,     // ms before auto-restart
+ATTRACT_IDLE_TIME: 12000,       // ms before attract mode
+```
+
+## Admin Features
+
+- **Ctrl+Shift+R**: Reset the leaderboard (with confirmation)
+- **F11**: Toggle fullscreen mode
+
+## Offline Use
+
+After initial load, the game runs entirely client-side with no external API calls. Leaderboard is stored in localStorage.
+
+## Technologies
+
+- React + TypeScript
 - Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- localStorage for persistence

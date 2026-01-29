@@ -3,6 +3,7 @@ import { FarmTank } from "./FarmTank";
 import { TankerV2 } from "./TankerV2";
 import { ConnectionPipe } from "./ConnectionPipe";
 import { SpillAnimation } from "./SpillAnimation";
+import { GameTimer } from "./GameTimer";
 import { GameSessionV2, GameConfig } from "../hooks/useGameStateV2";
 
 interface GameScreenV2Props {
@@ -42,8 +43,9 @@ export function GameScreenV2({
         config={config}
       />
 
-      {/* Header with flow rate indicator */}
-      <div className="flex justify-between items-center mb-4">
+      {/* Header with flow rate and timer */}
+      <div className="flex justify-between items-start mb-4">
+        {/* Flow Rate - Left */}
         <div className="bg-slate-800/80 px-4 py-2 rounded-lg border border-slate-600">
           <div className="text-xs text-slate-400">FLOW RATE</div>
           <div className="text-lg font-mono font-bold text-amber-400">
@@ -51,16 +53,21 @@ export function GameScreenV2({
           </div>
         </div>
 
-        <div className="text-center">
-          <div className="text-2xl font-bold text-white">FILL THE TANK</div>
-          <div className="text-sm text-slate-400">One shot. Real consequences.</div>
-        </div>
+        {/* Timer - Center */}
+        <GameTimer
+          fillStartTime={session.fillStartTime}
+          isFilling={isFilling}
+          usePiperSampling={session.usePiperSampling}
+          useWeighbridge={session.useWeighbridge}
+          nudgeCount={session.nudgeCount}
+          spillTriggered={session.spillTriggered}
+          config={config}
+        />
 
-        <div className="bg-slate-800/80 px-4 py-2 rounded-lg border border-slate-600">
-          <div className="text-xs text-slate-400">TIME {session.timeDelta >= 0 ? "SAVED" : "LOST"}</div>
-          <div className={`text-lg font-mono font-bold ${session.timeDelta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-            {session.timeDelta >= 0 ? "+" : ""}{session.timeDelta} min
-          </div>
+        {/* Title - Right */}
+        <div className="text-right">
+          <div className="text-xl font-bold text-white">FILL THE TANK</div>
+          <div className="text-xs text-slate-400">One shot. Real consequences.</div>
         </div>
       </div>
 

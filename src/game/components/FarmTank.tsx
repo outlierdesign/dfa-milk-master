@@ -45,15 +45,9 @@ export function FarmTank({ currentLevel, initialLevel, showLeftBehind = false, c
         <div className="absolute bottom-8 -right-6 w-8 h-3 bg-slate-500 rounded-r" />
       </div>
 
-      {/* Level Display */}
-      <div className="mt-6 bg-slate-800/90 px-3 py-2 rounded-lg border border-slate-600 text-center">
-        <div className="text-xs text-slate-400">REMAINING</div>
-        <div className="text-lg font-mono font-bold text-sky-400">
-          {Math.round(currentLevel).toLocaleString()}L
-        </div>
-      </div>
+      {/* Level display removed - now shown in prominent stats bar above graphics */}
 
-      {/* Milk Left Behind Warning */}
+      {/* Milk Left Behind Warning (only shown on results) */}
       {showLeftBehind && milkLeftBehind > 0 && (
         <div className="mt-3 bg-amber-900/50 px-3 py-2 rounded-lg border border-amber-600 text-center animate-pulse">
           <div className="text-xs text-amber-300 font-bold">MILK LEFT BEHIND</div>

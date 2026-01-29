@@ -75,6 +75,55 @@ export function GameScreenV2({
         </div>
       </div>
 
+      {/* Prominent Stats Bar - Above Graphics */}
+      <div className="flex justify-center gap-6 mb-4">
+        {/* Remaining (Farm Tank) */}
+        <div className="bg-slate-800/90 px-6 py-3 rounded-xl border-2 border-sky-600">
+          <div className="text-xs text-sky-300 mb-1 text-center font-bold">
+            REMAINING
+          </div>
+          <div className="text-2xl md:text-3xl font-mono font-bold text-sky-400">
+            {Math.round(session.farmTankLevel).toLocaleString()}L
+          </div>
+        </div>
+
+        {/* Target */}
+        <div className="bg-slate-800/90 px-6 py-3 rounded-xl border-2 border-emerald-600">
+          <div className="text-xs text-emerald-300 mb-1 text-center font-bold">
+            TARGET
+          </div>
+          <div className="text-2xl md:text-3xl font-mono font-bold text-emerald-400">
+            {Math.round(targetFill).toLocaleString()}L
+          </div>
+        </div>
+
+        {/* Current Fill */}
+        <div className={`bg-slate-800/90 px-6 py-3 rounded-xl border-2 ${
+          session.spillTriggered ? "border-red-600" : "border-slate-600"
+        }`}>
+          <div className={`text-xs mb-1 text-center font-bold ${
+            session.spillTriggered ? "text-red-300" : "text-slate-400"
+          }`}>
+            CURRENT
+          </div>
+          <div className={`text-2xl md:text-3xl font-mono font-bold ${
+            session.spillTriggered ? "text-red-400" : "text-white"
+          }`}>
+            {Math.round(session.currentFill).toLocaleString()}L
+          </div>
+        </div>
+
+        {/* Spilled (only shown when triggered) */}
+        {session.spillTriggered && session.spillAmount > 0 && (
+          <div className="bg-red-900/90 px-6 py-3 rounded-xl border-2 border-red-600 animate-pulse">
+            <div className="text-xs text-red-300 mb-1 text-center font-bold">SPILLED</div>
+            <div className="text-2xl md:text-3xl font-mono font-bold text-red-400">
+              {Math.round(session.spillAmount).toLocaleString()}L
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Main Game Area */}
       <div className="flex-1 flex items-center justify-center">
         <div className="flex items-center gap-2 scale-75 md:scale-90 lg:scale-100 origin-center">

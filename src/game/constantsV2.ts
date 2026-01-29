@@ -33,6 +33,9 @@ export const GAME_CONFIG_V2 = {
   RESULTS_DISPLAY_TIME: 15_000,
   ATTRACT_IDLE_TIME: 20_000,
 
+  // Game speed (for trade show demo acceleration)
+  GAME_SPEED_MULTIPLIER: 1, // 1, 2, 5, or 10
+
   // Derived values (computed)
   get TARGET_FILL_L() {
     return this.TANKER_CAPACITY_L * this.TARGET_FILL_PERCENT;

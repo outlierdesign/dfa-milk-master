@@ -49,6 +49,7 @@ export interface GameConfig {
   RESULTS_DISPLAY_TIME: number;
   ATTRACT_IDLE_TIME: number;
   TARGET_FILL_L: number;
+  GAME_SPEED_MULTIPLIER: number;
 }
 
 const createInitialSession = (config: GameConfig): GameSessionV2 => ({
@@ -124,7 +125,9 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
           // Don't fill if already spilled
           if (prev.spillTriggered) return prev;
 
-          const fillDelta = prev.currentFlowRate * deltaTime;
+          // Apply speed multiplier to fill rate (not to displayed time)
+          const speedMultiplier = configRef.current.GAME_SPEED_MULTIPLIER || 1;
+          const fillDelta = prev.currentFlowRate * deltaTime * speedMultiplier;
           let newFill = prev.currentFill + fillDelta;
           let newFarmLevel = prev.farmTankLevel - fillDelta;
 
@@ -141,7 +144,7 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
           // Don't drain below 0
           newFarmLevel = Math.max(0, newFarmLevel);
 
-          // Sample flow rate for averaging
+          // Sample flow rate for averaging (use raw flow rate, not multiplied)
           const newFlowRateSamples = [...prev.flowRateSamples, prev.currentFlowRate];
 
           return {

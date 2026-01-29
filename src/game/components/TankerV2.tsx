@@ -234,39 +234,7 @@ export function TankerV2({
         </div>
       </div>
 
-      {/* Fill level display */}
-      <div className="mt-10 flex justify-center gap-6">
-        <div className="bg-slate-800/90 px-4 py-3 rounded-lg border border-emerald-600">
-          <div className="text-xs text-emerald-300 mb-1 text-center">
-            TARGET
-          </div>
-          <div className="text-xl font-mono font-bold text-emerald-400">
-            {Math.round(targetFill).toLocaleString()}L
-          </div>
-        </div>
-        <div
-          className={`bg-slate-800/90 px-4 py-3 rounded-lg border ${spillTriggered ? "border-red-600" : "border-slate-600"}`}
-        >
-          <div
-            className={`text-xs mb-1 text-center ${spillTriggered ? "text-red-300" : "text-slate-400"}`}
-          >
-            CURRENT
-          </div>
-          <div
-            className={`text-xl font-mono font-bold ${spillTriggered ? "text-red-400" : "text-white"}`}
-          >
-            {Math.round(currentFill).toLocaleString()}L
-          </div>
-        </div>
-        {spillTriggered && spillAmount > 0 && (
-          <div className="bg-red-900/90 px-4 py-3 rounded-lg border border-red-600 animate-pulse">
-            <div className="text-xs text-red-300 mb-1 text-center">SPILLED</div>
-            <div className="text-xl font-mono font-bold text-red-400">
-              {Math.round(spillAmount).toLocaleString()}L
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Fill level display removed - now shown in prominent stats bar above graphics */}
     </div>
   );
 }

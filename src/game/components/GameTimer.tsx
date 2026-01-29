@@ -22,6 +22,9 @@ export function GameTimer({
 }: GameTimerProps) {
   const [elapsedTime, setElapsedTime] = useState(0);
 
+  // Get speed multiplier for simulated time display
+  const speedMultiplier = config.GAME_SPEED_MULTIPLIER || 1;
+
   // Calculate pending penalties
   const agitationPenalty = !usePiperSampling ? config.AGITATION_TIME_SAVED : 0;
   const weighbridgePenalty = useWeighbridge ? config.WEIGHBRIDGE_TIME_COST : 0;
@@ -38,7 +41,8 @@ export function GameTimer({
 
     const updateTimer = () => {
       const now = performance.now();
-      setElapsedTime((now - fillStartTime) / 1000);
+      // Apply speed multiplier to show simulated real-world time
+      setElapsedTime(((now - fillStartTime) / 1000) * speedMultiplier);
     };
 
     // Initial update
@@ -49,7 +53,7 @@ export function GameTimer({
       const interval = setInterval(updateTimer, 100);
       return () => clearInterval(interval);
     }
-  }, [fillStartTime, isFilling, spillTriggered]);
+  }, [fillStartTime, isFilling, spillTriggered, speedMultiplier]);
 
   // Format time as MM:SS.d
   const formatTime = (seconds: number) => {
@@ -97,6 +101,11 @@ export function GameTimer({
       <div className="text-xs text-slate-400 text-center mb-1 flex items-center justify-center gap-1">
         <span>⏱️</span>
         <span>LOAD TIME</span>
+        {speedMultiplier > 1 && (
+          <span className="ml-1 px-1.5 py-0.5 bg-emerald-600/50 text-emerald-300 rounded text-[10px] font-bold">
+            {speedMultiplier}× SPEED
+          </span>
+        )}
       </div>
 
       {/* Main Timer Display */}

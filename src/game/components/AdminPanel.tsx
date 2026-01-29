@@ -11,6 +11,7 @@ export interface AdminSettings {
   flowRateMax: number;
   agitationTimeSaved: number;
   weighbridgeTimeCost: number;
+  gameSpeedMultiplier: number;
 }
 
 const DEFAULT_SETTINGS: AdminSettings = {
@@ -23,6 +24,7 @@ const DEFAULT_SETTINGS: AdminSettings = {
   flowRateMax: GAME_CONFIG_V2.FLOW_RATE_MAX_LPS,
   agitationTimeSaved: GAME_CONFIG_V2.AGITATION_TIME_SAVED,
   weighbridgeTimeCost: GAME_CONFIG_V2.WEIGHBRIDGE_TIME_COST,
+  gameSpeedMultiplier: GAME_CONFIG_V2.GAME_SPEED_MULTIPLIER,
 };
 
 const STORAGE_KEY = "fill-tank-admin-settings";
@@ -90,6 +92,7 @@ export function useAdminSettings() {
     NUDGE_TIME_PENALTY_SEC: GAME_CONFIG_V2.NUDGE_TIME_PENALTY_SEC,
     RESULTS_DISPLAY_TIME: GAME_CONFIG_V2.RESULTS_DISPLAY_TIME,
     ATTRACT_IDLE_TIME: GAME_CONFIG_V2.ATTRACT_IDLE_TIME,
+    GAME_SPEED_MULTIPLIER: settings.gameSpeedMultiplier,
     get TARGET_FILL_L() {
       return this.TANKER_CAPACITY_L * this.TARGET_FILL_PERCENT;
     },
@@ -138,6 +141,14 @@ export function AdminPanel({
 
         {/* Settings */}
         <div className="p-4 space-y-6">
+          {/* Game Speed */}
+          <SettingGroup title="Game Speed (Trade Show Mode)">
+            <SpeedSelector
+              value={settings.gameSpeedMultiplier}
+              onChange={(v) => onUpdate("gameSpeedMultiplier", v)}
+            />
+          </SettingGroup>
+
           {/* Target Fill */}
           <SettingGroup title="Target & Difficulty">
             <SliderSetting
@@ -314,6 +325,50 @@ function SliderSetting({
       <span className="w-20 text-right font-mono text-white">
         {value.toFixed(decimals)} {unit}
       </span>
+    </div>
+  );
+}
+
+const SPEED_OPTIONS = [
+  { value: 1, label: "1×", description: "Real-time (~60-90s)" },
+  { value: 2, label: "2×", description: "~30-45s" },
+  { value: 5, label: "5×", description: "~12-18s" },
+  { value: 10, label: "10×", description: "~6-9s" },
+];
+
+interface SpeedSelectorProps {
+  value: number;
+  onChange: (value: number) => void;
+}
+
+function SpeedSelector({ value, onChange }: SpeedSelectorProps) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-slate-300 text-sm">Demo Speed</span>
+        <span className="text-xs text-slate-400">
+          Timer shows simulated real-world time
+        </span>
+      </div>
+      <div className="flex gap-2">
+        {SPEED_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => onChange(option.value)}
+            className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${
+              value === option.value
+                ? "bg-emerald-600 text-white border-2 border-emerald-400"
+                : "bg-slate-700 text-slate-300 border-2 border-slate-600 hover:border-slate-500"
+            }`}
+          >
+            <div className="text-lg font-bold">{option.label}</div>
+            <div className="text-xs opacity-75">{option.description}</div>
+          </button>
+        ))}
+      </div>
+      <div className="text-xs text-amber-400/80 text-center">
+        ⚡ Higher speeds make demos faster while preserving accurate time-cost calculations
+      </div>
     </div>
   );
 }

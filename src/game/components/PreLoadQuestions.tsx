@@ -1,11 +1,13 @@
-import { useState } from "react";
-import { GAME_CONFIG_V2 } from "../constantsV2";
+import { GameConfig } from "../hooks/useGameStateV2";
 
 interface PreLoadQuestionsProps {
   onComplete: (usePiperSampling: boolean, useWeighbridge: boolean) => void;
+  config: GameConfig;
 }
 
-export function PreLoadQuestions({ onComplete }: PreLoadQuestionsProps) {
+import { useState } from "react";
+
+export function PreLoadQuestions({ onComplete, config }: PreLoadQuestionsProps) {
   const [usePiperSampling, setUsePiperSampling] = useState<boolean | null>(null);
   const [useWeighbridge, setUseWeighbridge] = useState<boolean | null>(null);
 
@@ -39,7 +41,7 @@ export function PreLoadQuestions({ onComplete }: PreLoadQuestionsProps) {
           >
             YES
             <span className="block text-sm font-normal opacity-75 mt-1">
-              +{GAME_CONFIG_V2.AGITATION_TIME_SAVED} mins saved
+              +{config.AGITATION_TIME_SAVED} mins saved
             </span>
           </button>
           <button
@@ -52,7 +54,7 @@ export function PreLoadQuestions({ onComplete }: PreLoadQuestionsProps) {
           >
             NO
             <span className="block text-sm font-normal opacity-75 mt-1">
-              −{GAME_CONFIG_V2.AGITATION_TIME_SAVED} mins (agitation)
+              −{config.AGITATION_TIME_SAVED} mins (agitation)
             </span>
           </button>
         </div>
@@ -74,7 +76,7 @@ export function PreLoadQuestions({ onComplete }: PreLoadQuestionsProps) {
           >
             YES
             <span className="block text-sm font-normal opacity-75 mt-1">
-              −{GAME_CONFIG_V2.WEIGHBRIDGE_TIME_COST} mins
+              −{config.WEIGHBRIDGE_TIME_COST} mins
             </span>
           </button>
           <button

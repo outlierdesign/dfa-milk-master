@@ -3,8 +3,7 @@ import { FarmTank } from "./FarmTank";
 import { TankerV2 } from "./TankerV2";
 import { ConnectionPipe } from "./ConnectionPipe";
 import { SpillAnimation } from "./SpillAnimation";
-import { GameSessionV2 } from "../hooks/useGameStateV2";
-import { GAME_CONFIG_V2 } from "../constantsV2";
+import { GameSessionV2, GameConfig } from "../hooks/useGameStateV2";
 
 interface GameScreenV2Props {
   session: GameSessionV2;
@@ -13,6 +12,7 @@ interface GameScreenV2Props {
   onStopFilling: () => void;
   onNudge: () => void;
   onComplete: () => void;
+  config: GameConfig;
 }
 
 export function GameScreenV2({
@@ -22,6 +22,7 @@ export function GameScreenV2({
   onStopFilling,
   onNudge,
   onComplete,
+  config,
 }: GameScreenV2Props) {
   // Prevent context menu on long press (mobile)
   useEffect(() => {
@@ -30,7 +31,7 @@ export function GameScreenV2({
     return () => document.removeEventListener("contextmenu", handleContextMenu);
   }, []);
 
-  const targetFill = GAME_CONFIG_V2.TARGET_FILL_L;
+  const targetFill = config.TARGET_FILL_L;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col p-4 select-none relative overflow-hidden">
@@ -38,6 +39,7 @@ export function GameScreenV2({
       <SpillAnimation
         spillAmount={session.spillAmount}
         isActive={session.spillTriggered}
+        config={config}
       />
 
       {/* Header with flow rate indicator */}
@@ -68,7 +70,8 @@ export function GameScreenV2({
           {/* Farm Tank (source) */}
           <FarmTank
             currentLevel={session.farmTankLevel}
-            initialLevel={GAME_CONFIG_V2.FARM_TANK_CAPACITY_L}
+            initialLevel={config.FARM_TANK_CAPACITY_L}
+            config={config}
           />
 
           {/* Connection Pipe */}
@@ -81,6 +84,7 @@ export function GameScreenV2({
             isFilling={isFilling}
             spillTriggered={session.spillTriggered}
             spillAmount={session.spillAmount}
+            config={config}
           />
         </div>
       </div>
@@ -90,7 +94,7 @@ export function GameScreenV2({
         {/* Nudge count warning */}
         {session.nudgeCount > 0 && (
           <div className="text-amber-400 text-sm animate-pulse">
-            ⏱️ {session.nudgeCount} nudge{session.nudgeCount > 1 ? "s" : ""} = +{session.nudgeCount * GAME_CONFIG_V2.NUDGE_TIME_PENALTY_SEC}s delay
+            ⏱️ {session.nudgeCount} nudge{session.nudgeCount > 1 ? "s" : ""} = +{session.nudgeCount * config.NUDGE_TIME_PENALTY_SEC}s delay
           </div>
         )}
 
@@ -130,7 +134,7 @@ export function GameScreenV2({
                 : "bg-amber-600 hover:bg-amber-500 text-white active:scale-95"
             }`}
           >
-            +{GAME_CONFIG_V2.NUDGE_AMOUNT_L}L
+            +{config.NUDGE_AMOUNT_L}L
             <span className="block text-xs opacity-75">NUDGE</span>
           </button>
         </div>

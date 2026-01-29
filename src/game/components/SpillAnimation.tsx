@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-import { GAME_CONFIG_V2 } from "../constantsV2";
+import { GameConfig } from "../hooks/useGameStateV2";
 
 interface SpillAnimationProps {
   spillAmount: number;
   isActive: boolean;
+  config: GameConfig;
 }
 
-export function SpillAnimation({ spillAmount, isActive }: SpillAnimationProps) {
+export function SpillAnimation({ spillAmount, isActive, config }: SpillAnimationProps) {
   const [showFlash, setShowFlash] = useState(false);
   const [puddleSize, setPuddleSize] = useState(0);
 
-  const spillValue = spillAmount * GAME_CONFIG_V2.MILK_VALUE_PER_L;
+  const spillValue = spillAmount * config.MILK_VALUE_PER_L;
 
   useEffect(() => {
     if (isActive && spillAmount > 0) {

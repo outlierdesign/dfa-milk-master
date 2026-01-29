@@ -28,14 +28,15 @@ export function TankerV2({
   const difference = Math.abs(currentFill - targetFill);
   const tolerance = 200; // 200L tolerance for color feedback
 
-  let fillColorClass = "from-sky-400 to-sky-500"; // Default blue milk
+  // Base milk color is cream (#FDFFF5), change based on state
+  let fillColor = "from-[#FDFFF5] to-[#F5F7E8]"; // Cream milk color
   if (currentFill > 0) {
     if (spillTriggered) {
-      fillColorClass = "from-red-400 to-red-500";
+      fillColor = "from-red-400 to-red-500";
     } else if (difference <= tolerance * 0.5) {
-      fillColorClass = "from-emerald-400 to-emerald-500";
+      fillColor = "from-emerald-400 to-emerald-500";
     } else if (difference <= tolerance) {
-      fillColorClass = "from-amber-400 to-amber-500";
+      fillColor = "from-amber-400 to-amber-500";
     }
   }
 
@@ -122,7 +123,7 @@ export function TankerV2({
             <div className="absolute inset-4 rounded-full bg-gradient-to-b from-slate-700/80 to-slate-800/80 overflow-hidden border-2 border-slate-600/50">
               {/* Liquid fill */}
               <div
-                className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t ${fillColorClass} transition-all duration-75 ease-out`}
+                className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t ${fillColor} transition-all duration-75 ease-out`}
                 style={{ height: `${fillPercentage}%` }}
               >
                 {/* Liquid surface animation */}
@@ -221,7 +222,7 @@ export function TankerV2({
               {[...Array(5)].map((_, i) => (
                 <div
                   key={i}
-                  className="w-2 h-8 bg-gradient-to-b from-sky-300 to-transparent rounded-full animate-bounce"
+                  className="w-2 h-8 bg-gradient-to-b from-[#FDFFF5] to-transparent rounded-full animate-bounce"
                   style={{
                     animationDelay: `${i * 0.12}s`,
                     animationDuration: "0.5s",

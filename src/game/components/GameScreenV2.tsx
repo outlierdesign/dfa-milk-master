@@ -5,6 +5,7 @@ import { ConnectionPipe } from "./ConnectionPipe";
 import { SpillAnimation } from "./SpillAnimation";
 import { GameTimer } from "./GameTimer";
 import { GameSessionV2, GameConfig } from "../hooks/useGameStateV2";
+import piperLogo from "@/assets/piper-logo.png";
 
 interface GameScreenV2Props {
   session: GameSessionV2;
@@ -43,7 +44,7 @@ export function GameScreenV2({
         config={config}
       />
 
-      {/* Header with flow rate and timer */}
+      {/* Header with flow rate, logo, and timer */}
       <div className="flex justify-between items-start mb-4">
         {/* Flow Rate - Left */}
         <div className="bg-slate-800/80 px-4 py-2 rounded-lg border border-slate-600">
@@ -53,16 +54,19 @@ export function GameScreenV2({
           </div>
         </div>
 
-        {/* Timer - Center */}
-        <GameTimer
-          fillStartTime={session.fillStartTime}
-          isFilling={isFilling}
-          usePiperSampling={session.usePiperSampling}
-          useWeighbridge={session.useWeighbridge}
-          nudgeCount={session.nudgeCount}
-          spillTriggered={session.spillTriggered}
-          config={config}
-        />
+        {/* Logo + Timer - Center */}
+        <div className="flex flex-col items-center gap-2">
+          <img src={piperLogo} alt="Piper" className="h-10 md:h-12 object-contain" />
+          <GameTimer
+            fillStartTime={session.fillStartTime}
+            isFilling={isFilling}
+            usePiperSampling={session.usePiperSampling}
+            useWeighbridge={session.useWeighbridge}
+            nudgeCount={session.nudgeCount}
+            spillTriggered={session.spillTriggered}
+            config={config}
+          />
+        </div>
 
         {/* Title - Right */}
         <div className="text-right">

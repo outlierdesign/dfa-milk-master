@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { TankerV2 } from "./TankerV2";
 import { LeaderboardEntry } from "../types";
 import { GameConfig } from "../hooks/useGameStateV2";
+import piperLogo from "@/assets/piper-logo.png";
 
 interface AttractModeV2Props {
   onStartGame: () => void;
@@ -49,6 +50,11 @@ export function AttractModeV2({ onStartGame, leaderboardEntries, config }: Attra
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center p-8">
+      {/* Piper Logo */}
+      <div className="mb-6 animate-fade-in">
+        <img src={piperLogo} alt="Piper" className="h-16 md:h-20 object-contain" />
+      </div>
+
       {/* Title */}
       <div className="text-center mb-4 animate-fade-in">
         <h1 className="text-5xl md:text-7xl font-bold text-white mb-2">

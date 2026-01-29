@@ -25,7 +25,7 @@ export function FarmTank({ currentLevel, initialLevel, showLeftBehind = false, c
           <div className="absolute inset-2 rounded bg-gradient-to-b from-slate-700 to-slate-800 overflow-hidden">
             {/* Milk level */}
             <div
-              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-sky-400 to-sky-300 transition-all duration-100 ease-out"
+              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#FDFFF5] to-[#F5F7E8] transition-all duration-100 ease-out"
               style={{ height: `${fillPercentage}%` }}
             >
               {/* Liquid surface shimmer */}

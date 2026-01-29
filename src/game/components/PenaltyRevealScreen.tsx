@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { GameConfig } from "../hooks/useGameStateV2";
+import piperLogo from "@/assets/piper-logo.png";
 
 interface PenaltyRevealScreenProps {
   fillDuration: number;
@@ -118,7 +119,12 @@ export function PenaltyRevealScreen({
   }, [penalties.length, onComplete]);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/95 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-slate-900/95 flex flex-col items-center justify-center z-50">
+      {/* Piper Logo */}
+      <div className="absolute top-6">
+        <img src={piperLogo} alt="Piper" className="h-12 md:h-16" />
+      </div>
+
       <div className="bg-slate-800 rounded-2xl p-8 max-w-lg w-full mx-4 border border-slate-600 shadow-2xl">
         {/* Header */}
         <div className="text-center mb-8">

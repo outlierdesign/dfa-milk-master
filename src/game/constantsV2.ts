@@ -40,7 +40,7 @@ export const GAME_CONFIG_V2 = {
 } as const;
 
 // Game states for v2 flow
-export type GameStateV2 = "attract" | "questions" | "playing" | "results";
+export type GameStateV2 = "attract" | "questions" | "playing" | "penaltyReveal" | "results";
 
 // Pre-load decision options
 export interface PreLoadDecisions {

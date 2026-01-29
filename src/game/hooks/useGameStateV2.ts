@@ -253,7 +253,7 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     });
   }, [session.spillTriggered]);
 
-  // Complete load and go to results
+  // Complete load and go to penalty reveal
   const completeLoad = useCallback(() => {
     setIsFilling(false);
 
@@ -284,6 +284,11 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
       };
     });
 
+    setGameState("penaltyReveal");
+  }, []);
+
+  // Transition from penalty reveal to results
+  const showResults = useCallback(() => {
     setGameState("results");
   }, []);
 
@@ -333,6 +338,7 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     stopFilling,
     nudgeFill,
     completeLoad,
+    showResults,
     resetToAttract,
   };
 }

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { GameConfig } from "../hooks/useGameStateV2";
+import { LoadReceipt } from "./LoadReceipt";
+import { LeadCaptureForm, LeadData } from "./LeadCaptureForm";
 
 interface ResultsScreenV2Props {
   // Fill results
@@ -11,6 +13,10 @@ interface ResultsScreenV2Props {
   // Time results
   timeDelta: number; // +/- minutes from decisions
   nudgeCount: number;
+  
+  // Timing metrics
+  totalFillDuration: number;
+  averageFlowRate: number;
   
   // Pre-load decisions
   usedPiperSampling: boolean;
@@ -30,12 +36,15 @@ export function ResultsScreenV2({
   milkLeftBehind,
   timeDelta,
   nudgeCount,
+  totalFillDuration,
+  averageFlowRate,
   usedPiperSampling,
   usedWeighbridge,
   onPlayAgain,
   config,
 }: ResultsScreenV2Props) {
   const [showAnnualized, setShowAnnualized] = useState(false);
+  const [leadSubmitted, setLeadSubmitted] = useState(false);
 
   // Calculate costs using config
   const spillCost = spillAmount * config.MILK_VALUE_PER_L;
@@ -68,8 +77,23 @@ export function ResultsScreenV2({
   const hasEmptyCapacity = emptyCapacity > 100; // More than 100L empty
   const isPerfect = !hasSpill && !hasEmptyCapacity && accuracy >= 98;
 
+  const handleLeadSubmit = (data: LeadData) => {
+    setLeadSubmitted(true);
+    // Delay play again to show confirmation
+    setTimeout(() => {
+      onPlayAgain();
+    }, 500);
+  };
+
+  const gameResults = {
+    accuracy,
+    loadTime: totalFillDuration,
+    volumeLoaded: currentFill,
+    totalCost: totalLoadCost,
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center p-6 overflow-y-auto">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-start p-6 overflow-y-auto">
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
@@ -82,80 +106,29 @@ export function ResultsScreenV2({
         </div>
       </div>
 
-      {/* Per-Load Breakdown */}
-      <div className="bg-slate-800/80 p-6 rounded-xl border border-slate-600 max-w-lg w-full mb-6">
-        <h3 className="text-lg font-bold text-slate-300 mb-4 text-center">
-          THIS LOAD
-        </h3>
-
-        <div className="space-y-3">
-          {/* Spill */}
-          {hasSpill && (
-            <div className="flex justify-between items-center text-red-400">
-              <span>🥛 Milk spilled: {Math.round(spillAmount)}L</span>
-              <span className="font-bold">−€{spillCost.toFixed(2)}</span>
-            </div>
-          )}
-
-          {/* Empty Capacity */}
-          {hasEmptyCapacity && (
-            <div className="flex justify-between items-center text-amber-400">
-              <span>🚛 Empty capacity: {(emptyCapacityPercent * 100).toFixed(1)}%</span>
-              <span className="font-bold">−€{haulageWasteCost.toFixed(2)}</span>
-            </div>
-          )}
-
-          {/* Time */}
-          {timeDelta !== 0 && (
-            <div className={`flex justify-between items-center ${timeDelta > 0 ? "text-emerald-400" : "text-red-400"}`}>
-              <span>
-                ⏱️ Time {timeDelta > 0 ? "saved" : "lost"}: {Math.abs(timeDelta)} mins
-              </span>
-              <span className="font-bold">
-                {timeDelta > 0 ? `+€${timeSaved.toFixed(2)}` : `−€${timeCost.toFixed(2)}`}
-              </span>
-            </div>
-          )}
-
-          {/* Nudge penalty */}
-          {nudgeCount > 0 && (
-            <div className="flex justify-between items-center text-slate-400 text-sm">
-              <span>👆 Nudges used: {nudgeCount}</span>
-              <span>+{(nudgeTimePenalty * 60).toFixed(0)}s delay</span>
-            </div>
-          )}
-
-          {/* Decision summary */}
-          <div className="pt-3 border-t border-slate-600 text-sm text-slate-400 space-y-1">
-            <div className="flex justify-between">
-              <span>Piper Sampling</span>
-              <span className={usedPiperSampling ? "text-emerald-400" : "text-red-400"}>
-                {usedPiperSampling ? "✓ YES" : "✗ NO"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Weighbridge</span>
-              <span className={!usedWeighbridge ? "text-emerald-400" : "text-red-400"}>
-                {usedWeighbridge ? "✗ YES" : "✓ NO (Piper)"}
-              </span>
-            </div>
-          </div>
-
-          {/* Total */}
-          <div className="pt-3 mt-3 border-t-2 border-slate-500">
-            <div className="flex justify-between items-center text-xl">
-              <span className="text-white font-bold">LOAD COST</span>
-              <span className={`font-bold ${totalLoadCost > 0 ? "text-red-400" : "text-emerald-400"}`}>
-                {totalLoadCost > 0 ? `−€${totalLoadCost.toFixed(2)}` : "€0.00"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Load Receipt */}
+      <LoadReceipt
+        currentFill={currentFill}
+        targetFill={targetFill}
+        spillAmount={spillAmount}
+        emptyCapacity={emptyCapacity}
+        totalFillDuration={totalFillDuration}
+        averageFlowRate={averageFlowRate}
+        spillCost={spillCost}
+        haulageWasteCost={haulageWasteCost}
+        timeCost={timeCost}
+        timeSaved={timeSaved}
+        timeDelta={timeDelta}
+        nudgeCount={nudgeCount}
+        totalLoadCost={totalLoadCost}
+        usedPiperSampling={usedPiperSampling}
+        usedWeighbridge={usedWeighbridge}
+        config={config}
+      />
 
       {/* Annualized Impact */}
       {showAnnualized && totalLoadCost > 0 && (
-        <div className="bg-red-900/50 p-6 rounded-xl border border-red-600 max-w-lg w-full mb-6 animate-fade-in">
+        <div className="bg-red-900/50 p-6 rounded-xl border border-red-600 max-w-lg w-full mt-6 animate-fade-in">
           <h3 className="text-lg font-bold text-red-300 mb-3 text-center">
             ANNUALIZED IMPACT
           </h3>
@@ -181,7 +154,7 @@ export function ResultsScreenV2({
       )}
 
       {/* Piper Message */}
-      <div className="bg-emerald-900/50 p-6 rounded-xl border border-emerald-600 max-w-lg w-full mb-6">
+      <div className="bg-emerald-900/50 p-6 rounded-xl border border-emerald-600 max-w-lg w-full mt-6">
         <div className="text-center">
           <div className="text-2xl md:text-3xl font-bold text-emerald-400 mb-2">
             Piper removes this cost.
@@ -192,13 +165,20 @@ export function ResultsScreenV2({
         </div>
       </div>
 
-      {/* Play Again */}
-      <button
-        onClick={onPlayAgain}
-        className="bg-emerald-500 hover:bg-emerald-400 text-white text-2xl font-bold px-10 py-5 rounded-2xl shadow-2xl transition-all hover:scale-105"
-      >
-        PLAY AGAIN
-      </button>
+      {/* Lead Capture Form */}
+      <div className="mt-6 w-full max-w-lg">
+        {leadSubmitted ? (
+          <div className="text-center text-emerald-400 text-xl font-bold animate-fade-in">
+            ✓ Thanks! Starting new game...
+          </div>
+        ) : (
+          <LeadCaptureForm
+            onSubmit={handleLeadSubmit}
+            onSkip={onPlayAgain}
+            gameResults={gameResults}
+          />
+        )}
+      </div>
     </div>
   );
 }

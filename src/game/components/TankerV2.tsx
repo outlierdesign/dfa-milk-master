@@ -41,42 +41,85 @@ export function TankerV2({
 
   return (
     <div className="relative">
-      {/* Tanker assembly */}
-      <div className="relative flex items-end gap-4">
-        {/* Cab/Truck front */}
-        <div className="relative w-24 h-24 flex-shrink-0">
-          {/* Cab body */}
-          <div className="absolute bottom-0 w-full h-20 bg-gradient-to-b from-slate-300 via-slate-200 to-slate-400 rounded-t-xl rounded-b-lg border-2 border-slate-400">
-            {/* Window */}
-            <div className="absolute top-2 left-2 right-2 h-9 bg-gradient-to-b from-sky-200 to-sky-300 rounded-t-lg border border-slate-400">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent rounded-t-lg" />
+      {/* Tanker assembly - Semi truck with cylindrical trailer */}
+      <div className="relative flex items-end">
+        {/* Semi-Truck Cab */}
+        <div className="relative w-32 h-32 flex-shrink-0 z-10">
+          {/* Main cab body - dark blue */}
+          <div className="absolute bottom-4 left-0 w-28 h-24 bg-gradient-to-b from-blue-800 via-blue-900 to-blue-950 rounded-t-lg rounded-b-sm border-2 border-blue-700">
+            {/* Hood section */}
+            <div className="absolute bottom-0 left-0 w-full h-10 bg-gradient-to-b from-blue-800 to-blue-900 rounded-b-sm">
+              {/* Silver grill */}
+              <div className="absolute bottom-1 left-2 right-2 h-6 bg-gradient-to-b from-slate-300 to-slate-400 rounded border border-slate-500">
+                {/* Grill lines */}
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="w-full h-0.5 bg-slate-600 mt-1" />
+                ))}
+              </div>
             </div>
-            {/* Grill */}
-            <div className="absolute bottom-3 left-2 right-2 h-6 bg-slate-600 rounded">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="w-full h-1 bg-slate-400 mt-1" />
-              ))}
+            
+            {/* Windshield */}
+            <div className="absolute top-2 left-2 right-3 h-11 bg-gradient-to-br from-sky-300 via-sky-400 to-sky-500 rounded-t-lg border-2 border-slate-600 overflow-hidden">
+              {/* Glass reflection */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent" />
+              {/* Windshield wiper line */}
+              <div className="absolute bottom-1 left-1/4 right-1/4 h-0.5 bg-slate-700/50" />
+            </div>
+            
+            {/* Side mirror */}
+            <div className="absolute top-4 -left-2 w-3 h-4 bg-slate-700 rounded-sm border border-slate-600" />
+            
+            {/* Exhaust stacks */}
+            <div className="absolute -top-4 right-1 w-2 h-5 bg-gradient-to-t from-slate-600 to-slate-400 rounded-t-full border border-slate-500" />
+            <div className="absolute -top-3 right-4 w-2 h-4 bg-gradient-to-t from-slate-600 to-slate-400 rounded-t-full border border-slate-500" />
+            
+            {/* Headlights */}
+            <div className="absolute bottom-2 left-1 w-1.5 h-2 bg-amber-300 rounded-full shadow-lg shadow-amber-300/50" />
+          </div>
+          
+          {/* Cab wheels - dual rear axle */}
+          <div className="absolute -bottom-1 left-1 w-9 h-9 bg-slate-900 rounded-full border-3 border-slate-700">
+            <div className="absolute inset-1.5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full border-2 border-slate-800">
+              <div className="absolute inset-1 bg-slate-400 rounded-full" />
             </div>
           </div>
-          {/* Front wheel */}
-          <div className="absolute -bottom-2 left-2 w-8 h-8 bg-slate-800 rounded-full border-3 border-slate-600">
-            <div className="absolute inset-1.5 bg-slate-400 rounded-full" />
-          </div>
-          {/* Rear wheel */}
-          <div className="absolute -bottom-2 right-0 w-8 h-8 bg-slate-800 rounded-full border-3 border-slate-600">
-            <div className="absolute inset-1.5 bg-slate-400 rounded-full" />
+          <div className="absolute -bottom-1 right-1 w-9 h-9 bg-slate-900 rounded-full border-3 border-slate-700">
+            <div className="absolute inset-1.5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full border-2 border-slate-800">
+              <div className="absolute inset-1 bg-slate-400 rounded-full" />
+            </div>
           </div>
         </div>
 
-        {/* Tank body - single compartment */}
-        <div className="relative flex-1 min-w-[280px]">
-          {/* Main tank container - horizontal elliptical shape */}
-          <div className="relative h-32 bg-gradient-to-b from-slate-300 via-slate-200 to-slate-300 rounded-full border-4 border-slate-400 shadow-2xl overflow-hidden">
-            {/* Top dome highlight */}
-            <div className="absolute top-0 left-4 right-4 h-6 bg-gradient-to-b from-white/60 to-transparent rounded-full" />
+        {/* Fifth wheel connector */}
+        <div className="absolute left-28 bottom-12 w-8 h-3 bg-slate-700 rounded z-5" />
 
-            {/* Inner tank area */}
-            <div className="absolute inset-3 rounded-full bg-gradient-to-b from-slate-700 to-slate-800 overflow-hidden">
+        {/* Tank Trailer */}
+        <div className="relative flex-1 min-w-[320px] -ml-4">
+          {/* Black frame/undercarriage */}
+          <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-b from-slate-800 to-slate-900 rounded border-2 border-slate-700">
+            {/* Frame details */}
+            <div className="absolute top-1 left-4 right-4 h-1 bg-slate-600 rounded" />
+          </div>
+          
+          {/* Main cylindrical tank */}
+          <div className="relative h-28 mb-6 bg-gradient-to-b from-slate-200 via-slate-100 to-slate-300 rounded-full border-4 border-slate-400 shadow-2xl overflow-hidden">
+            {/* Metallic sheen effect */}
+            <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white/70 via-white/30 to-transparent rounded-t-full" />
+            
+            {/* Ribbed tank sections */}
+            <div className="absolute top-0 bottom-0 left-[25%] w-0.5 bg-slate-400/50" />
+            <div className="absolute top-0 bottom-0 left-[50%] w-0.5 bg-slate-400/50" />
+            <div className="absolute top-0 bottom-0 left-[75%] w-0.5 bg-slate-400/50" />
+            
+            {/* MILK text */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
+              <span className="text-3xl font-black text-blue-900 tracking-wider drop-shadow-lg" style={{ textShadow: '2px 2px 0 rgba(255,255,255,0.5)' }}>
+                MILK
+              </span>
+            </div>
+
+            {/* Inner tank cutaway view (semi-transparent window) */}
+            <div className="absolute inset-4 rounded-full bg-gradient-to-b from-slate-700/80 to-slate-800/80 overflow-hidden border-2 border-slate-600/50">
               {/* Liquid fill */}
               <div
                 className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t ${fillColorClass} transition-all duration-75 ease-out`}
@@ -132,40 +175,55 @@ export function TankerV2({
               )}
             </div>
 
-            {/* Top hatch - single */}
-            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-10 h-4 bg-slate-500 rounded-t-lg border-2 border-slate-400" />
+            {/* Top hatches */}
+            <div className="absolute -top-1 left-[20%] w-8 h-3 bg-slate-500 rounded-t-lg border-2 border-slate-400" />
+            <div className="absolute -top-1 left-[50%] -translate-x-1/2 w-10 h-4 bg-slate-500 rounded-t-lg border-2 border-slate-400" />
+            <div className="absolute -top-1 right-[20%] w-8 h-3 bg-slate-500 rounded-t-lg border-2 border-slate-400" />
           </div>
 
-          {/* Undercarriage */}
-          <div className="absolute -bottom-3 left-6 right-6 h-4 bg-slate-700 rounded" />
+          {/* End caps - front and back of tank */}
+          <div className="absolute left-0 top-6 bottom-12 w-4 bg-gradient-to-r from-slate-400 to-slate-300 rounded-l-full border-2 border-slate-400" />
+          <div className="absolute right-0 top-6 bottom-12 w-4 bg-gradient-to-l from-slate-400 to-slate-300 rounded-r-full border-2 border-slate-400" />
 
-          {/* Wheels */}
-          <div className="absolute -bottom-5 left-10 flex gap-1">
-            <div className="w-10 h-10 bg-slate-800 rounded-full border-3 border-slate-600">
-              <div className="absolute inset-2 bg-slate-400 rounded-full" />
+          {/* Trailer wheels - dual axles */}
+          <div className="absolute -bottom-1 left-16 flex gap-1">
+            <div className="w-10 h-10 bg-slate-900 rounded-full border-3 border-slate-700">
+              <div className="absolute inset-1.5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full border-2 border-slate-800">
+                <div className="absolute inset-1.5 bg-slate-400 rounded-full" />
+              </div>
             </div>
-            <div className="w-10 h-10 bg-slate-800 rounded-full border-3 border-slate-600">
-              <div className="absolute inset-2 bg-slate-400 rounded-full" />
-            </div>
-          </div>
-          <div className="absolute -bottom-5 right-10 flex gap-1">
-            <div className="w-10 h-10 bg-slate-800 rounded-full border-3 border-slate-600">
-              <div className="absolute inset-2 bg-slate-400 rounded-full" />
-            </div>
-            <div className="w-10 h-10 bg-slate-800 rounded-full border-3 border-slate-600">
-              <div className="absolute inset-2 bg-slate-400 rounded-full" />
+            <div className="w-10 h-10 bg-slate-900 rounded-full border-3 border-slate-700">
+              <div className="absolute inset-1.5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full border-2 border-slate-800">
+                <div className="absolute inset-1.5 bg-slate-400 rounded-full" />
+              </div>
             </div>
           </div>
+          <div className="absolute -bottom-1 right-10 flex gap-1">
+            <div className="w-10 h-10 bg-slate-900 rounded-full border-3 border-slate-700">
+              <div className="absolute inset-1.5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full border-2 border-slate-800">
+                <div className="absolute inset-1.5 bg-slate-400 rounded-full" />
+              </div>
+            </div>
+            <div className="w-10 h-10 bg-slate-900 rounded-full border-3 border-slate-700">
+              <div className="absolute inset-1.5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full border-2 border-slate-800">
+                <div className="absolute inset-1.5 bg-slate-400 rounded-full" />
+              </div>
+            </div>
+          </div>
+
+          {/* Rear lights */}
+          <div className="absolute right-1 top-[45%] w-2 h-3 bg-red-500 rounded-r shadow-lg shadow-red-500/50" />
+          <div className="absolute right-1 top-[55%] w-2 h-2 bg-amber-400 rounded-r" />
 
           {/* Milk dripping when spill */}
           {spillTriggered && (
             <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
-              {[...Array(3)].map((_, i) => (
+              {[...Array(5)].map((_, i) => (
                 <div
                   key={i}
-                  className="w-2 h-6 bg-gradient-to-b from-sky-300 to-transparent rounded-full animate-bounce"
+                  className="w-2 h-8 bg-gradient-to-b from-sky-300 to-transparent rounded-full animate-bounce"
                   style={{
-                    animationDelay: `${i * 0.15}s`,
+                    animationDelay: `${i * 0.12}s`,
                     animationDuration: "0.5s",
                   }}
                 />

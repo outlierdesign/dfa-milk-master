@@ -2,35 +2,25 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import piperLogo from "@/assets/piper-logo.png";
 
-interface LeadCaptureDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: () => void;
-  onSkip: () => void;
+interface LeadCaptureScreenProps {
   gameResults: {
     accuracy: number;
     loadTime: number;
     volumeLoaded: number;
     totalCost: number;
   };
+  onSubmit: () => void;
+  onSkip: () => void;
 }
 
-export function LeadCaptureDialog({
-  open,
-  onOpenChange,
+export function LeadCaptureScreen({
+  gameResults,
   onSubmit,
   onSkip,
-  gameResults,
-}: LeadCaptureDialogProps) {
+}: LeadCaptureScreenProps) {
   const [name, setName] = useState("");
   const [contactType, setContactType] = useState<"phone" | "email">("email");
   const [contactValue, setContactValue] = useState("");
@@ -84,10 +74,8 @@ export function LeadCaptureDialog({
 
       if (error) {
         console.error("Failed to save lead:", error);
-        // Still proceed even if save fails
       }
 
-      // Reset form
       setName("");
       setContactValue("");
       setWantsInfo(true);
@@ -96,7 +84,7 @@ export function LeadCaptureDialog({
       onSubmit();
     } catch (err) {
       console.error("Error submitting lead:", err);
-      onSubmit(); // Still proceed
+      onSubmit();
     } finally {
       setIsSubmitting(false);
     }
@@ -110,18 +98,26 @@ export function LeadCaptureDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-800 border-slate-600 text-white max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-center text-white">
-            Want to learn more about Piper?
-          </DialogTitle>
-          <DialogDescription className="text-slate-400 text-center">
-            Leave your details and we'll be in touch
-          </DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center z-50 p-6">
+      {/* Piper Logo */}
+      <div className="mb-6">
+        <img src={piperLogo} alt="Piper" className="h-12 md:h-16" />
+      </div>
 
-        <div className="space-y-4 pt-2">
+      {/* Content Card */}
+      <div className="bg-slate-800 rounded-2xl p-8 max-w-md w-full border border-slate-600 shadow-2xl">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-3">🎯</div>
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+            Enter your details to see your results
+          </h2>
+          <p className="text-slate-400 text-sm">
+            We'd love to show you how Piper can help
+          </p>
+        </div>
+
+        <div className="space-y-4">
           {/* Name input */}
           <div>
             <Label htmlFor="name" className="text-slate-300 text-sm">
@@ -133,8 +129,9 @@ export function LeadCaptureDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your name"
-              className="mt-1 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+              className="mt-1 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 h-12 text-lg"
               maxLength={100}
+              autoFocus
             />
             {errors.name && (
               <p className="text-red-400 text-xs mt-1">{errors.name}</p>
@@ -189,7 +186,7 @@ export function LeadCaptureDialog({
               value={contactValue}
               onChange={(e) => setContactValue(e.target.value)}
               placeholder={contactType === "email" ? "you@company.com" : "+353 12 345 6789"}
-              className="mt-1 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+              className="mt-1 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 h-12 text-lg"
               maxLength={contactType === "email" ? 255 : 20}
             />
             {errors.contact && (
@@ -211,24 +208,24 @@ export function LeadCaptureDialog({
           </div>
 
           {/* Buttons */}
-          <div className="flex flex-col gap-3 pt-2">
+          <div className="flex flex-col gap-3 pt-4">
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-700 text-white text-lg font-bold px-6 py-4 rounded-xl shadow-xl transition-all hover:scale-105 disabled:hover:scale-100"
+              className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-700 text-white text-xl font-bold px-6 py-5 rounded-xl shadow-xl transition-all hover:scale-105 disabled:hover:scale-100"
             >
-              {isSubmitting ? "SUBMITTING..." : "SUBMIT & PLAY AGAIN"}
+              {isSubmitting ? "SUBMITTING..." : "SEE MY RESULTS →"}
             </button>
             <button
               onClick={handleSkip}
               disabled={isSubmitting}
-              className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-medium px-6 py-3 rounded-xl transition-all"
+              className="w-full bg-slate-700 hover:bg-slate-600 text-slate-400 text-sm font-medium px-6 py-3 rounded-xl transition-all"
             >
-              SKIP — PLAY AGAIN
+              Skip
             </button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

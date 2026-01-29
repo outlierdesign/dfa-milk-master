@@ -290,7 +290,12 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     setGameState("penaltyReveal");
   }, []);
 
-  // Transition from penalty reveal to results
+  // Transition from penalty reveal to lead capture
+  const showLeadCapture = useCallback(() => {
+    setGameState("leadCapture");
+  }, []);
+
+  // Transition from lead capture to results
   const showResults = useCallback(() => {
     setGameState("results");
   }, []);
@@ -341,6 +346,7 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     stopFilling,
     nudgeFill,
     completeLoad,
+    showLeadCapture,
     showResults,
     resetToAttract,
   };

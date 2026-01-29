@@ -1,289 +1,217 @@
 
-# Fill the Tank v2 — Piper Value Demo
-## Complete Game Redesign Specification
 
----
+# Enhanced Milk Tanker Visual & Results Screen Lead Capture
 
 ## Overview
 
-A single-attempt, 30-45 second trade show game that demonstrates the financial value of Piper by quantifying:
-- **Time saved** (no agitation, no weighbridge delays)
-- **Optimized tanker fill** (no empty capacity)  
-- **Avoided milk loss** (no spills, no leftovers)
+Two major enhancements to the Fill the Tank v2 game:
+1. **Realistic Milk Tanker Design** - Redesign the tanker to match the reference image with proper semi-truck cab and cylindrical trailer
+2. **Lead Capture & Receipt Format** - Add contact form and detailed load metrics to the results screen
 
 ---
 
-## Core Changes Summary
+## Part 1: Realistic Milk Tanker Visual
 
-| Current Game | V2 Game |
-|--------------|---------|
-| Multiple levels/compartments | Single compartment, single attempt |
-| Constant flow rate | Variable/unpredictable flow rate |
-| No spill mechanic | Visible milk spill on overfill |
-| No farm tank visual | Farm tank with visible milk drain |
-| No pre-load decisions | Sampling + weighbridge questions |
-| Money kept/lost focus | Cost breakdown (spill, haulage, time) |
-| Per-load results | Annualized impact (×5 loads ×365 days) |
+### Current State
+The existing `TankerV2.tsx` renders a simplified truck with:
+- Small grey cab attached to the tank
+- Rounded cylindrical tank body
+- Basic wheel representation
 
----
+### Target Design (from reference image)
+A proper articulated milk tanker with:
+- **Dark blue semi-truck cab** - Sleeper-style with distinct hood, windshield, and exhaust stacks
+- **Separate cylindrical stainless steel trailer** - Mounted on a black frame with "MILK" text
+- **Dual rear axle wheels** - Both on cab and trailer
+- **Proper proportions** - Cab is about 1/4 of total length, trailer is 3/4
 
-## New Game Flow
+### Implementation Changes to `TankerV2.tsx`
 
+**New Visual Structure:**
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  IDLE SCREEN                                            │
-│  "Tap to Load" + demo animation                         │
-└─────────────────────────┬───────────────────────────────┘
-                          │ tap
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│  PRE-LOAD DECISIONS                                     │
-│  Q1: "Sampling with Piper?" [YES/NO]                    │
-│  Q2: "Need weighbridge?" [YES/NO]                       │
-└─────────────────────────┬───────────────────────────────┘
-                          │ answers submitted
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│  FILLING PHASE (Single Attempt)                         │
-│  - Farm tank drains as tanker fills                     │
-│  - Variable flow rate (unpredictable)                   │
-│  - Overfill triggers spill animation                    │
-│  - Nudge button available (costs time)                  │
-└─────────────────────────┬───────────────────────────────┘
-                          │ player releases / presses DONE
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│  RESULTS SCREEN                                         │
-│  Per-load costs + Annualized impact                     │
-│  "Piper removes this cost."                             │
-└─────────────────────────────────────────────────────────┘
+┌───────────┐   ┌─────────────────────────────────────────────┐
+│   CAB     │───│              TANK TRAILER                   │
+│ (blue)    │   │  ┌─────────────────────────────────────┐   │
+│ ┌─────┐   │   │  │    [MILK liquid fill animation]     │   │
+│ │wind │   │   │  │         "MILK" text on side         │   │
+│ │-ow  │   │   │  └─────────────────────────────────────┘   │
+│ └─────┘   │   │         [undercarriage frame]              │
+│ [exhaust] │   │                                             │
+│    O   O  │   │        O O              O O                 │
+└───────────┘   └─────────────────────────────────────────────┘
+   wheels              front axle        rear axle
 ```
+
+**Key Visual Elements:**
+- Semi-truck cab with navy blue body, silver grill, blue-tinted windshield
+- Exhaust stacks on cab
+- Fifth wheel connector between cab and trailer
+- Silver/stainless steel cylindrical tank with metallic sheen
+- "MILK" text prominently displayed
+- Black frame/undercarriage
+- Orange/red wheel rims with black tires
+- Target line and fill level inside tank cutaway view
 
 ---
 
-## Files to Create
+## Part 2: Results Screen Lead Capture & Receipt Format
 
-### 1. `src/game/constantsV2.ts` — New Configuration
-Admin-configurable constants:
+### New Features
 
+#### A. Lead Capture Form
+Add optional contact capture before "Play Again":
+- Name (text input)
+- Phone OR Email (toggle between options)
+- Optional checkbox: "Send me info about Piper"
+- Submit saves to localStorage (or future Supabase integration)
+
+#### B. Enhanced "THIS LOAD" Receipt
+Add load statistics in a receipt-style format:
+
+| Metric | Value | Source |
+|--------|-------|--------|
+| Load Time | Xs | Track elapsed time during filling phase |
+| Avg Flow Rate | XXX L/s | Average of flow rate samples |
+| Volume Loaded | X,XXX L | session.currentFill |
+| Target Volume | X,XXX L | config.TARGET_FILL_L |
+| Accuracy | XX.X% | Calculated |
+
+### State Changes Required
+
+**`useGameStateV2.ts`** - Track new metrics:
 ```typescript
-export const GAME_CONFIG_V2 = {
-  // Capacity
-  TANKER_CAPACITY_L: 10_000,
-  FARM_TANK_CAPACITY_L: 12_000, // Slightly more than tanker
-  TARGET_FILL_PERCENT: 0.98, // Adjustable: 90%, 95%, 98%, 100%
+interface GameSessionV2 {
+  // ... existing fields
   
-  // Money values (€)
-  MILK_VALUE_PER_L: 0.42,
-  HAULAGE_COST_PER_LOAD: 180.00,
-  TIME_COST_PER_MIN: 4.00,
-  
-  // Scaling
-  FARM_LOADS_PER_DAY: 5,
-  DAYS_PER_YEAR: 365,
-  
-  // Time penalties/savings (minutes)
-  AGITATION_TIME_SAVED: 20, // Piper sampling
-  WEIGHBRIDGE_TIME_COST: 10,
-  
-  // Flow mechanics
-  FLOW_RATE_MIN_LPS: 80,
-  FLOW_RATE_MAX_LPS: 140,
-  FLOW_VARIANCE_INTERVAL_MS: 800, // Change every 0.8s
-  
-  // Nudge
-  NUDGE_AMOUNT_L: 25,
-  NUDGE_TIME_PENALTY_SEC: 2,
-  
-  // UI timing
-  RESULTS_DISPLAY_TIME: 15000,
-  ATTRACT_IDLE_TIME: 20000,
-};
+  // New timing metrics
+  fillStartTime: number | null;
+  fillEndTime: number | null;
+  totalFillDuration: number; // seconds
+  flowRateSamples: number[]; // for calculating average
+}
 ```
 
-### 2. `src/game/components/PreLoadQuestions.tsx`
-Simple yes/no decision screen:
-- Question 1: "Sampling with Piper?" → YES saves 20 mins, NO costs 20 mins
-- Question 2: "Need weighbridge?" → YES costs 10 mins, NO (Piper) saves 10 mins
-- Big, touch-friendly buttons
-- Submit button to proceed
+**`ResultsScreenV2.tsx`** - New sections:
+1. Receipt-style load data section with all metrics
+2. Lead capture form component
+3. Updated layout to accommodate new elements
 
-### 3. `src/game/components/FarmTank.tsx`
-Visual source tank that drains as player fills:
-- Shows starting milk level (12,000L)
-- Level drops in sync with tanker fill
-- If player stops early, remaining milk is visually shown
-- Label: "Milk left behind" with € value
-
-### 4. `src/game/components/SpillAnimation.tsx`
-Triggered when player overfills:
-- Milk visually "spills" onto concrete below tanker
-- Screen flash effect
-- Big message: **"MILK ON THE GROUND — Call farm cat"** 🐈
-- Tanker fill freezes at max
-- Spill amount tracked
-
-### 5. `src/game/components/ResultsScreenV2.tsx`
-Complete cost breakdown with annualized impact:
-
-**Per-Load Breakdown:**
-- Milk spilled: X L = €Y (red, if applicable)
-- Empty capacity: X% = €Y haulage wasted
-- Time cost/saved: ±X mins = €Y
-- **Total load cost: €Z**
-
-**Annualized Impact:**
-- "This farm loads 5 tankers a day"
-- Daily: €Z × 5 = €A
-- Annual: €A × 365 = **€B**
-- Big closing: **"Piper removes this cost."**
+### Lead Data Structure
+```typescript
+interface LeadCapture {
+  id: string;
+  name: string;
+  contactType: 'phone' | 'email';
+  contactValue: string;
+  wantsInfo: boolean;
+  gameResults: {
+    accuracy: number;
+    loadTime: number;
+    volumeLoaded: number;
+    totalCost: number;
+  };
+  timestamp: string;
+}
+```
 
 ---
 
 ## Files to Modify
 
-### 1. `src/game/hooks/useGameStateV2.ts`
-Complete rewrite of game logic:
+### 1. `src/game/components/TankerV2.tsx`
+Complete redesign of the visual:
+- Replace current cab with proper semi-truck design
+- Add fifth wheel connector
+- Redesign tank as separate trailer unit
+- Add "MILK" text
+- Improve wheel styling with dual axles
+- Keep all existing fill mechanics (target line, fill animation, spill detection)
 
-**New State:**
-```typescript
-interface GameSessionV2 {
-  // Pre-load decisions
-  usePiperSampling: boolean | null;
-  useWeighbridge: boolean | null;
-  
-  // Fill state
-  currentFill: number;
-  farmTankLevel: number;
-  currentFlowRate: number;
-  
-  // Outcomes
-  spillAmount: number;
-  spillTriggered: boolean;
-  emptyCapacity: number;
-  milkLeftBehind: number;
-  
-  // Time tracking
-  elapsedTime: number;
-  timeDelta: number; // +/- minutes from decisions
-  nudgeCount: number;
-  
-  // Costs (calculated)
-  spillCost: number;
-  haulageWasteCost: number;
-  timeCost: number;
-  totalLoadCost: number;
-  annualCost: number;
-}
-```
+### 2. `src/game/hooks/useGameStateV2.ts`
+Add timing and flow tracking:
+- `fillStartTime` / `fillEndTime` timestamps
+- `flowRateSamples` array to track flow rate over time
+- `totalFillDuration` calculated on load complete
+- Update `startFilling()`, `stopFilling()`, and `completeLoad()` to track these
 
-**Variable Flow Rate Logic:**
-```typescript
-// Every 0.8 seconds, change flow rate
-useEffect(() => {
-  const interval = setInterval(() => {
-    const newRate = random(FLOW_RATE_MIN, FLOW_RATE_MAX);
-    setCurrentFlowRate(newRate);
-  }, FLOW_VARIANCE_INTERVAL_MS);
-  return () => clearInterval(interval);
-}, []);
-```
-
-**Spill Detection:**
-```typescript
-if (currentFill > TANKER_CAPACITY_L) {
-  spillAmount = currentFill - TANKER_CAPACITY_L;
-  currentFill = TANKER_CAPACITY_L; // Freeze at max
-  spillTriggered = true;
-}
-```
-
-### 2. `src/game/components/MilkTanker.tsx`
-Simplify to single compartment + add spill visual:
-- Remove multi-compartment logic
-- Add milk dripping animation when overfilled
-- Show puddle growing on "ground" below tanker
-
-### 3. `src/game/components/GameScreen.tsx`
-Add new layout with farm tank:
-- Left side: Farm Tank (source, draining)
-- Center: Connection pipe/hose
-- Right side: Milk Tanker (destination, filling)
-- Bottom: Controls + nudge button with time cost warning
-
-### 4. `src/game/components/AttractMode.tsx`
-Simplify and update messaging:
-- Remove difficulty selector (single mode)
-- Update tagline: "One shot. Real consequences."
-- Show three Piper outcomes in attract animation
-
-### 5. `src/game/FillTheTank.tsx`
-Add pre-load questions state:
-- New game state: "questions" between attract and playing
-- Route through PreLoadQuestions before filling
+### 3. `src/game/components/ResultsScreenV2.tsx`
+Major enhancements:
+- Add "LOAD RECEIPT" section with load time, avg flow, volume metrics
+- Add lead capture form (name, phone/email, checkbox)
+- Store leads in localStorage
+- Update layout to accommodate new sections
+- Add form validation
 
 ---
 
-## Cost Calculation Formulas
+## Technical Details
 
+### Timing Calculation
 ```typescript
-// Derived values
-const TARGET_FILL_L = TANKER_CAPACITY_L × TARGET_FILL_PERCENT;
+// In startFilling:
+fillStartTime = performance.now();
 
-// Spill cost (if overfilled)
-const spillCost = spillAmount × MILK_VALUE_PER_L;
+// In stopFilling (or during filling):
+// Accumulate total fill duration
 
-// Empty capacity cost (if underfilled)
-const emptyCapacity_L = Math.max(0, TARGET_FILL_L - currentFill);
-const emptyCapacity_Percent = emptyCapacity_L / TANKER_CAPACITY_L;
-const haulageWasteCost = emptyCapacity_Percent × HAULAGE_COST_PER_LOAD;
+// In completeLoad:
+totalFillDuration = accumulatedFillTime; // seconds
+avgFlowRate = flowRateSamples.reduce((a,b) => a+b, 0) / flowRateSamples.length;
+```
 
-// Time cost
-const nudgeTimePenalty = nudgeCount × (NUDGE_TIME_PENALTY_SEC / 60);
-const totalTimeMin = BASE_LOAD_TIME + timeDelta + nudgeTimePenalty;
-const timeCost = Math.max(0, totalTimeMin) × TIME_COST_PER_MIN;
-
-// Per-load total
-const totalLoadCost = spillCost + haulageWasteCost + timeCost;
-
-// Annualized
-const dailyCost = totalLoadCost × FARM_LOADS_PER_DAY;
-const annualCost = dailyCost × DAYS_PER_YEAR;
+### Lead Storage
+```typescript
+// Save to localStorage
+const leads = JSON.parse(localStorage.getItem('piper_leads') || '[]');
+leads.push(newLead);
+localStorage.setItem('piper_leads', JSON.stringify(leads));
 ```
 
 ---
 
-## Visual Feedback Summary
+## Visual Mockup: Results Screen Layout
 
-| Scenario | Visual | Message |
-|----------|--------|---------|
-| Overfill | Milk spills, screen flash | "MILK ON THE GROUND — Call farm cat" |
-| Underfill | Empty space visible in tanker | "You paid to haul air." |
-| Milk left | Visible in farm tank | "Milk left behind." |
-| Perfect fill | Green glow, confetti | "Perfect load!" |
-| Nudge used | Timer ticks up | "Time costs money." (tooltip) |
-
----
-
-## Technical Notes
-
-1. **Variable flow rate** makes the game genuinely challenging — no one wins by accident
-2. **Single attempt** creates urgency and keeps queue moving
-3. **Farm tank drain** provides intuitive visual feedback
-4. **Annualized costs** make the impact real for decision-makers
-5. **Humour** ("Call farm cat") makes it memorable
+```text
+┌─────────────────────────────────────────────────┐
+│           🎉 Perfect Load! / 💔 Milk Lost       │
+│              Accuracy: 98.5%                    │
+├─────────────────────────────────────────────────┤
+│                 LOAD RECEIPT                    │
+│  ─────────────────────────────────────────────  │
+│  Load Time:        12.4s                        │
+│  Avg Flow Rate:    108 L/s                      │
+│  Volume Loaded:    9,800 L                      │
+│  Target Volume:    9,800 L                      │
+│  ─────────────────────────────────────────────  │
+│  Spill:            0 L              €0.00       │
+│  Empty Capacity:   2%               -€3.60      │
+│  Time Saved:       +30 mins         +€120.00    │
+│  ─────────────────────────────────────────────  │
+│  LOAD COST:                         €3.60       │
+├─────────────────────────────────────────────────┤
+│              ANNUALIZED IMPACT                  │
+│                 €6,570/year                     │
+├─────────────────────────────────────────────────┤
+│           Piper removes this cost.              │
+├─────────────────────────────────────────────────┤
+│  ┌───────────────────────────────────────────┐  │
+│  │  Want to learn more about Piper?          │  │
+│  │  Name: [_____________________]            │  │
+│  │  ( ) Phone  ( ) Email                     │  │
+│  │  [_____________________]                  │  │
+│  │  [ ] Send me info about Piper             │  │
+│  │         [SUBMIT & PLAY AGAIN]             │  │
+│  └───────────────────────────────────────────┘  │
+│                 [SKIP - PLAY AGAIN]             │
+└─────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Implementation Order
 
-1. Create `constantsV2.ts` with all configurable values
-2. Create `PreLoadQuestions.tsx` component
-3. Create `FarmTank.tsx` visual component
-4. Create `SpillAnimation.tsx` with milk puddle effect
-5. Rewrite `useGameStateV2.ts` with new logic
-6. Update `MilkTanker.tsx` for single compartment + spill
-7. Update `GameScreen.tsx` with new layout
-8. Create `ResultsScreenV2.tsx` with cost breakdown
-9. Update `AttractMode.tsx` with new messaging
-10. Update `FillTheTank.tsx` to orchestrate new flow
+1. **Update `useGameStateV2.ts`** - Add timing/flow tracking fields and logic
+2. **Redesign `TankerV2.tsx`** - Complete visual overhaul to match reference
+3. **Enhance `ResultsScreenV2.tsx`** - Add receipt format and lead capture form
+4. **Update `GameScreenV2.tsx`** - Pass new session data as needed
+

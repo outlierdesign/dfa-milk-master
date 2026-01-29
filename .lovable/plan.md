@@ -1,217 +1,170 @@
 
 
-# Enhanced Milk Tanker Visual & Results Screen Lead Capture
+# Add Live Timer to Game Screen
 
 ## Overview
 
-Two major enhancements to the Fill the Tank v2 game:
-1. **Realistic Milk Tanker Design** - Redesign the tanker to match the reference image with proper semi-truck cab and cylindrical trailer
-2. **Lead Capture & Receipt Format** - Add contact form and detailed load metrics to the results screen
+Add a prominent countdown/countup timer to the game screen that visually demonstrates time jeopardy. The timer will:
+1. **Count up during filling** - Shows real-time elapsed loading time
+2. **Display time penalties** - If player selected NO to Piper sampling (agitation required) or YES to weighbridge, show penalty time being added
+3. **Create urgency** - Large, animated timer makes players feel the time pressure that costs money
 
 ---
 
-## Part 1: Realistic Milk Tanker Visual
+## How It Works
 
-### Current State
-The existing `TankerV2.tsx` renders a simplified truck with:
-- Small grey cab attached to the tank
-- Rounded cylindrical tank body
-- Basic wheel representation
+### Timer Behavior
 
-### Target Design (from reference image)
-A proper articulated milk tanker with:
-- **Dark blue semi-truck cab** - Sleeper-style with distinct hood, windshield, and exhaust stacks
-- **Separate cylindrical stainless steel trailer** - Mounted on a black frame with "MILK" text
-- **Dual rear axle wheels** - Both on cab and trailer
-- **Proper proportions** - Cab is about 1/4 of total length, trailer is 3/4
+| Pre-Load Decision | Timer Effect |
+|-------------------|--------------|
+| Piper Sampling: NO | +20 min penalty added at end |
+| Weighbridge: YES | +10 min penalty added at end |
+| Nudges used | +2 sec each added to timer |
 
-### Implementation Changes to `TankerV2.tsx`
+### Visual Flow
 
-**New Visual Structure:**
 ```text
-┌───────────┐   ┌─────────────────────────────────────────────┐
-│   CAB     │───│              TANK TRAILER                   │
-│ (blue)    │   │  ┌─────────────────────────────────────┐   │
-│ ┌─────┐   │   │  │    [MILK liquid fill animation]     │   │
-│ │wind │   │   │  │         "MILK" text on side         │   │
-│ │-ow  │   │   │  └─────────────────────────────────────┘   │
-│ └─────┘   │   │         [undercarriage frame]              │
-│ [exhaust] │   │                                             │
-│    O   O  │   │        O O              O O                 │
-└───────────┘   └─────────────────────────────────────────────┘
-   wheels              front axle        rear axle
-```
+┌─────────────────────────────────────────────────────────────────┐
+│                      DURING FILLING                              │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │         ⏱️  LOAD TIME: 00:12.4                              ││
+│  │                                                              ││
+│  │   [If penalties pending, show warning below timer]           ││
+│  │   ⚠️ +20 min agitation | +10 min weighbridge                ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
 
-**Key Visual Elements:**
-- Semi-truck cab with navy blue body, silver grill, blue-tinted windshield
-- Exhaust stacks on cab
-- Fifth wheel connector between cab and trailer
-- Silver/stainless steel cylindrical tank with metallic sheen
-- "MILK" text prominently displayed
-- Black frame/undercarriage
-- Orange/red wheel rims with black tires
-- Target line and fill level inside tank cutaway view
+┌─────────────────────────────────────────────────────────────────┐
+│                      ON COMPLETE (dramatic reveal)               │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │         LOAD TIME: 00:12.4                                   ││
+│  │                                                              ││
+│  │   [Penalties animate in and add to total]                    ││
+│  │         + 20:00 agitation ⏱️                                 ││
+│  │         + 10:00 weighbridge ⏱️                               ││
+│  │         ─────────────────────                                ││
+│  │         TOTAL: 30:12.4  💸                                   ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Part 2: Results Screen Lead Capture & Receipt Format
+## Implementation Details
 
-### New Features
+### 1. New Component: `src/game/components/GameTimer.tsx`
 
-#### A. Lead Capture Form
-Add optional contact capture before "Play Again":
-- Name (text input)
-- Phone OR Email (toggle between options)
-- Optional checkbox: "Send me info about Piper"
-- Submit saves to localStorage (or future Supabase integration)
+A dedicated timer component that displays:
+- **Live elapsed time** during filling (counting up in seconds)
+- **Penalty warnings** if player made costly decisions (shown as pending)
+- **Visual urgency** with color changes and pulse animations
 
-#### B. Enhanced "THIS LOAD" Receipt
-Add load statistics in a receipt-style format:
+Key features:
+- Uses `useEffect` interval to update display every 100ms for smooth counting
+- Shows decimal seconds for precision feel (e.g., "12.4s")
+- Displays pending penalties below the timer with warning styling
+- Pulsing animation when penalties are pending
 
-| Metric | Value | Source |
-|--------|-------|--------|
-| Load Time | Xs | Track elapsed time during filling phase |
-| Avg Flow Rate | XXX L/s | Average of flow rate samples |
-| Volume Loaded | X,XXX L | session.currentFill |
-| Target Volume | X,XXX L | config.TARGET_FILL_L |
-| Accuracy | XX.X% | Calculated |
+### 2. Update `src/game/hooks/useGameStateV2.ts`
 
-### State Changes Required
+Add new session field to track live elapsed time:
+- `liveElapsedTime: number` - Updates in real-time during filling phase
+- Modify the filling loop to also update this value
+- This separates "display time" from "final calculated duration"
 
-**`useGameStateV2.ts`** - Track new metrics:
+### 3. Update `src/game/components/GameScreenV2.tsx`
+
+Replace the current simple "TIME SAVED/LOST" indicator in the header with the new prominent timer:
+- Add `GameTimer` component to the center of the header area
+- Keep flow rate indicator on the left
+- Show the timer prominently in the center
+- Remove or move the current timeDelta display
+
+---
+
+## Visual Design
+
+### Timer States
+
+| State | Color | Animation |
+|-------|-------|-----------|
+| Filling actively | Sky blue | Subtle pulse |
+| Penalties pending | Amber | Warning pulse |
+| Spill triggered | Red | Frozen, no animation |
+| Good choices made | Emerald | Calm glow |
+
+### Penalty Warning Display
+
+When player has time penalties pending:
+```text
+┌────────────────────────────────┐
+│     ⏱️ LOAD TIME              │
+│        00:15.2                │
+│  ────────────────────────────  │
+│  ⚠️ PENDING PENALTIES:         │
+│  • +20 min (no Piper sampling) │
+│  • +10 min (weighbridge)       │
+└────────────────────────────────┘
+```
+
+---
+
+## Technical Approach
+
+### GameTimer Component Structure
+
 ```typescript
-interface GameSessionV2 {
-  // ... existing fields
-  
-  // New timing metrics
+interface GameTimerProps {
   fillStartTime: number | null;
-  fillEndTime: number | null;
-  totalFillDuration: number; // seconds
-  flowRateSamples: number[]; // for calculating average
+  isFilling: boolean;
+  usePiperSampling: boolean;
+  useWeighbridge: boolean;
+  nudgeCount: number;
+  spillTriggered: boolean;
+  config: GameConfig;
 }
 ```
 
-**`ResultsScreenV2.tsx`** - New sections:
-1. Receipt-style load data section with all metrics
-2. Lead capture form component
-3. Updated layout to accommodate new elements
+### Timer Logic
 
-### Lead Data Structure
-```typescript
-interface LeadCapture {
-  id: string;
-  name: string;
-  contactType: 'phone' | 'email';
-  contactValue: string;
-  wantsInfo: boolean;
-  gameResults: {
-    accuracy: number;
-    loadTime: number;
-    volumeLoaded: number;
-    totalCost: number;
-  };
-  timestamp: string;
-}
-```
+1. **During filling**: Show elapsed time counting up from `fillStartTime`
+2. **Penalties display**: Always visible if player made costly choices
+3. **On complete**: Timer freezes, penalties are highlighted
+
+### State Changes to `useGameStateV2.ts`
+
+No major changes needed - we already have:
+- `fillStartTime` - When filling started
+- `usePiperSampling` / `useWeighbridge` - Decision flags
+- `nudgeCount` - Number of nudges used
+- `AGITATION_TIME_SAVED` / `WEIGHBRIDGE_TIME_COST` - Config values
+
+The timer component will calculate display values from these existing fields.
 
 ---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/game/components/GameTimer.tsx` | New timer display component with penalties |
 
 ## Files to Modify
 
-### 1. `src/game/components/TankerV2.tsx`
-Complete redesign of the visual:
-- Replace current cab with proper semi-truck design
-- Add fifth wheel connector
-- Redesign tank as separate trailer unit
-- Add "MILK" text
-- Improve wheel styling with dual axles
-- Keep all existing fill mechanics (target line, fill animation, spill detection)
-
-### 2. `src/game/hooks/useGameStateV2.ts`
-Add timing and flow tracking:
-- `fillStartTime` / `fillEndTime` timestamps
-- `flowRateSamples` array to track flow rate over time
-- `totalFillDuration` calculated on load complete
-- Update `startFilling()`, `stopFilling()`, and `completeLoad()` to track these
-
-### 3. `src/game/components/ResultsScreenV2.tsx`
-Major enhancements:
-- Add "LOAD RECEIPT" section with load time, avg flow, volume metrics
-- Add lead capture form (name, phone/email, checkbox)
-- Store leads in localStorage
-- Update layout to accommodate new sections
-- Add form validation
+| File | Changes |
+|------|---------|
+| `src/game/components/GameScreenV2.tsx` | Replace header time display with GameTimer component |
 
 ---
 
-## Technical Details
+## User Experience Flow
 
-### Timing Calculation
-```typescript
-// In startFilling:
-fillStartTime = performance.now();
+1. **Pre-load questions**: Player selects NO to Piper sampling and YES to weighbridge
+2. **Game starts**: Timer appears showing "LOAD TIME: 00:00.0" with warning "⚠️ +30 min penalties pending"
+3. **During filling**: Timer counts up, penalties remain visible as a reminder
+4. **Each nudge**: Small "+2s" animation flashes by the timer
+5. **On complete**: Timer freezes, player sees their actual fill time plus the penalty minutes
+6. **Results screen**: Full breakdown of time costs with € values
 
-// In stopFilling (or during filling):
-// Accumulate total fill duration
-
-// In completeLoad:
-totalFillDuration = accumulatedFillTime; // seconds
-avgFlowRate = flowRateSamples.reduce((a,b) => a+b, 0) / flowRateSamples.length;
-```
-
-### Lead Storage
-```typescript
-// Save to localStorage
-const leads = JSON.parse(localStorage.getItem('piper_leads') || '[]');
-leads.push(newLead);
-localStorage.setItem('piper_leads', JSON.stringify(leads));
-```
-
----
-
-## Visual Mockup: Results Screen Layout
-
-```text
-┌─────────────────────────────────────────────────┐
-│           🎉 Perfect Load! / 💔 Milk Lost       │
-│              Accuracy: 98.5%                    │
-├─────────────────────────────────────────────────┤
-│                 LOAD RECEIPT                    │
-│  ─────────────────────────────────────────────  │
-│  Load Time:        12.4s                        │
-│  Avg Flow Rate:    108 L/s                      │
-│  Volume Loaded:    9,800 L                      │
-│  Target Volume:    9,800 L                      │
-│  ─────────────────────────────────────────────  │
-│  Spill:            0 L              €0.00       │
-│  Empty Capacity:   2%               -€3.60      │
-│  Time Saved:       +30 mins         +€120.00    │
-│  ─────────────────────────────────────────────  │
-│  LOAD COST:                         €3.60       │
-├─────────────────────────────────────────────────┤
-│              ANNUALIZED IMPACT                  │
-│                 €6,570/year                     │
-├─────────────────────────────────────────────────┤
-│           Piper removes this cost.              │
-├─────────────────────────────────────────────────┤
-│  ┌───────────────────────────────────────────┐  │
-│  │  Want to learn more about Piper?          │  │
-│  │  Name: [_____________________]            │  │
-│  │  ( ) Phone  ( ) Email                     │  │
-│  │  [_____________________]                  │  │
-│  │  [ ] Send me info about Piper             │  │
-│  │         [SUBMIT & PLAY AGAIN]             │  │
-│  └───────────────────────────────────────────┘  │
-│                 [SKIP - PLAY AGAIN]             │
-└─────────────────────────────────────────────────┘
-```
-
----
-
-## Implementation Order
-
-1. **Update `useGameStateV2.ts`** - Add timing/flow tracking fields and logic
-2. **Redesign `TankerV2.tsx`** - Complete visual overhaul to match reference
-3. **Enhance `ResultsScreenV2.tsx`** - Add receipt format and lead capture form
-4. **Update `GameScreenV2.tsx`** - Pass new session data as needed
+This creates a visceral "time is money" experience that demonstrates Piper's value proposition.
 

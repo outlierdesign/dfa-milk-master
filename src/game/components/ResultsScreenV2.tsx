@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GAME_CONFIG_V2 } from "../constantsV2";
+import { GameConfig } from "../hooks/useGameStateV2";
 
 interface ResultsScreenV2Props {
   // Fill results
@@ -18,6 +18,9 @@ interface ResultsScreenV2Props {
   
   // Callbacks
   onPlayAgain: () => void;
+  
+  // Config
+  config: GameConfig;
 }
 
 export function ResultsScreenV2({
@@ -30,28 +33,29 @@ export function ResultsScreenV2({
   usedPiperSampling,
   usedWeighbridge,
   onPlayAgain,
+  config,
 }: ResultsScreenV2Props) {
   const [showAnnualized, setShowAnnualized] = useState(false);
 
-  // Calculate costs
-  const spillCost = spillAmount * GAME_CONFIG_V2.MILK_VALUE_PER_L;
+  // Calculate costs using config
+  const spillCost = spillAmount * config.MILK_VALUE_PER_L;
   
-  const emptyCapacityPercent = emptyCapacity / GAME_CONFIG_V2.TANKER_CAPACITY_L;
-  const haulageWasteCost = emptyCapacityPercent * GAME_CONFIG_V2.HAULAGE_COST_PER_LOAD;
+  const emptyCapacityPercent = emptyCapacity / config.TANKER_CAPACITY_L;
+  const haulageWasteCost = emptyCapacityPercent * config.HAULAGE_COST_PER_LOAD;
   
-  const nudgeTimePenalty = nudgeCount * (GAME_CONFIG_V2.NUDGE_TIME_PENALTY_SEC / 60);
+  const nudgeTimePenalty = nudgeCount * (config.NUDGE_TIME_PENALTY_SEC / 60);
   const totalTimeMin = Math.abs(timeDelta) + nudgeTimePenalty;
-  const timeCost = timeDelta < 0 ? totalTimeMin * GAME_CONFIG_V2.TIME_COST_PER_MIN : 0;
-  const timeSaved = timeDelta > 0 ? timeDelta * GAME_CONFIG_V2.TIME_COST_PER_MIN : 0;
+  const timeCost = timeDelta < 0 ? totalTimeMin * config.TIME_COST_PER_MIN : 0;
+  const timeSaved = timeDelta > 0 ? timeDelta * config.TIME_COST_PER_MIN : 0;
 
   const totalLoadCost = spillCost + haulageWasteCost + timeCost;
   
   // Annualized
-  const dailyCost = totalLoadCost * GAME_CONFIG_V2.FARM_LOADS_PER_DAY;
-  const annualCost = dailyCost * GAME_CONFIG_V2.DAYS_PER_YEAR;
+  const dailyCost = totalLoadCost * config.FARM_LOADS_PER_DAY;
+  const annualCost = dailyCost * config.DAYS_PER_YEAR;
 
   // Calculate accuracy
-  const targetFill = GAME_CONFIG_V2.TARGET_FILL_L;
+  const targetFill = config.TARGET_FILL_L;
   const accuracy = Math.max(0, 100 - (Math.abs(currentFill - targetFill) / targetFill) * 100);
 
   // Show annualized after delay for dramatic effect
@@ -157,16 +161,16 @@ export function ResultsScreenV2({
           </h3>
           
           <p className="text-center text-slate-300 mb-3">
-            This farm loads <span className="font-bold text-white">{GAME_CONFIG_V2.FARM_LOADS_PER_DAY} tankers</span> a day
+            This farm loads <span className="font-bold text-white">{config.FARM_LOADS_PER_DAY} tankers</span> a day
           </p>
 
           <div className="space-y-2 text-center">
             <div className="text-slate-400">
-              Daily: €{totalLoadCost.toFixed(2)} × {GAME_CONFIG_V2.FARM_LOADS_PER_DAY} = 
+              Daily: €{totalLoadCost.toFixed(2)} × {config.FARM_LOADS_PER_DAY} = 
               <span className="text-red-400 font-bold ml-2">€{dailyCost.toFixed(2)}</span>
             </div>
             <div className="text-slate-400">
-              Annual: €{dailyCost.toFixed(2)} × {GAME_CONFIG_V2.DAYS_PER_YEAR} = 
+              Annual: €{dailyCost.toFixed(2)} × {config.DAYS_PER_YEAR} = 
             </div>
             <div className="text-4xl font-black text-red-400 mt-2">
               €{annualCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}

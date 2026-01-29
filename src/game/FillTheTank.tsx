@@ -1,13 +1,22 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useGameStateV2 } from "./hooks/useGameStateV2";
 import { useLeaderboard } from "./hooks/useLeaderboard";
+import { useAdminSettings, AdminPanel } from "./components/AdminPanel";
 import { AttractModeV2 } from "./components/AttractModeV2";
 import { PreLoadQuestions } from "./components/PreLoadQuestions";
 import { GameScreenV2 } from "./components/GameScreenV2";
 import { ResultsScreenV2 } from "./components/ResultsScreenV2";
-import { GAME_CONFIG_V2 } from "./constantsV2";
 
 export function FillTheTank() {
+  const {
+    settings,
+    config,
+    isOpen: isAdminOpen,
+    setIsOpen: setAdminOpen,
+    updateSetting,
+    resetToDefaults,
+  } = useAdminSettings();
+
   const {
     gameState,
     session,
@@ -19,7 +28,7 @@ export function FillTheTank() {
     nudgeFill,
     completeLoad,
     resetToAttract,
-  } = useGameStateV2();
+  } = useGameStateV2(config);
 
   const { entries, addEntry } = useLeaderboard();
   const idleTimeoutRef = useRef<number | null>(null);
@@ -38,8 +47,8 @@ export function FillTheTank() {
       if (gameState === "results") {
         resetToAttract();
       }
-    }, GAME_CONFIG_V2.ATTRACT_IDLE_TIME);
-  }, [gameState, resetToAttract]);
+    }, config.ATTRACT_IDLE_TIME);
+  }, [gameState, resetToAttract, config.ATTRACT_IDLE_TIME]);
 
   // Set up idle detection
   useEffect(() => {
@@ -61,14 +70,14 @@ export function FillTheTank() {
   // Handle adding score to leaderboard
   const handleAddToLeaderboard = useCallback(
     (name: string) => {
-      const targetFill = GAME_CONFIG_V2.TARGET_FILL_L;
+      const targetFill = config.TARGET_FILL_L;
       const accuracy = Math.max(
         0,
         100 - (Math.abs(session.currentFill - targetFill) / targetFill) * 100
       );
       addEntry(name, 0, accuracy, 1);
     },
-    [addEntry, session.currentFill]
+    [addEntry, session.currentFill, config.TARGET_FILL_L]
   );
 
   // Handle play again
@@ -108,12 +117,25 @@ export function FillTheTank() {
 
   return (
     <div className="w-full h-screen overflow-hidden bg-slate-900">
+      {/* Admin Panel */}
+      <AdminPanel
+        settings={settings}
+        isOpen={isAdminOpen}
+        onClose={() => setAdminOpen(false)}
+        onUpdate={updateSetting}
+        onReset={resetToDefaults}
+      />
+
       {gameState === "attract" && (
-        <AttractModeV2 onStartGame={startGame} leaderboardEntries={entries} />
+        <AttractModeV2
+          onStartGame={startGame}
+          leaderboardEntries={entries}
+          config={config}
+        />
       )}
 
       {gameState === "questions" && (
-        <PreLoadQuestions onComplete={completeQuestions} />
+        <PreLoadQuestions onComplete={completeQuestions} config={config} />
       )}
 
       {gameState === "playing" && (
@@ -124,6 +146,7 @@ export function FillTheTank() {
           onStopFilling={stopFilling}
           onNudge={nudgeFill}
           onComplete={completeLoad}
+          config={config}
         />
       )}
 
@@ -138,6 +161,7 @@ export function FillTheTank() {
           usedPiperSampling={session.usePiperSampling}
           usedWeighbridge={session.useWeighbridge}
           onPlayAgain={handlePlayAgain}
+          config={config}
         />
       )}
     </div>

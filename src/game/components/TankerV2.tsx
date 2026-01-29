@@ -1,4 +1,4 @@
-import { GAME_CONFIG_V2 } from "../constantsV2";
+import { GameConfig } from "../hooks/useGameStateV2";
 
 interface TankerV2Props {
   currentFill: number;
@@ -6,6 +6,7 @@ interface TankerV2Props {
   isFilling: boolean;
   spillTriggered: boolean;
   spillAmount: number;
+  config: GameConfig;
 }
 
 export function TankerV2({
@@ -14,13 +15,14 @@ export function TankerV2({
   isFilling,
   spillTriggered,
   spillAmount,
+  config,
 }: TankerV2Props) {
   const fillPercentage = Math.min(
-    (currentFill / GAME_CONFIG_V2.TANKER_CAPACITY_L) * 100,
+    (currentFill / config.TANKER_CAPACITY_L) * 100,
     100
   );
   const targetPercentage =
-    (targetFill / GAME_CONFIG_V2.TANKER_CAPACITY_L) * 100;
+    (targetFill / config.TANKER_CAPACITY_L) * 100;
 
   // Determine fill color based on proximity to target
   const difference = Math.abs(currentFill - targetFill);

@@ -1,17 +1,18 @@
 import { useEffect, useState, useRef } from "react";
 import { TankerV2 } from "./TankerV2";
 import { LeaderboardEntry } from "../types";
-import { GAME_CONFIG_V2 } from "../constantsV2";
+import { GameConfig } from "../hooks/useGameStateV2";
 
 interface AttractModeV2Props {
   onStartGame: () => void;
   leaderboardEntries: LeaderboardEntry[];
+  config: GameConfig;
 }
 
-export function AttractModeV2({ onStartGame, leaderboardEntries }: AttractModeV2Props) {
+export function AttractModeV2({ onStartGame, leaderboardEntries, config }: AttractModeV2Props) {
   const [demoFillLevel, setDemoFillLevel] = useState(0);
   const animationRef = useRef<number | null>(null);
-  const demoTarget = GAME_CONFIG_V2.TARGET_FILL_L;
+  const demoTarget = config.TARGET_FILL_L;
 
   // Demo animation
   useEffect(() => {
@@ -27,8 +28,8 @@ export function AttractModeV2({ onStartGame, leaderboardEntries }: AttractModeV2
       if (elapsed < fillDuration) {
         // Filling phase
         const progress = elapsed / fillDuration;
-        const targetProgress = demoTarget / GAME_CONFIG_V2.TANKER_CAPACITY_L;
-        setDemoFillLevel(progress * targetProgress * GAME_CONFIG_V2.TANKER_CAPACITY_L);
+        const targetProgress = demoTarget / config.TANKER_CAPACITY_L;
+        setDemoFillLevel(progress * targetProgress * config.TANKER_CAPACITY_L);
       } else {
         // Pause at target
         setDemoFillLevel(demoTarget);
@@ -44,7 +45,7 @@ export function AttractModeV2({ onStartGame, leaderboardEntries }: AttractModeV2
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [demoTarget]);
+  }, [demoTarget, config.TANKER_CAPACITY_L]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center p-8">
@@ -82,6 +83,7 @@ export function AttractModeV2({ onStartGame, leaderboardEntries }: AttractModeV2
           isFilling={demoFillLevel < demoTarget}
           spillTriggered={false}
           spillAmount={0}
+          config={config}
         />
       </div>
 
@@ -96,6 +98,11 @@ export function AttractModeV2({ onStartGame, leaderboardEntries }: AttractModeV2
         <p className="text-slate-400 mt-4 text-lg">
           Closer for more accurate loads
         </p>
+      </div>
+
+      {/* Admin hint - subtle */}
+      <div className="absolute bottom-4 right-4 text-slate-600 text-xs">
+        Ctrl+Shift+A for settings
       </div>
 
       {/* Leaderboard Preview */}

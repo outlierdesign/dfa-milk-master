@@ -22,12 +22,34 @@ export interface GameSessionV2 {
   nudgeCount: number;
 }
 
-const createInitialSession = (): GameSessionV2 => ({
+// Config type that can be overridden by admin settings
+export interface GameConfig {
+  TANKER_CAPACITY_L: number;
+  FARM_TANK_CAPACITY_L: number;
+  TARGET_FILL_PERCENT: number;
+  MILK_VALUE_PER_L: number;
+  HAULAGE_COST_PER_LOAD: number;
+  TIME_COST_PER_MIN: number;
+  FARM_LOADS_PER_DAY: number;
+  DAYS_PER_YEAR: number;
+  AGITATION_TIME_SAVED: number;
+  WEIGHBRIDGE_TIME_COST: number;
+  FLOW_RATE_MIN_LPS: number;
+  FLOW_RATE_MAX_LPS: number;
+  FLOW_VARIANCE_INTERVAL_MS: number;
+  NUDGE_AMOUNT_L: number;
+  NUDGE_TIME_PENALTY_SEC: number;
+  RESULTS_DISPLAY_TIME: number;
+  ATTRACT_IDLE_TIME: number;
+  TARGET_FILL_L: number;
+}
+
+const createInitialSession = (config: GameConfig): GameSessionV2 => ({
   usePiperSampling: false,
   useWeighbridge: false,
   currentFill: 0,
-  farmTankLevel: GAME_CONFIG_V2.FARM_TANK_CAPACITY_L,
-  currentFlowRate: GAME_CONFIG_V2.FLOW_RATE_MIN_LPS,
+  farmTankLevel: config.FARM_TANK_CAPACITY_L,
+  currentFlowRate: config.FLOW_RATE_MIN_LPS,
   spillAmount: 0,
   spillTriggered: false,
   emptyCapacity: 0,
@@ -36,10 +58,14 @@ const createInitialSession = (): GameSessionV2 => ({
   nudgeCount: 0,
 });
 
-export function useGameStateV2() {
+export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as GameConfig) {
   const [gameState, setGameState] = useState<GameStateV2>("attract");
-  const [session, setSession] = useState<GameSessionV2>(createInitialSession());
+  const [session, setSession] = useState<GameSessionV2>(() => createInitialSession(config));
   const [isFilling, setIsFilling] = useState(false);
+
+  // Store config ref for use in intervals
+  const configRef = useRef(config);
+  configRef.current = config;
 
   // Flow rate variance timer
   const flowRateIntervalRef = useRef<number | null>(null);
@@ -48,8 +74,8 @@ export function useGameStateV2() {
 
   // Random flow rate generator
   const getRandomFlowRate = useCallback(() => {
-    const min = GAME_CONFIG_V2.FLOW_RATE_MIN_LPS;
-    const max = GAME_CONFIG_V2.FLOW_RATE_MAX_LPS;
+    const min = configRef.current.FLOW_RATE_MIN_LPS;
+    const max = configRef.current.FLOW_RATE_MAX_LPS;
     return Math.random() * (max - min) + min;
   }, []);
 
@@ -61,7 +87,7 @@ export function useGameStateV2() {
           ...prev,
           currentFlowRate: getRandomFlowRate(),
         }));
-      }, GAME_CONFIG_V2.FLOW_VARIANCE_INTERVAL_MS);
+      }, config.FLOW_VARIANCE_INTERVAL_MS);
 
       return () => {
         if (flowRateIntervalRef.current) {
@@ -69,7 +95,7 @@ export function useGameStateV2() {
         }
       };
     }
-  }, [gameState, getRandomFlowRate]);
+  }, [gameState, getRandomFlowRate, config.FLOW_VARIANCE_INTERVAL_MS]);
 
   // Filling loop
   useEffect(() => {
@@ -93,9 +119,9 @@ export function useGameStateV2() {
           let spillAmount = 0;
           let spillTriggered = false;
 
-          if (newFill > GAME_CONFIG_V2.TANKER_CAPACITY_L) {
-            spillAmount = newFill - GAME_CONFIG_V2.TANKER_CAPACITY_L;
-            newFill = GAME_CONFIG_V2.TANKER_CAPACITY_L;
+          if (newFill > configRef.current.TANKER_CAPACITY_L) {
+            spillAmount = newFill - configRef.current.TANKER_CAPACITY_L;
+            newFill = configRef.current.TANKER_CAPACITY_L;
             spillTriggered = true;
           }
 
@@ -122,7 +148,7 @@ export function useGameStateV2() {
 
   // Start game from attract mode
   const startGame = useCallback(() => {
-    setSession(createInitialSession());
+    setSession(createInitialSession(configRef.current));
     setGameState("questions");
   }, []);
 
@@ -132,16 +158,16 @@ export function useGameStateV2() {
       // Calculate time delta from decisions
       let timeDelta = 0;
 
-      // Piper sampling: YES = +20 mins saved, NO = -20 mins lost
+      // Piper sampling: YES = +X mins saved, NO = -X mins lost
       if (usePiperSampling) {
-        timeDelta += GAME_CONFIG_V2.AGITATION_TIME_SAVED;
+        timeDelta += configRef.current.AGITATION_TIME_SAVED;
       } else {
-        timeDelta -= GAME_CONFIG_V2.AGITATION_TIME_SAVED;
+        timeDelta -= configRef.current.AGITATION_TIME_SAVED;
       }
 
-      // Weighbridge: YES = -10 mins, NO (Piper) = 0
+      // Weighbridge: YES = -X mins, NO (Piper) = 0
       if (useWeighbridge) {
-        timeDelta -= GAME_CONFIG_V2.WEIGHBRIDGE_TIME_COST;
+        timeDelta -= configRef.current.WEIGHBRIDGE_TIME_COST;
       }
 
       setSession((prev) => ({
@@ -174,16 +200,16 @@ export function useGameStateV2() {
     if (session.spillTriggered) return;
 
     setSession((prev) => {
-      let newFill = prev.currentFill + GAME_CONFIG_V2.NUDGE_AMOUNT_L;
-      let newFarmLevel = prev.farmTankLevel - GAME_CONFIG_V2.NUDGE_AMOUNT_L;
+      let newFill = prev.currentFill + configRef.current.NUDGE_AMOUNT_L;
+      let newFarmLevel = prev.farmTankLevel - configRef.current.NUDGE_AMOUNT_L;
 
       // Check for spill
       let spillAmount = 0;
       let spillTriggered = false;
 
-      if (newFill > GAME_CONFIG_V2.TANKER_CAPACITY_L) {
-        spillAmount = newFill - GAME_CONFIG_V2.TANKER_CAPACITY_L;
-        newFill = GAME_CONFIG_V2.TANKER_CAPACITY_L;
+      if (newFill > configRef.current.TANKER_CAPACITY_L) {
+        spillAmount = newFill - configRef.current.TANKER_CAPACITY_L;
+        newFill = configRef.current.TANKER_CAPACITY_L;
         spillTriggered = true;
       }
 
@@ -206,7 +232,7 @@ export function useGameStateV2() {
 
     // Calculate final values
     setSession((prev) => {
-      const targetFill = GAME_CONFIG_V2.TARGET_FILL_L;
+      const targetFill = configRef.current.TARGET_FILL_L;
       const emptyCapacity = Math.max(0, targetFill - prev.currentFill);
       const milkLeftBehind = prev.farmTankLevel;
 
@@ -222,31 +248,26 @@ export function useGameStateV2() {
 
   // Reset to attract mode
   const resetToAttract = useCallback(() => {
-    setSession(createInitialSession());
+    setSession(createInitialSession(configRef.current));
     setIsFilling(false);
     setGameState("attract");
   }, []);
 
   // Calculated costs (for display)
   const calculateCosts = useCallback(() => {
-    const spillCost = session.spillAmount * GAME_CONFIG_V2.MILK_VALUE_PER_L;
+    const cfg = configRef.current;
+    const spillCost = session.spillAmount * cfg.MILK_VALUE_PER_L;
 
-    const emptyCapacityPercent =
-      session.emptyCapacity / GAME_CONFIG_V2.TANKER_CAPACITY_L;
-    const haulageWasteCost =
-      emptyCapacityPercent * GAME_CONFIG_V2.HAULAGE_COST_PER_LOAD;
+    const emptyCapacityPercent = session.emptyCapacity / cfg.TANKER_CAPACITY_L;
+    const haulageWasteCost = emptyCapacityPercent * cfg.HAULAGE_COST_PER_LOAD;
 
-    const nudgeTimePenalty =
-      session.nudgeCount * (GAME_CONFIG_V2.NUDGE_TIME_PENALTY_SEC / 60);
+    const nudgeTimePenalty = session.nudgeCount * (cfg.NUDGE_TIME_PENALTY_SEC / 60);
     const totalTimeMin = Math.abs(session.timeDelta) + nudgeTimePenalty;
-    const timeCost =
-      session.timeDelta < 0
-        ? totalTimeMin * GAME_CONFIG_V2.TIME_COST_PER_MIN
-        : 0;
+    const timeCost = session.timeDelta < 0 ? totalTimeMin * cfg.TIME_COST_PER_MIN : 0;
 
     const totalLoadCost = spillCost + haulageWasteCost + timeCost;
-    const dailyCost = totalLoadCost * GAME_CONFIG_V2.FARM_LOADS_PER_DAY;
-    const annualCost = dailyCost * GAME_CONFIG_V2.DAYS_PER_YEAR;
+    const dailyCost = totalLoadCost * cfg.FARM_LOADS_PER_DAY;
+    const annualCost = dailyCost * cfg.DAYS_PER_YEAR;
 
     return {
       spillCost,

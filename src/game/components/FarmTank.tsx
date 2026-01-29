@@ -1,15 +1,16 @@
-import { GAME_CONFIG_V2 } from "../constantsV2";
+import { GameConfig } from "../hooks/useGameStateV2";
 
 interface FarmTankProps {
   currentLevel: number;
   initialLevel: number;
   showLeftBehind?: boolean;
+  config: GameConfig;
 }
 
-export function FarmTank({ currentLevel, initialLevel, showLeftBehind = false }: FarmTankProps) {
-  const fillPercentage = (currentLevel / GAME_CONFIG_V2.FARM_TANK_CAPACITY_L) * 100;
+export function FarmTank({ currentLevel, initialLevel, showLeftBehind = false, config }: FarmTankProps) {
+  const fillPercentage = (currentLevel / config.FARM_TANK_CAPACITY_L) * 100;
   const milkLeftBehind = currentLevel;
-  const leftBehindValue = milkLeftBehind * GAME_CONFIG_V2.MILK_VALUE_PER_L;
+  const leftBehindValue = milkLeftBehind * config.MILK_VALUE_PER_L;
 
   return (
     <div className="flex flex-col items-center">

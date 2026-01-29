@@ -6,6 +6,7 @@ import { AttractModeV2 } from "./components/AttractModeV2";
 import { PreLoadQuestions } from "./components/PreLoadQuestions";
 import { GameScreenV2 } from "./components/GameScreenV2";
 import { PenaltyRevealScreen } from "./components/PenaltyRevealScreen";
+import { LeadCaptureScreen } from "./components/LeadCaptureScreen";
 import { ResultsScreenV2 } from "./components/ResultsScreenV2";
 
 export function FillTheTank() {
@@ -28,6 +29,7 @@ export function FillTheTank() {
     stopFilling,
     nudgeFill,
     completeLoad,
+    showLeadCapture,
     showResults,
     resetToAttract,
   } = useGameStateV2(config);
@@ -159,7 +161,25 @@ export function FillTheTank() {
           useWeighbridge={session.useWeighbridge}
           nudgeCount={session.nudgeCount}
           config={config}
-          onComplete={showResults}
+          onComplete={showLeadCapture}
+        />
+      )}
+
+      {gameState === "leadCapture" && (
+        <LeadCaptureScreen
+          gameResults={{
+            accuracy: Math.max(
+              0,
+              100 - (Math.abs(session.currentFill - config.TARGET_FILL_L) / config.TARGET_FILL_L) * 100
+            ),
+            loadTime: session.totalFillDuration,
+            volumeLoaded: session.currentFill,
+            totalCost:
+              session.spillAmount * config.MILK_VALUE_PER_L +
+              (session.emptyCapacity / config.TANKER_CAPACITY_L) * config.HAULAGE_COST_PER_LOAD,
+          }}
+          onSubmit={showResults}
+          onSkip={showResults}
         />
       )}
 

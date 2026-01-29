@@ -5,6 +5,7 @@ import { useAdminSettings, AdminPanel } from "./components/AdminPanel";
 import { AttractModeV2 } from "./components/AttractModeV2";
 import { PreLoadQuestions } from "./components/PreLoadQuestions";
 import { GameScreenV2 } from "./components/GameScreenV2";
+import { PenaltyRevealScreen } from "./components/PenaltyRevealScreen";
 import { ResultsScreenV2 } from "./components/ResultsScreenV2";
 
 export function FillTheTank() {
@@ -27,6 +28,7 @@ export function FillTheTank() {
     stopFilling,
     nudgeFill,
     completeLoad,
+    showResults,
     resetToAttract,
   } = useGameStateV2(config);
 
@@ -147,6 +149,17 @@ export function FillTheTank() {
           onNudge={nudgeFill}
           onComplete={completeLoad}
           config={config}
+        />
+      )}
+
+      {gameState === "penaltyReveal" && (
+        <PenaltyRevealScreen
+          fillDuration={session.totalFillDuration}
+          usePiperSampling={session.usePiperSampling}
+          useWeighbridge={session.useWeighbridge}
+          nudgeCount={session.nudgeCount}
+          config={config}
+          onComplete={showResults}
         />
       )}
 

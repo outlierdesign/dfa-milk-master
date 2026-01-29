@@ -20,6 +20,13 @@ export interface GameSessionV2 {
   // Time tracking
   timeDelta: number; // +/- minutes from decisions
   nudgeCount: number;
+
+  // Timing metrics for receipt
+  fillStartTime: number | null;
+  fillEndTime: number | null;
+  totalFillDuration: number; // seconds
+  flowRateSamples: number[]; // for calculating average
+  averageFlowRate: number;
 }
 
 // Config type that can be overridden by admin settings
@@ -56,6 +63,12 @@ const createInitialSession = (config: GameConfig): GameSessionV2 => ({
   milkLeftBehind: 0,
   timeDelta: 0,
   nudgeCount: 0,
+  // Timing metrics
+  fillStartTime: null,
+  fillEndTime: null,
+  totalFillDuration: 0,
+  flowRateSamples: [],
+  averageFlowRate: 0,
 });
 
 export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as GameConfig) {
@@ -128,12 +141,16 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
           // Don't drain below 0
           newFarmLevel = Math.max(0, newFarmLevel);
 
+          // Sample flow rate for averaging
+          const newFlowRateSamples = [...prev.flowRateSamples, prev.currentFlowRate];
+
           return {
             ...prev,
             currentFill: newFill,
             farmTankLevel: newFarmLevel,
             spillAmount: prev.spillAmount + spillAmount,
             spillTriggered,
+            flowRateSamples: newFlowRateSamples,
           };
         });
       }, 16); // ~60fps
@@ -187,12 +204,22 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
   const startFilling = useCallback(() => {
     if (!session.spillTriggered) {
       setIsFilling(true);
+      // Record fill start time if this is the first fill
+      setSession((prev) => ({
+        ...prev,
+        fillStartTime: prev.fillStartTime ?? performance.now(),
+      }));
     }
   }, [session.spillTriggered]);
 
   // Stop filling
   const stopFilling = useCallback(() => {
     setIsFilling(false);
+    // Record end time for duration calculation
+    setSession((prev) => ({
+      ...prev,
+      fillEndTime: performance.now(),
+    }));
   }, []);
 
   // Nudge (small increment)
@@ -230,16 +257,30 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
   const completeLoad = useCallback(() => {
     setIsFilling(false);
 
-    // Calculate final values
+    // Calculate final values including timing metrics
     setSession((prev) => {
       const targetFill = configRef.current.TARGET_FILL_L;
       const emptyCapacity = Math.max(0, targetFill - prev.currentFill);
       const milkLeftBehind = prev.farmTankLevel;
 
+      // Calculate total fill duration
+      const endTime = prev.fillEndTime ?? performance.now();
+      const startTime = prev.fillStartTime ?? endTime;
+      const totalFillDuration = (endTime - startTime) / 1000; // Convert to seconds
+
+      // Calculate average flow rate
+      const averageFlowRate =
+        prev.flowRateSamples.length > 0
+          ? prev.flowRateSamples.reduce((a, b) => a + b, 0) / prev.flowRateSamples.length
+          : prev.currentFlowRate;
+
       return {
         ...prev,
         emptyCapacity,
         milkLeftBehind,
+        fillEndTime: endTime,
+        totalFillDuration,
+        averageFlowRate,
       };
     });
 

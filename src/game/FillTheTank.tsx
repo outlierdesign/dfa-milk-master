@@ -158,6 +158,8 @@ export function FillTheTank() {
           milkLeftBehind={session.milkLeftBehind}
           timeDelta={session.timeDelta}
           nudgeCount={session.nudgeCount}
+          totalFillDuration={session.totalFillDuration}
+          averageFlowRate={session.averageFlowRate}
           usedPiperSampling={session.usePiperSampling}
           usedWeighbridge={session.useWeighbridge}
           onPlayAgain={handlePlayAgain}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { GameConfig } from "../hooks/useGameStateV2";
 import { LoadReceipt } from "./LoadReceipt";
 import { LeadCaptureForm, LeadData } from "./LeadCaptureForm";
+import piperLogo from "@/assets/piper-logo.png";
 
 interface ResultsScreenV2Props {
   // Fill results
@@ -94,6 +95,11 @@ export function ResultsScreenV2({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-start p-6 overflow-y-auto">
+      {/* Piper Logo */}
+      <div className="mb-4">
+        <img src={piperLogo} alt="Piper" className="h-12 md:h-16" />
+      </div>
+
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">

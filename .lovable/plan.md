@@ -1,145 +1,102 @@
 
-
-# Add Live Timer to Game Screen
+# Dramatic Penalty Reveal Animation
 
 ## Overview
 
-Add a prominent countdown/countup timer to the game screen that visually demonstrates time jeopardy. The timer will:
-1. **Count up during filling** - Shows real-time elapsed loading time
-2. **Display time penalties** - If player selected NO to Piper sampling (agitation required) or YES to weighbridge, show penalty time being added
-3. **Create urgency** - Large, animated timer makes players feel the time pressure that costs money
+Add an intermediate "penalty reveal" phase between clicking "Done" and showing the results screen. This creates a dramatic reveal where each penalty animates onto the screen and adds to the total time, emphasizing the cost impact of player decisions.
 
 ---
 
-## How It Works
+## Animation Flow
 
-### Timer Behavior
-
-| Pre-Load Decision | Timer Effect |
-|-------------------|--------------|
-| Piper Sampling: NO | +20 min penalty added at end |
-| Weighbridge: YES | +10 min penalty added at end |
-| Nudges used | +2 sec each added to timer |
-
-### Visual Flow
+When player clicks "DONE - COMPLETE LOAD":
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                      DURING FILLING                              │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │         ⏱️  LOAD TIME: 00:12.4                              ││
-│  │                                                              ││
-│  │   [If penalties pending, show warning below timer]           ││
-│  │   ⚠️ +20 min agitation | +10 min weighbridge                ││
-│  └─────────────────────────────────────────────────────────────┘│
+│                    STEP 1: Freeze + Darken                       │
+│  Game screen darkens, timer freezes, dramatic pause              │
 └─────────────────────────────────────────────────────────────────┘
-
+                              ↓ (0.5s)
 ┌─────────────────────────────────────────────────────────────────┐
-│                      ON COMPLETE (dramatic reveal)               │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │         LOAD TIME: 00:12.4                                   ││
-│  │                                                              ││
-│  │   [Penalties animate in and add to total]                    ││
-│  │         + 20:00 agitation ⏱️                                 ││
-│  │         + 10:00 weighbridge ⏱️                               ││
-│  │         ─────────────────────                                ││
-│  │         TOTAL: 30:12.4  💸                                   ││
-│  └─────────────────────────────────────────────────────────────┘│
+│                    STEP 2: Show Base Time                        │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              ⏱️ LOAD COMPLETE                              │  │
+│  │                                                            │  │
+│  │              Fill Time: 00:12.4                            │  │
+│  │              ──────────────────                            │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓ (1s)
+┌─────────────────────────────────────────────────────────────────┐
+│                    STEP 3: Penalties Animate In                  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              Fill Time: 00:12.4                            │  │
+│  │                                                            │  │
+│  │     [slide in + shake]   + 20:00  Agitation Required  ⚠️  │  │
+│  │     [slide in + shake]   + 10:00  Weighbridge Stop    ⚠️  │  │
+│  │     [fade in]            + 00:04  Nudges (2× 2s)      ⏱️  │  │
+│  │              ──────────────────                            │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓ (0.5s each penalty)
+┌─────────────────────────────────────────────────────────────────┐
+│                    STEP 4: Total Reveal                          │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              Fill Time: 00:12.4                            │  │
+│  │                                                            │  │
+│  │              + 20:00  Agitation Required                   │  │
+│  │              + 10:00  Weighbridge Stop                     │  │
+│  │              + 00:04  Nudges                               │  │
+│  │              ══════════════════                            │  │
+│  │                                                            │  │
+│  │     [pulse + scale]    TOTAL: 30:16.4  💸 €120.13         │  │
+│  │                                                            │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓ (2s)
+┌─────────────────────────────────────────────────────────────────┐
+│                    STEP 5: Transition to Results                 │
+│  Screen fades to results screen with full breakdown              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Implementation Details
+## Implementation Approach
 
-### 1. New Component: `src/game/components/GameTimer.tsx`
+### New Game State
 
-A dedicated timer component that displays:
-- **Live elapsed time** during filling (counting up in seconds)
-- **Penalty warnings** if player made costly decisions (shown as pending)
-- **Visual urgency** with color changes and pulse animations
+Add a new intermediate state to handle the penalty reveal phase:
 
-Key features:
-- Uses `useEffect` interval to update display every 100ms for smooth counting
-- Shows decimal seconds for precision feel (e.g., "12.4s")
-- Displays pending penalties below the timer with warning styling
-- Pulsing animation when penalties are pending
+**Current states:** `attract` → `questions` → `playing` → `results`
 
-### 2. Update `src/game/hooks/useGameStateV2.ts`
+**New flow:** `attract` → `questions` → `playing` → `penaltyReveal` → `results`
 
-Add new session field to track live elapsed time:
-- `liveElapsedTime: number` - Updates in real-time during filling phase
-- Modify the filling loop to also update this value
-- This separates "display time" from "final calculated duration"
+### New Component: `PenaltyRevealScreen.tsx`
 
-### 3. Update `src/game/components/GameScreenV2.tsx`
+A dedicated overlay/screen that:
+1. Shows darkened game background
+2. Displays animated penalty reveal sequence
+3. Auto-transitions to results after animation completes
 
-Replace the current simple "TIME SAVED/LOST" indicator in the header with the new prominent timer:
-- Add `GameTimer` component to the center of the header area
-- Keep flow rate indicator on the left
-- Show the timer prominently in the center
-- Remove or move the current timeDelta display
+**Component Structure:**
+- Uses `useState` to track animation phase (0-4)
+- Uses `useEffect` with `setTimeout` to sequence animations
+- Each penalty slides in from the right with a slight shake
+- Total calculates live as penalties add
+- Final total pulses with cost conversion
 
----
+### Animation Timeline
 
-## Visual Design
+| Phase | Duration | Action |
+|-------|----------|--------|
+| 0 | 0ms | Initial - show "LOAD COMPLETE" title |
+| 1 | 500ms | Show base fill time |
+| 2 | 500ms × N | Each penalty slides in (staggered) |
+| 3 | 1000ms | Total reveals with pulse animation |
+| 4 | 1500ms | Hold, then fade to results |
 
-### Timer States
-
-| State | Color | Animation |
-|-------|-------|-----------|
-| Filling actively | Sky blue | Subtle pulse |
-| Penalties pending | Amber | Warning pulse |
-| Spill triggered | Red | Frozen, no animation |
-| Good choices made | Emerald | Calm glow |
-
-### Penalty Warning Display
-
-When player has time penalties pending:
-```text
-┌────────────────────────────────┐
-│     ⏱️ LOAD TIME              │
-│        00:15.2                │
-│  ────────────────────────────  │
-│  ⚠️ PENDING PENALTIES:         │
-│  • +20 min (no Piper sampling) │
-│  • +10 min (weighbridge)       │
-└────────────────────────────────┘
-```
-
----
-
-## Technical Approach
-
-### GameTimer Component Structure
-
-```typescript
-interface GameTimerProps {
-  fillStartTime: number | null;
-  isFilling: boolean;
-  usePiperSampling: boolean;
-  useWeighbridge: boolean;
-  nudgeCount: number;
-  spillTriggered: boolean;
-  config: GameConfig;
-}
-```
-
-### Timer Logic
-
-1. **During filling**: Show elapsed time counting up from `fillStartTime`
-2. **Penalties display**: Always visible if player made costly choices
-3. **On complete**: Timer freezes, penalties are highlighted
-
-### State Changes to `useGameStateV2.ts`
-
-No major changes needed - we already have:
-- `fillStartTime` - When filling started
-- `usePiperSampling` / `useWeighbridge` - Decision flags
-- `nudgeCount` - Number of nudges used
-- `AGITATION_TIME_SAVED` / `WEIGHBRIDGE_TIME_COST` - Config values
-
-The timer component will calculate display values from these existing fields.
+Total animation time: ~4-5 seconds depending on number of penalties
 
 ---
 
@@ -147,24 +104,61 @@ The timer component will calculate display values from these existing fields.
 
 | File | Purpose |
 |------|---------|
-| `src/game/components/GameTimer.tsx` | New timer display component with penalties |
+| `src/game/components/PenaltyRevealScreen.tsx` | New animated penalty reveal component |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/game/components/GameScreenV2.tsx` | Replace header time display with GameTimer component |
+| `src/game/constantsV2.ts` | Add `"penaltyReveal"` to `GameStateV2` type |
+| `src/game/hooks/useGameStateV2.ts` | Change `completeLoad` to go to `penaltyReveal` state first, add `showResults()` action to transition to results |
+| `src/game/FillTheTank.tsx` | Add rendering for `penaltyReveal` state with new component |
 
 ---
 
-## User Experience Flow
+## Technical Details
 
-1. **Pre-load questions**: Player selects NO to Piper sampling and YES to weighbridge
-2. **Game starts**: Timer appears showing "LOAD TIME: 00:00.0" with warning "⚠️ +30 min penalties pending"
-3. **During filling**: Timer counts up, penalties remain visible as a reminder
-4. **Each nudge**: Small "+2s" animation flashes by the timer
-5. **On complete**: Timer freezes, player sees their actual fill time plus the penalty minutes
-6. **Results screen**: Full breakdown of time costs with € values
+### State Updates to `useGameStateV2.ts`
 
-This creates a visceral "time is money" experience that demonstrates Piper's value proposition.
+```typescript
+// Change completeLoad to go to penalty reveal first
+const completeLoad = useCallback(() => {
+  setIsFilling(false);
+  // ... calculate final values ...
+  setGameState("penaltyReveal"); // Changed from "results"
+}, []);
 
+// New action to transition from penalty reveal to results
+const showResults = useCallback(() => {
+  setGameState("results");
+}, []);
+```
+
+### PenaltyRevealScreen Props
+
+```typescript
+interface PenaltyRevealScreenProps {
+  fillDuration: number;           // seconds of actual filling
+  usePiperSampling: boolean;
+  useWeighbridge: boolean;
+  nudgeCount: number;
+  config: GameConfig;
+  onComplete: () => void;         // Called when animation finishes
+}
+```
+
+### Animation CSS Classes
+
+Will use Tailwind's built-in animations plus custom keyframes:
+- `animate-slide-in-right` - Penalty rows slide from right
+- `animate-pulse` - Total time emphasis
+- `animate-scale-in` - Final total reveal
+- Custom shake animation for penalty impact feel
+
+### Penalty Row Animation
+
+Each penalty appears with:
+1. Slide in from right (300ms)
+2. Brief shake/impact effect (200ms)
+3. Running total updates
+4. Sound effect hook ready (for future)

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { GameConfig } from "../hooks/useGameStateV2";
 import { LoadReceipt } from "./LoadReceipt";
-import { LeadCaptureForm, LeadData } from "./LeadCaptureForm";
+import { LeadCaptureDialog } from "./LeadCaptureDialog";
 import piperLogo from "@/assets/piper-logo.png";
 
 interface ResultsScreenV2Props {
@@ -45,7 +45,7 @@ export function ResultsScreenV2({
   config,
 }: ResultsScreenV2Props) {
   const [showAnnualized, setShowAnnualized] = useState(false);
-  const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [showLeadDialog, setShowLeadDialog] = useState(false);
 
   // Calculate costs using config
   const spillCost = spillAmount * config.MILK_VALUE_PER_L;
@@ -78,12 +78,14 @@ export function ResultsScreenV2({
   const hasEmptyCapacity = emptyCapacity > 100; // More than 100L empty
   const isPerfect = !hasSpill && !hasEmptyCapacity && accuracy >= 98;
 
-  const handleLeadSubmit = (data: LeadData) => {
-    setLeadSubmitted(true);
-    // Delay play again to show confirmation
-    setTimeout(() => {
-      onPlayAgain();
-    }, 500);
+  const handleLeadSubmit = () => {
+    setShowLeadDialog(false);
+    onPlayAgain();
+  };
+
+  const handleLeadSkip = () => {
+    setShowLeadDialog(false);
+    onPlayAgain();
   };
 
   const gameResults = {
@@ -171,20 +173,24 @@ export function ResultsScreenV2({
         </div>
       </div>
 
-      {/* Lead Capture Form */}
-      <div className="mt-6 w-full max-w-lg">
-        {leadSubmitted ? (
-          <div className="text-center text-emerald-400 text-xl font-bold animate-fade-in">
-            ✓ Thanks! Starting new game...
-          </div>
-        ) : (
-          <LeadCaptureForm
-            onSubmit={handleLeadSubmit}
-            onSkip={onPlayAgain}
-            gameResults={gameResults}
-          />
-        )}
+      {/* Play Again Button */}
+      <div className="mt-8 w-full max-w-lg flex flex-col gap-4">
+        <button
+          onClick={() => setShowLeadDialog(true)}
+          className="w-full bg-emerald-500 hover:bg-emerald-400 text-white text-xl font-bold px-8 py-5 rounded-xl shadow-xl transition-all hover:scale-105"
+        >
+          PLAY AGAIN
+        </button>
       </div>
+
+      {/* Lead Capture Dialog */}
+      <LeadCaptureDialog
+        open={showLeadDialog}
+        onOpenChange={setShowLeadDialog}
+        onSubmit={handleLeadSubmit}
+        onSkip={handleLeadSkip}
+        gameResults={gameResults}
+      />
     </div>
   );
 }

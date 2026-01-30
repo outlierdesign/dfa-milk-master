@@ -3,7 +3,9 @@ import { FarmTank } from "./FarmTank";
 import { TankerV2 } from "./TankerV2";
 import { ConnectionPipe } from "./ConnectionPipe";
 import { SpillAnimation } from "./SpillAnimation";
+import { SpillMessagePopup } from "./SpillMessagePopup";
 import { GameTimer } from "./GameTimer";
+import { LoadMeter } from "./LoadMeter";
 import { GameSessionV2, GameConfig } from "../hooks/useGameStateV2";
 import piperLogo from "@/assets/piper-logo.png";
 
@@ -14,6 +16,7 @@ interface GameScreenV2Props {
   onStopFilling: () => void;
   onNudge: () => void;
   onComplete: () => void;
+  onAcknowledgeSpill: () => void;
   config: GameConfig;
 }
 
@@ -24,6 +27,7 @@ export function GameScreenV2({
   onStopFilling,
   onNudge,
   onComplete,
+  onAcknowledgeSpill,
   config,
 }: GameScreenV2Props) {
   // Prevent context menu on long press (mobile)
@@ -35,8 +39,24 @@ export function GameScreenV2({
 
   const targetFill = config.TARGET_FILL_L;
 
+  // Determine button state and text
+  const getButtonState = () => {
+    if (session.spillAcknowledged) {
+      return { disabled: true, text: "STOPPED", style: "bg-slate-700 text-slate-500 cursor-not-allowed" };
+    }
+    if (session.spillWarningActive && isFilling) {
+      return { disabled: false, text: "⚠️ OVERFILLING!", style: "bg-red-600 text-white animate-pulse scale-95" };
+    }
+    if (isFilling) {
+      return { disabled: false, text: "FILLING...", style: "bg-sky-500 text-white scale-95" };
+    }
+    return { disabled: false, text: "HOLD TO FILL", style: "bg-sky-600 hover:bg-sky-500 text-white active:scale-95" };
+  };
+
+  const buttonState = getButtonState();
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col p-4 select-none relative overflow-hidden">
+    <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col p-2 md:p-4 select-none relative overflow-hidden">
       {/* Spill Animation Overlay */}
       <SpillAnimation
         spillAmount={session.spillAmount}
@@ -44,89 +64,121 @@ export function GameScreenV2({
         config={config}
       />
 
-      {/* Header with flow rate, logo, and timer */}
-      <div className="flex justify-between items-start mb-4">
-        {/* Flow Rate - Left */}
-        <div className="bg-slate-800/80 px-4 py-2 rounded-lg border border-slate-600">
-          <div className="text-xs text-slate-400">FLOW RATE</div>
-          <div className="text-lg font-mono font-bold text-amber-400">
+      {/* Spill Message Popup */}
+      {session.showSpillPopup && (
+        <SpillMessagePopup
+          spillAmount={session.spillAmount}
+          config={config}
+          onContinue={onAcknowledgeSpill}
+        />
+      )}
+
+      {/* Overfill Warning Overlay (while still filling) */}
+      {session.spillWarningActive && isFilling && !session.spillTriggered && (
+        <div className="fixed inset-0 bg-red-500/20 z-30 pointer-events-none animate-pulse">
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 bg-red-900/90 px-6 py-3 rounded-xl border-2 border-red-500">
+            <div className="text-xl md:text-2xl font-black text-red-300 text-center animate-pulse">
+              ⚠️ OVERFILLING ⚠️
+            </div>
+            <div className="text-sm text-red-200 text-center mt-1">
+              Release to stop! ({Math.round(session.spillAmount)}L spilled)
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Centralized Header */}
+      <div className="text-center mb-2 md:mb-3">
+        <img src={piperLogo} alt="Piper" className="h-8 md:h-10 object-contain mx-auto" />
+        <div className="text-lg md:text-xl font-bold text-white">FILL THE TANK</div>
+        <div className="text-[10px] md:text-xs text-slate-400">One shot. Real consequences.</div>
+      </div>
+
+      {/* Stats Row - Flow Rate + Timer */}
+      <div className="flex justify-center gap-2 md:gap-4 mb-2 md:mb-3">
+        {/* Flow Rate */}
+        <div className="bg-slate-800/80 px-2 md:px-4 py-1 md:py-2 rounded-lg border border-slate-600">
+          <div className="text-[10px] md:text-xs text-slate-400">FLOW RATE</div>
+          <div className="text-sm md:text-lg font-mono font-bold text-amber-400">
             {Math.round(session.currentFlowRate)} L/s
           </div>
         </div>
 
-        {/* Logo + Timer - Center */}
-        <div className="flex flex-col items-center gap-2">
-          <img src={piperLogo} alt="Piper" className="h-10 md:h-12 object-contain" />
-          <GameTimer
-            fillStartTime={session.fillStartTime}
-            isFilling={isFilling}
-            usePiperSampling={session.usePiperSampling}
-            useWeighbridge={session.useWeighbridge}
-            nudgeCount={session.nudgeCount}
-            spillTriggered={session.spillTriggered}
-            config={config}
-          />
-        </div>
-
-        {/* Title - Right */}
-        <div className="text-right">
-          <div className="text-xl font-bold text-white">FILL THE TANK</div>
-          <div className="text-xs text-slate-400">One shot. Real consequences.</div>
-        </div>
+        {/* Timer - Compact on mobile */}
+        <GameTimer
+          fillStartTime={session.fillStartTime}
+          isFilling={isFilling}
+          usePiperSampling={session.usePiperSampling}
+          useWeighbridge={session.useWeighbridge}
+          nudgeCount={session.nudgeCount}
+          spillTriggered={session.spillTriggered}
+          config={config}
+        />
       </div>
 
-      {/* Prominent Stats Bar - Above Graphics */}
-      <div className="flex justify-center gap-6 mb-4">
+      {/* Prominent Stats Bar */}
+      <div className="flex justify-center gap-2 md:gap-4 mb-2 md:mb-3 flex-wrap">
         {/* Remaining (Farm Tank) */}
-        <div className="bg-slate-800/90 px-6 py-3 rounded-xl border-2 border-sky-600">
-          <div className="text-xs text-sky-300 mb-1 text-center font-bold">
+        <div className="bg-slate-800/90 px-3 md:px-5 py-2 md:py-3 rounded-xl border-2 border-sky-600">
+          <div className="text-[10px] md:text-xs text-sky-300 mb-0.5 text-center font-bold">
             REMAINING
           </div>
-          <div className="text-2xl md:text-3xl font-mono font-bold text-sky-400">
+          <div className="text-lg md:text-2xl font-mono font-bold text-sky-400">
             {Math.round(session.farmTankLevel).toLocaleString()}L
           </div>
         </div>
 
         {/* Target */}
-        <div className="bg-slate-800/90 px-6 py-3 rounded-xl border-2 border-emerald-600">
-          <div className="text-xs text-emerald-300 mb-1 text-center font-bold">
+        <div className="bg-slate-800/90 px-3 md:px-5 py-2 md:py-3 rounded-xl border-2 border-emerald-600">
+          <div className="text-[10px] md:text-xs text-emerald-300 mb-0.5 text-center font-bold">
             TARGET
           </div>
-          <div className="text-2xl md:text-3xl font-mono font-bold text-emerald-400">
+          <div className="text-lg md:text-2xl font-mono font-bold text-emerald-400">
             {Math.round(targetFill).toLocaleString()}L
           </div>
         </div>
 
         {/* Current Fill */}
-        <div className={`bg-slate-800/90 px-6 py-3 rounded-xl border-2 ${
-          session.spillTriggered ? "border-red-600" : "border-slate-600"
+        <div className={`bg-slate-800/90 px-3 md:px-5 py-2 md:py-3 rounded-xl border-2 ${
+          session.spillTriggered || session.spillWarningActive ? "border-red-600" : "border-slate-600"
         }`}>
-          <div className={`text-xs mb-1 text-center font-bold ${
-            session.spillTriggered ? "text-red-300" : "text-slate-400"
+          <div className={`text-[10px] md:text-xs mb-0.5 text-center font-bold ${
+            session.spillTriggered || session.spillWarningActive ? "text-red-300" : "text-slate-400"
           }`}>
             CURRENT
           </div>
-          <div className={`text-2xl md:text-3xl font-mono font-bold ${
-            session.spillTriggered ? "text-red-400" : "text-white"
+          <div className={`text-lg md:text-2xl font-mono font-bold ${
+            session.spillTriggered || session.spillWarningActive ? "text-red-400" : "text-white"
           }`}>
             {Math.round(session.currentFill).toLocaleString()}L
           </div>
         </div>
 
         {/* Spilled (only shown when triggered) */}
-        {session.spillTriggered && session.spillAmount > 0 && (
-          <div className="bg-red-900/90 px-6 py-3 rounded-xl border-2 border-red-600 animate-pulse">
-            <div className="text-xs text-red-300 mb-1 text-center font-bold">SPILLED</div>
-            <div className="text-2xl md:text-3xl font-mono font-bold text-red-400">
+        {(session.spillTriggered || session.spillWarningActive) && session.spillAmount > 0 && (
+          <div className="bg-red-900/90 px-3 md:px-5 py-2 md:py-3 rounded-xl border-2 border-red-600 animate-pulse">
+            <div className="text-[10px] md:text-xs text-red-300 mb-0.5 text-center font-bold">SPILLED</div>
+            <div className="text-lg md:text-2xl font-mono font-bold text-red-400">
               {Math.round(session.spillAmount).toLocaleString()}L
             </div>
           </div>
         )}
       </div>
 
-      {/* Main Game Area */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="flex items-center gap-2 scale-75 md:scale-90 lg:scale-100 origin-center">
+      {/* Load Meter */}
+      <div className="mb-2 md:mb-3 max-w-2xl mx-auto w-full">
+        <LoadMeter
+          currentFill={session.currentFill}
+          targetFill={targetFill}
+          config={config}
+          spillTriggered={session.spillTriggered}
+          spillWarningActive={session.spillWarningActive}
+        />
+      </div>
+
+      {/* Main Game Area - Responsive scaling */}
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        <div className="flex items-center gap-1 md:gap-2 scale-50 md:scale-75 lg:scale-90 origin-center">
           {/* Farm Tank (source) */}
           <FarmTank
             currentLevel={session.farmTankLevel}
@@ -135,30 +187,31 @@ export function GameScreenV2({
           />
 
           {/* Connection Pipe */}
-          <ConnectionPipe isFlowing={isFilling && !session.spillTriggered} />
+          <ConnectionPipe isFlowing={isFilling && !session.spillAcknowledged} />
 
           {/* Tanker (destination) */}
           <TankerV2
             currentFill={session.currentFill}
             targetFill={targetFill}
             isFilling={isFilling}
-            spillTriggered={session.spillTriggered}
+            spillTriggered={session.spillTriggered || session.spillWarningActive}
             spillAmount={session.spillAmount}
             config={config}
           />
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex flex-col items-center gap-4 pb-4">
+      {/* Controls - Compact for mobile */}
+      <div className="flex flex-col items-center gap-2 md:gap-3 pb-2 md:pb-4">
         {/* Nudge count warning */}
         {session.nudgeCount > 0 && (
-          <div className="text-amber-400 text-sm animate-pulse">
+          <div className="text-amber-400 text-xs md:text-sm animate-pulse">
             ⏱️ {session.nudgeCount} nudge{session.nudgeCount > 1 ? "s" : ""} = +{session.nudgeCount * config.NUDGE_TIME_PENALTY_SEC}s delay
           </div>
         )}
 
-        <div className="flex gap-4">
+        {/* Button row */}
+        <div className="flex gap-2 md:gap-4">
           {/* Main Fill Button */}
           <button
             onMouseDown={onStartFilling}
@@ -172,37 +225,31 @@ export function GameScreenV2({
               e.preventDefault();
               onStopFilling();
             }}
-            disabled={session.spillTriggered}
-            className={`px-12 py-8 rounded-2xl font-bold text-2xl transition-all shadow-2xl ${
-              session.spillTriggered
-                ? "bg-slate-700 text-slate-500 cursor-not-allowed"
-                : isFilling
-                  ? "bg-sky-500 text-white scale-95"
-                  : "bg-sky-600 hover:bg-sky-500 text-white active:scale-95"
-            }`}
+            disabled={buttonState.disabled}
+            className={`px-6 md:px-12 py-4 md:py-6 rounded-xl md:rounded-2xl font-bold text-lg md:text-2xl transition-all shadow-2xl ${buttonState.style}`}
           >
-            {session.spillTriggered ? "STOPPED" : isFilling ? "FILLING..." : "HOLD TO FILL"}
+            {buttonState.text}
           </button>
 
           {/* Nudge Button */}
           <button
             onClick={onNudge}
-            disabled={session.spillTriggered}
-            className={`px-6 py-8 rounded-2xl font-bold text-lg transition-all shadow-xl ${
-              session.spillTriggered
+            disabled={session.spillAcknowledged}
+            className={`px-4 md:px-6 py-4 md:py-6 rounded-xl md:rounded-2xl font-bold text-base md:text-lg transition-all shadow-xl ${
+              session.spillAcknowledged
                 ? "bg-slate-700 text-slate-500 cursor-not-allowed"
                 : "bg-amber-600 hover:bg-amber-500 text-white active:scale-95"
             }`}
           >
             +{config.NUDGE_AMOUNT_L}L
-            <span className="block text-xs opacity-75">NUDGE</span>
+            <span className="block text-[10px] md:text-xs opacity-75">NUDGE</span>
           </button>
         </div>
 
         {/* Done Button */}
         <button
           onClick={onComplete}
-          className="px-10 py-4 rounded-xl font-bold text-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-xl hover:scale-105"
+          className="px-6 md:px-10 py-3 md:py-4 rounded-xl font-bold text-base md:text-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-xl hover:scale-105"
         >
           DONE — COMPLETE LOAD
         </button>

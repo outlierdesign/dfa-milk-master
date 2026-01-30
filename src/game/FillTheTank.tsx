@@ -32,6 +32,7 @@ export function FillTheTank() {
     showLeadCapture,
     showResults,
     resetToAttract,
+    acknowledgeSpill,
   } = useGameStateV2(config);
 
   const { entries, addEntry } = useLeaderboard();
@@ -150,6 +151,7 @@ export function FillTheTank() {
           onStopFilling={stopFilling}
           onNudge={nudgeFill}
           onComplete={completeLoad}
+          onAcknowledgeSpill={acknowledgeSpill}
           config={config}
         />
       )}

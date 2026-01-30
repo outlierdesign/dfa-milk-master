@@ -95,29 +95,29 @@ export function GameTimer({
 
   return (
     <div
-      className={`px-6 py-3 rounded-xl border-2 transition-all duration-300 ${stateStyles[timerState]}`}
+      className={`px-3 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl border-2 transition-all duration-300 ${stateStyles[timerState]}`}
     >
       {/* Timer Label */}
-      <div className="text-xs text-slate-400 text-center mb-1 flex items-center justify-center gap-1">
+      <div className="text-[10px] md:text-xs text-slate-400 text-center mb-0.5 md:mb-1 flex items-center justify-center gap-1">
         <span>⏱️</span>
         <span>LOAD TIME</span>
         {speedMultiplier > 1 && (
-          <span className="ml-1 px-1.5 py-0.5 bg-emerald-600/50 text-emerald-300 rounded text-[10px] font-bold">
-            {speedMultiplier}× SPEED
+          <span className="ml-1 px-1 py-0.5 bg-emerald-600/50 text-emerald-300 rounded text-[8px] md:text-[10px] font-bold">
+            {speedMultiplier}×
           </span>
         )}
       </div>
 
       {/* Main Timer Display */}
       <div
-        className={`text-3xl font-mono font-bold text-center ${timeStyles[timerState]}`}
+        className={`text-xl md:text-3xl font-mono font-bold text-center ${timeStyles[timerState]}`}
       >
         {formatTime(elapsedTime)}
       </div>
 
-      {/* Pending Penalties Warning */}
+      {/* Pending Penalties Warning - Hidden on mobile for space */}
       {hasPenalties && (
-        <div className="mt-2 pt-2 border-t border-slate-600/50">
+        <div className="hidden md:block mt-2 pt-2 border-t border-slate-600/50">
           <div className="text-xs text-amber-400 flex items-center justify-center gap-1 mb-1">
             <span>⚠️</span>
             <span>PENDING PENALTIES:</span>
@@ -139,10 +139,10 @@ export function GameTimer({
         </div>
       )}
 
-      {/* Nudge Penalty (shown separately as it accumulates) */}
+      {/* Nudge Penalty - Compact on mobile */}
       {nudgeCount > 0 && (
-        <div className="mt-1 text-xs text-amber-400/70 text-center">
-          +{(nudgePenalty * 60).toFixed(0)}s from {nudgeCount} nudge{nudgeCount > 1 ? "s" : ""}
+        <div className="mt-0.5 md:mt-1 text-[10px] md:text-xs text-amber-400/70 text-center">
+          +{(nudgePenalty * 60).toFixed(0)}s ({nudgeCount} nudge{nudgeCount > 1 ? "s" : ""})
         </div>
       )}
     </div>

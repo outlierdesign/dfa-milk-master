@@ -1,159 +1,187 @@
 
-# Game UI Improvements: Stats Prominence + Speed Control
+
+# Game Improvements: Overfill Experience, Load Meter, and Mobile Layout
 
 ## Overview
 
-Two main improvements to enhance the trade show demo experience:
+Three improvements to enhance gameplay and mobile experience:
 
-1. **Reorganize stats display** - Move Target, Current, and Remaining values above the tank graphics, directly below the timer, making them the focal point
-2. **Add game speed multiplier** - Speed up the filling animation while showing the "real-world equivalent" time the load would actually take
-
----
-
-## 1. Stats Display Reorganization
-
-### Current Layout
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│  FLOW RATE     │      PIPER LOGO + TIMER        │  FILL THE TANK │
-│   178 L/s      │      00:19.4 + Penalties       │                │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│     [FARM TANK]  ═══════  [MILK TANKER]                          │
-│      REMAINING            TARGET    CURRENT                       │
-│       9,058L             10,000L    2,942L                        │
-│                                                                   │
-├──────────────────────────────────────────────────────────────────┤
-│                     [CONTROLS]                                    │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### Proposed Layout
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│  FLOW RATE     │      PIPER LOGO + TIMER        │  FILL THE TANK │
-│   178 L/s      │      00:19.4 + Penalties       │                │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│     REMAINING           TARGET           CURRENT                  │
-│      9,058L            10,000L           2,942L                   │
-│                                                                   │
-│     [FARM TANK]  ═══════  [MILK TANKER]                          │
-│                                                                   │
-├──────────────────────────────────────────────────────────────────┤
-│                     [CONTROLS]                                    │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-**Key Changes:**
-- Create a new prominent stats bar between header and graphics
-- Large, bold numbers for TARGET, CURRENT, REMAINING
-- Color-coded boxes: emerald for target, white/red for current (changes on spill), sky-blue for remaining
-- Remove redundant displays from TankerV2 and FarmTank components
+1. **Overfill continuation with comedic popup** - Let players keep filling during overfill (with warning), show a funny "farmer text message" popup when they stop
+2. **Add load meter + centralize UI** - Visual progress bar showing fill level relative to target
+3. **Mobile-optimized layout** - Reduce dead space and fit everything without scrolling
 
 ---
 
-## 2. Game Speed Multiplier
+## 1. Overfill Behavior Change
 
-### Concept
-Instead of a 60+ second real-time fill at 80-140 L/s, introduce a speed multiplier (e.g., 5x, 10x) that:
-- Speeds up the visual fill animation and game clock
-- Displays the "simulated real-world time" that the load would actually represent
+### Current Behavior
+When overfill occurs, the game immediately:
+- Sets `spillTriggered = true`
+- Disables the fill button
+- Shows "MILK ON THE GROUND" overlay
 
-### UI Addition
-A toggle/selector in the admin panel:
+### New Behavior
+1. **Warning phase**: When `currentFill > TANKER_CAPACITY_L`:
+   - Show flashing warning overlay (but don't block controls)
+   - Button shows "WARNING: OVERFILL!" but still works
+   - Spill amount accumulates while they continue holding
+   
+2. **On release**: Show a comedic popup dialog styled as a "text message to the farmer":
+   > **From: Driver**  
+   > "Boss, we've had an overfill. I'll need to clean this up... does this farm have a cat we could borrow? "
+   > 
+   > **Spill Cost: €XX.XX**
+   
+3. **Popup has "Continue" button** that dismisses it (spill is now locked in)
 
-| Setting | Effect |
-|---------|--------|
-| 1x (Real-time) | ~60-90 seconds to fill 10,000L |
-| 5x | ~12-18 seconds to fill (shows "represents 60-90s") |
-| 10x | ~6-9 seconds to fill (shows "represents 60-90s") |
-
-### How It Works
-- The fill interval applies the multiplier to how much liquid is added per tick
-- The displayed "load time" shows the **simulated** time (as if real-world)
-- The actual game clock runs faster, but financial calculations use the simulated time
-
-### Timer Display Update
-```text
-┌────────────────────────────┐
-│     ⏱️ LOAD TIME           │
-│     00:45.2                │   <- Simulated real-world time
-│     (5x speed)             │   <- Small indicator
-│                            │
-│  ⚠️ PENDING PENALTIES:     │
-│  Weighbridge stop +10:00   │
-└────────────────────────────┘
-```
-
----
-
-## Files to Modify
-
+### Files to Modify
 | File | Changes |
 |------|---------|
-| `src/game/components/GameScreenV2.tsx` | Add prominent stats bar between header and graphics |
-| `src/game/components/TankerV2.tsx` | Remove the bottom "TARGET/CURRENT" display (moved up) |
-| `src/game/components/FarmTank.tsx` | Remove the "REMAINING" display (moved up) |
-| `src/game/components/AdminPanel.tsx` | Add "Game Speed" multiplier setting (1x, 2x, 5x, 10x) |
-| `src/game/hooks/useGameStateV2.ts` | Apply speed multiplier to fill rate, track simulated time separately |
-| `src/game/constantsV2.ts` | Add GAME_SPEED_MULTIPLIER default constant |
-| `src/game/components/GameTimer.tsx` | Display simulated time with speed indicator |
+| `useGameStateV2.ts` | Add `spillWarningActive` state, don't immediately block filling when overfill starts |
+| `GameScreenV2.tsx` | Show warning indicator during overfill, add popup component for when filling stops |
+| `SpillAnimation.tsx` | Adjust to show warning state vs. final spill state |
+
+---
+
+## 2. Load Meter + UI Centralization
+
+### Adding Load Meter
+A horizontal progress bar between the stats and graphics showing:
+- Current fill as a percentage of target
+- Color-coded: sky blue → amber (close) → emerald (target) → red (overfill)
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ [=============================>          ] 72% of target   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Centralizing the Layout
+Current layout has scattered elements. New layout:
+
+```text
+┌────────────────────────────────────────────────────────────────┐
+│                      PIPER LOGO                                │
+│             FILL THE TANK - One shot. Real consequences.       │
+├────────────────────────────────────────────────────────────────┤
+│   FLOW RATE      LOAD TIME        REMAINING  TARGET  CURRENT  │
+│    125 L/s       00:32.5           9,000L   10,000L   3,000L  │
+├────────────────────────────────────────────────────────────────┤
+│   [========================================>    ] 72%         │
+├────────────────────────────────────────────────────────────────┤
+│           [FARM TANK] ═══════ [MILK TANKER]                   │
+├────────────────────────────────────────────────────────────────┤
+│                [HOLD TO FILL] [+25L] [DONE]                   │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### Files to Modify
+| File | Changes |
+|------|---------|
+| `GameScreenV2.tsx` | Add LoadMeter component, restructure header into single centered block |
+
+---
+
+## 3. Mobile Responsiveness
+
+### Current Issues (from screenshots)
+- Header elements spread across full width with lots of whitespace
+- Tank graphics use fixed scaling that causes overflow
+- Buttons have large padding that wastes space
+- Stats boxes have excessive margins
+
+### Mobile Optimizations
+1. **Compact header**: Stack logo and title vertically, reduce padding
+2. **Smaller stats boxes**: Reduce font sizes and padding on mobile
+3. **Shrink tank graphics further**: Use `scale-50` or smaller on mobile
+4. **Compact buttons**: Smaller padding, stacked vertically on narrow screens
+5. **Remove/reduce gaps**: Tighten `gap` and `mb` values on mobile
+6. **Use `min-h-screen h-full` instead of fixed heights**
+
+### Mobile Layout (viewport ~375px wide)
+```text
+┌──────────────────────────┐
+│      [PIPER LOGO]        │
+│      FILL THE TANK       │
+│      ⏱️ 00:32.5          │
+├──────────────────────────┤
+│ REMAINING TARGET CURRENT │
+│  9,000L  10,000L  3,000L │
+├──────────────────────────┤
+│ [═══════════════>  ] 72% │
+├──────────────────────────┤
+│  [TANK]═══[TANKER]       │
+│     (compact scale)      │
+├──────────────────────────┤
+│ [  HOLD TO FILL  ][+25L] │
+│ [   DONE - COMPLETE    ] │
+└──────────────────────────┘
+```
+
+### Files to Modify
+| File | Changes |
+|------|---------|
+| `GameScreenV2.tsx` | Add responsive classes, restructure for mobile-first |
+| `FarmTank.tsx` | Reduce dimensions on mobile |
+| `TankerV2.tsx` | Reduce dimensions on mobile |
+| `GameTimer.tsx` | Compact mode for mobile |
 
 ---
 
 ## Technical Details
 
-### New Admin Setting
+### New State in useGameStateV2
 
 ```typescript
-// In AdminSettings interface
-gameSpeedMultiplier: number; // 1, 2, 5, or 10
-
-// Default
-gameSpeedMultiplier: 1
+interface GameSessionV2 {
+  // ... existing
+  spillWarningActive: boolean; // True when overfill started but button still held
+  spillAcknowledged: boolean;  // True after popup dismissed
+}
 ```
 
-### Speed Multiplier Logic
-
-In `useGameStateV2.ts`, the fill loop currently does:
-```typescript
-const fillDelta = prev.currentFlowRate * deltaTime;
-```
-
-With speed multiplier:
-```typescript
-const fillDelta = prev.currentFlowRate * deltaTime * config.GAME_SPEED_MULTIPLIER;
-```
-
-The timer tracks "simulated time":
-```typescript
-// Actual wall-clock time passed
-const actualTime = (now - startTime) / 1000;
-
-// Simulated real-world time (what would have passed at 1x)
-const simulatedTime = actualTime * config.GAME_SPEED_MULTIPLIER;
-```
-
-### Session State Addition
+### Overfill Logic Change
 
 ```typescript
-// In GameSessionV2
-simulatedFillDuration: number; // The "real-world equivalent" time
+// Instead of immediately setting spillTriggered = true and stopping:
+if (newFill > config.TANKER_CAPACITY_L) {
+  spillWarningActive = true;
+  spillAmount = newFill - config.TANKER_CAPACITY_L;
+  // BUT keep filling allowed
+}
+
+// On stopFilling:
+if (spillWarningActive && spillAmount > 0) {
+  spillTriggered = true; // Now lock it in
+  showSpillPopup = true;  // Show the farmer text message
+}
 ```
 
-### GameConfig Addition
+### Spill Popup Component
 
-```typescript
-// In GameConfig interface
-GAME_SPEED_MULTIPLIER: number;
-```
+New component: `SpillMessagePopup.tsx`
+- Styled as a phone text message
+- Shows the comedic message
+- Displays spill cost
+- "Continue" button to dismiss
+
+### Load Meter Component
+
+New component: `LoadMeter.tsx`
+- Horizontal progress bar
+- Props: `currentFill`, `targetFill`, `tankerCapacity`, `spillTriggered`
+- Color transitions based on proximity to target
 
 ---
 
 ## Summary
 
-1. **Stats bar**: A horizontal row of TARGET, CURRENT, and REMAINING displayed prominently between the timer and the tank graphics
-2. **Speed multiplier**: Admin-configurable option (1x/2x/5x/10x) that speeds up gameplay while preserving the simulation of real-world time costs
+| Feature | Key Change |
+|---------|------------|
+| Overfill popup | Allow continued filling, show farmer text message on release |
+| Load meter | Horizontal progress bar showing fill % relative to target |
+| Centralized UI | Reorganize header, stack elements more logically |
+| Mobile layout | Reduce padding/gaps, shrink graphics, stack buttons vertically |
 
-This makes the key numbers impossible to miss during demos while keeping game sessions short enough for trade show engagement (~10-20 seconds at 5x speed).
+These changes make the game more engaging (comedic overfill experience), more informative (load meter), and fully playable on mobile without scrolling.
+

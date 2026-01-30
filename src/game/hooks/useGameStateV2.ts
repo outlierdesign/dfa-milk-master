@@ -14,6 +14,9 @@ export interface GameSessionV2 {
   // Outcomes
   spillAmount: number;
   spillTriggered: boolean;
+  spillWarningActive: boolean; // Warning shown but can still fill
+  spillAcknowledged: boolean; // Popup dismissed
+  showSpillPopup: boolean; // Show the farmer text message popup
   emptyCapacity: number;
   milkLeftBehind: number;
 
@@ -60,6 +63,9 @@ const createInitialSession = (config: GameConfig): GameSessionV2 => ({
   currentFlowRate: config.FLOW_RATE_MIN_LPS,
   spillAmount: 0,
   spillTriggered: false,
+  spillWarningActive: false,
+  spillAcknowledged: false,
+  showSpillPopup: false,
   emptyCapacity: 0,
   milkLeftBehind: 0,
   timeDelta: 0,
@@ -111,9 +117,9 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     }
   }, [gameState, getRandomFlowRate, config.FLOW_VARIANCE_INTERVAL_MS]);
 
-  // Filling loop
+  // Filling loop - allows continued filling during overfill warning
   useEffect(() => {
-    if (isFilling && !session.spillTriggered) {
+    if (isFilling && !session.spillAcknowledged) {
       lastTickRef.current = performance.now();
 
       fillIntervalRef.current = window.setInterval(() => {
@@ -122,8 +128,8 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
         lastTickRef.current = now;
 
         setSession((prev) => {
-          // Don't fill if already spilled
-          if (prev.spillTriggered) return prev;
+          // Don't fill if spill already acknowledged (popup dismissed)
+          if (prev.spillAcknowledged) return prev;
 
           // Apply speed multiplier to fill rate (not to displayed time)
           const speedMultiplier = configRef.current.GAME_SPEED_MULTIPLIER || 1;
@@ -131,14 +137,16 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
           let newFill = prev.currentFill + fillDelta;
           let newFarmLevel = prev.farmTankLevel - fillDelta;
 
-          // Check for spill
-          let spillAmount = 0;
-          let spillTriggered = false;
+          // Check for overfill - track spill amount but don't stop filling
+          let spillAmount = prev.spillAmount;
+          let spillWarningActive = prev.spillWarningActive;
 
           if (newFill > configRef.current.TANKER_CAPACITY_L) {
+            // Calculate how much we're over capacity
             spillAmount = newFill - configRef.current.TANKER_CAPACITY_L;
+            spillWarningActive = true;
+            // Cap the visual fill at capacity, but track the overflow
             newFill = configRef.current.TANKER_CAPACITY_L;
-            spillTriggered = true;
           }
 
           // Don't drain below 0
@@ -151,8 +159,8 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
             ...prev,
             currentFill: newFill,
             farmTankLevel: newFarmLevel,
-            spillAmount: prev.spillAmount + spillAmount,
-            spillTriggered,
+            spillAmount,
+            spillWarningActive,
             flowRateSamples: newFlowRateSamples,
           };
         });
@@ -164,7 +172,7 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
         }
       };
     }
-  }, [isFilling, session.spillTriggered]);
+  }, [isFilling, session.spillAcknowledged]);
 
   // Start game from attract mode
   const startGame = useCallback(() => {
@@ -205,7 +213,8 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
 
   // Start filling
   const startFilling = useCallback(() => {
-    if (!session.spillTriggered) {
+    // Allow filling if spill not yet acknowledged
+    if (!session.spillAcknowledged) {
       setIsFilling(true);
       // Record fill start time if this is the first fill
       setSession((prev) => ({
@@ -213,34 +222,60 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
         fillStartTime: prev.fillStartTime ?? performance.now(),
       }));
     }
-  }, [session.spillTriggered]);
+  }, [session.spillAcknowledged]);
 
-  // Stop filling
+  // Stop filling - show popup if there was spillage
   const stopFilling = useCallback(() => {
     setIsFilling(false);
     // Record end time for duration calculation
+    setSession((prev) => {
+      // If there was spillage and we haven't shown popup yet, show it now
+      if (prev.spillWarningActive && prev.spillAmount > 0 && !prev.spillAcknowledged) {
+        return {
+          ...prev,
+          fillEndTime: performance.now(),
+          spillTriggered: true,
+          showSpillPopup: true,
+        };
+      }
+      return {
+        ...prev,
+        fillEndTime: performance.now(),
+      };
+    });
+  }, []);
+
+  // Acknowledge spill (dismiss popup)
+  const acknowledgeSpill = useCallback(() => {
     setSession((prev) => ({
       ...prev,
-      fillEndTime: performance.now(),
+      showSpillPopup: false,
+      spillAcknowledged: true,
     }));
   }, []);
 
   // Nudge (small increment)
   const nudgeFill = useCallback(() => {
-    if (session.spillTriggered) return;
+    // Block nudge if spill already acknowledged
+    if (session.spillAcknowledged) return;
 
     setSession((prev) => {
       let newFill = prev.currentFill + configRef.current.NUDGE_AMOUNT_L;
       let newFarmLevel = prev.farmTankLevel - configRef.current.NUDGE_AMOUNT_L;
 
-      // Check for spill
-      let spillAmount = 0;
-      let spillTriggered = false;
+      // Check for overfill
+      let spillAmount = prev.spillAmount;
+      let spillWarningActive = prev.spillWarningActive;
+      let spillTriggered = prev.spillTriggered;
+      let showSpillPopup = prev.showSpillPopup;
 
       if (newFill > configRef.current.TANKER_CAPACITY_L) {
         spillAmount = newFill - configRef.current.TANKER_CAPACITY_L;
         newFill = configRef.current.TANKER_CAPACITY_L;
+        spillWarningActive = true;
+        // For nudge, immediately trigger the popup since it's a discrete action
         spillTriggered = true;
+        showSpillPopup = true;
       }
 
       newFarmLevel = Math.max(0, newFarmLevel);
@@ -249,12 +284,14 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
         ...prev,
         currentFill: newFill,
         farmTankLevel: newFarmLevel,
-        spillAmount: prev.spillAmount + spillAmount,
+        spillAmount,
+        spillWarningActive,
         spillTriggered,
+        showSpillPopup,
         nudgeCount: prev.nudgeCount + 1,
       };
     });
-  }, [session.spillTriggered]);
+  }, [session.spillAcknowledged]);
 
   // Complete load and go to penalty reveal
   const completeLoad = useCallback(() => {
@@ -349,5 +386,6 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     showLeadCapture,
     showResults,
     resetToAttract,
+    acknowledgeSpill,
   };
 }

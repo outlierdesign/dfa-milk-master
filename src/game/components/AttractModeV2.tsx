@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { TankerV2 } from "./TankerV2";
 import { LeaderboardEntry } from "../types";
 import { GameConfig } from "../hooks/useGameStateV2";
+import { useSoundEffects } from "../hooks/useSoundEffects";
+import { SoundToggle } from "./SoundToggle";
 import piperLogo from "@/assets/piper-logo.png";
 
 interface AttractModeV2Props {
@@ -14,6 +16,12 @@ export function AttractModeV2({ onStartGame, leaderboardEntries, config }: Attra
   const [demoFillLevel, setDemoFillLevel] = useState(0);
   const animationRef = useRef<number | null>(null);
   const demoTarget = config.TARGET_FILL_L;
+  const { playGameStart, isMuted, toggleMute } = useSoundEffects();
+
+  const handleStartGame = () => {
+    playGameStart();
+    onStartGame();
+  };
 
   // Demo animation
   useEffect(() => {
@@ -96,7 +104,7 @@ export function AttractModeV2({ onStartGame, leaderboardEntries, config }: Attra
       {/* Call to Action */}
       <div className="text-center mb-6">
         <button
-          onClick={onStartGame}
+          onClick={handleStartGame}
           className="bg-emerald-500 hover:bg-emerald-400 text-white text-3xl font-bold px-12 py-6 rounded-2xl shadow-2xl animate-pulse transition-all hover:scale-105"
         >
           TAP TO PLAY
@@ -105,6 +113,13 @@ export function AttractModeV2({ onStartGame, leaderboardEntries, config }: Attra
           Closer for more accurate loads
         </p>
       </div>
+
+      {/* Sound Toggle */}
+      <SoundToggle
+        isMuted={isMuted}
+        onToggle={toggleMute}
+        className="absolute top-4 right-4"
+      />
 
       {/* Admin hint - subtle */}
       <div className="absolute bottom-4 right-4 text-slate-600 text-xs">

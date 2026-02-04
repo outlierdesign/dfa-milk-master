@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { GameConfig } from "../hooks/useGameStateV2";
+import { useSoundEffects } from "../hooks/useSoundEffects";
 
 interface SpillMessagePopupProps {
   spillAmount: number;
@@ -11,7 +13,13 @@ export function SpillMessagePopup({
   config,
   onContinue,
 }: SpillMessagePopupProps) {
+  const { playSpill } = useSoundEffects();
   const spillCost = spillAmount * config.MILK_VALUE_PER_L;
+
+  // Play spill sound on mount
+  useEffect(() => {
+    playSpill();
+  }, [playSpill]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm">

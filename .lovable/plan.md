@@ -1,97 +1,84 @@
 
-# Enable Scrolling on Results Screen
+# Fix Load Time to Reflect Simulated Real-World Time
 
-## Problem Identified
+## Problem
 
-The Results screen content gets cut off on mobile, iPad, and desktop because:
+When the game speed is set to 2x, 5x, or 10x via the admin panel, the "Load Time" shown on the results screen displays the actual wall-clock time (e.g., 11.0s) rather than the simulated real-world time it would represent (e.g., 55.0s at 5x speed).
 
-1. **Parent container blocks scrolling**: `FillTheTank.tsx` uses `overflow-hidden` on line 124, which prevents any child component from scrolling - even though `ResultsScreenV2` already has `overflow-y-auto` applied.
+The `GameTimer` component already correctly applies the speed multiplier for real-time display during gameplay, but the final duration stored and displayed on results screens is not adjusted.
 
-2. **Content exceeds viewport**: The Results screen contains:
-   - Piper logo
-   - Header with accuracy
-   - Load Receipt (detailed breakdown)
-   - Annualized Impact section (appears after 1.5s)
-   - Piper Message
-   - Play Again button
+## Current Flow
 
-   On smaller screens, this content exceeds the viewport height.
+```
+Wall-clock time: 11 seconds
+Speed multiplier: 5x
+Fill rate: Applied at 5x speed (fills tank faster)
 
----
+Current Result Display: "Load Time: 11.0s" (incorrect)
+Expected Result Display: "Load Time: 55.0s" (represents real-world equivalent)
+```
 
 ## Solution
 
-Change the parent container's overflow behavior based on the current game state:
-
-- **During gameplay**: Keep `overflow-hidden` to prevent accidental scrolling while filling
-- **On results screen**: Use `overflow-auto` to allow scrolling through all results
-
-This is a simple, targeted fix that preserves the current behavior for other screens.
+Apply the speed multiplier when calculating `totalFillDuration` in the `completeLoad` function, so the stored value represents simulated real-world time.
 
 ---
 
 ## Technical Changes
 
-### File: `src/game/FillTheTank.tsx`
+### File: `src/game/hooks/useGameStateV2.ts`
 
-**Current code (line 124):**
-```tsx
-<div className="w-full h-screen overflow-hidden bg-slate-900">
-```
+Update the `completeLoad` function to apply the speed multiplier to the duration calculation:
 
-**Updated code:**
-```tsx
-<div className={`w-full h-screen bg-slate-900 ${
-  gameState === "results" ? "overflow-auto" : "overflow-hidden"
-}`}>
-```
-
-This dynamically switches overflow based on game state:
-- `attract`, `questions`, `playing`, `penaltyReveal`, `leadCapture` → `overflow-hidden`
-- `results` → `overflow-auto`
-
----
-
-## Additional Enhancement (Optional)
-
-To ensure smooth scrolling and proper mobile behavior, we can also add:
-
-### File: `src/game/components/ResultsScreenV2.tsx`
-
-Add bottom padding to ensure the "Play Again" button isn't cut off at the very bottom:
-
-**Current (line 167-174):**
-```tsx
-<div className="mt-8 w-full max-w-lg">
+**Current (lines 307-310):**
+```typescript
+// Calculate total fill duration
+const endTime = prev.fillEndTime ?? performance.now();
+const startTime = prev.fillStartTime ?? endTime;
+const totalFillDuration = (endTime - startTime) / 1000; // Convert to seconds
 ```
 
 **Updated:**
-```tsx
-<div className="mt-8 mb-8 w-full max-w-lg">
+```typescript
+// Calculate total fill duration - apply speed multiplier to represent real-world time
+const endTime = prev.fillEndTime ?? performance.now();
+const startTime = prev.fillStartTime ?? endTime;
+const speedMultiplier = configRef.current.GAME_SPEED_MULTIPLIER || 1;
+const totalFillDuration = ((endTime - startTime) / 1000) * speedMultiplier; // Simulated real-world seconds
 ```
-
-And add `pb-8` (padding-bottom) to the main container to give breathing room at the bottom for mobile browsers that have address bars.
 
 ---
 
-## Summary of Changes
+### File: `src/game/components/PenaltyRevealScreen.tsx`
+
+This screen also shows the fill duration and should already work correctly once the source data is fixed. However, it also has a hardcoded `€` currency symbol on line 215 that should use the config currency for consistency.
+
+**Current (line 215):**
+```typescript
+€{totalCost.toFixed(2)} time cost
+```
+
+**Updated:**
+```typescript
+{config.CURRENCY}{totalCost.toFixed(2)} time cost
+```
+
+---
+
+## Summary
 
 | File | Change |
 |------|--------|
-| `src/game/FillTheTank.tsx` | Conditional overflow class based on `gameState` |
-| `src/game/components/ResultsScreenV2.tsx` | Add bottom margin/padding for better scroll UX |
+| `src/game/hooks/useGameStateV2.ts` | Apply `GAME_SPEED_MULTIPLIER` to `totalFillDuration` calculation |
+| `src/game/components/PenaltyRevealScreen.tsx` | Fix hardcoded `€` to use `config.CURRENCY` |
 
 ---
 
-## Alternative Considered
+## Result
 
-I also considered making the Results screen content more compact (smaller fonts, less padding) to fit without scrolling. However, this would:
-- Reduce readability
-- Make the important cost/impact information harder to see
-- Conflict with the trade show use case where visibility is important
+After this change:
+- At **1x speed**: 11 seconds wall-clock = 11 seconds displayed
+- At **5x speed**: 11 seconds wall-clock = 55 seconds displayed (simulated real-world time)
+- At **10x speed**: 11 seconds wall-clock = 110 seconds displayed
 
-**Scrolling is the better solution** because:
-- Preserves the current visual design
-- Works consistently across all device sizes
-- Allows users to see all information
-- Is a standard mobile pattern users expect
+This ensures the displayed time represents the actual duration a real tanker load would take, making the cost calculations and time penalties meaningful for trade show demonstrations.

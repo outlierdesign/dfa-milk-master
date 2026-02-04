@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { GameConfig } from "../hooks/useGameStateV2";
 import { LoadReceipt } from "./LoadReceipt";
+import { useSoundEffects } from "../hooks/useSoundEffects";
 import piperLogo from "@/assets/piper-logo.png";
 
 interface ResultsScreenV2Props {
@@ -44,6 +45,7 @@ export function ResultsScreenV2({
   config,
 }: ResultsScreenV2Props) {
   const [showAnnualized, setShowAnnualized] = useState(false);
+  const { playSuccess, playFailure } = useSoundEffects();
 
   // Calculate costs using config
   const spillCost = spillAmount * config.MILK_VALUE_PER_L;
@@ -66,15 +68,22 @@ export function ResultsScreenV2({
   const targetFill = config.TARGET_FILL_L;
   const accuracy = Math.max(0, 100 - (Math.abs(currentFill - targetFill) / targetFill) * 100);
 
-  // Show annualized after delay for dramatic effect
-  useEffect(() => {
-    const timer = setTimeout(() => setShowAnnualized(true), 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
   const hasSpill = spillAmount > 0;
   const hasEmptyCapacity = emptyCapacity > 100; // More than 100L empty
   const isPerfect = !hasSpill && !hasEmptyCapacity && accuracy >= 98;
+
+  // Play result sound and show annualized after delay
+  useEffect(() => {
+    // Play appropriate sound based on result
+    if (isPerfect || accuracy >= 95) {
+      playSuccess();
+    } else {
+      playFailure();
+    }
+    
+    const timer = setTimeout(() => setShowAnnualized(true), 1500);
+    return () => clearTimeout(timer);
+  }, [isPerfect, accuracy, playSuccess, playFailure]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-start p-6 overflow-y-auto">

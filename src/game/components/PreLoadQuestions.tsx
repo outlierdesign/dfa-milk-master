@@ -1,13 +1,14 @@
+import { useState } from "react";
 import { GameConfig } from "../hooks/useGameStateV2";
+import { useSoundEffects } from "../hooks/useSoundEffects";
 
 interface PreLoadQuestionsProps {
   onComplete: (usePiperSampling: boolean, useWeighbridge: boolean) => void;
   config: GameConfig;
 }
 
-import { useState } from "react";
-
 export function PreLoadQuestions({ onComplete, config }: PreLoadQuestionsProps) {
+  const { playButtonClick } = useSoundEffects();
   const [usePiperSampling, setUsePiperSampling] = useState<boolean | null>(null);
   const [useWeighbridge, setUseWeighbridge] = useState<boolean | null>(null);
 
@@ -32,7 +33,10 @@ export function PreLoadQuestions({ onComplete, config }: PreLoadQuestionsProps) 
         </p>
         <div className="flex gap-4 justify-center">
           <button
-            onClick={() => setUsePiperSampling(true)}
+            onClick={() => {
+              playButtonClick();
+              setUsePiperSampling(true);
+            }}
             className={`px-10 py-6 rounded-xl font-bold text-2xl transition-all ${
               usePiperSampling === true
                 ? "bg-emerald-500 text-white scale-105 shadow-lg shadow-emerald-500/30"
@@ -45,7 +49,10 @@ export function PreLoadQuestions({ onComplete, config }: PreLoadQuestionsProps) 
             </span>
           </button>
           <button
-            onClick={() => setUsePiperSampling(false)}
+            onClick={() => {
+              playButtonClick();
+              setUsePiperSampling(false);
+            }}
             className={`px-10 py-6 rounded-xl font-bold text-2xl transition-all ${
               usePiperSampling === false
                 ? "bg-red-500 text-white scale-105 shadow-lg shadow-red-500/30"
@@ -67,7 +74,10 @@ export function PreLoadQuestions({ onComplete, config }: PreLoadQuestionsProps) 
         </p>
         <div className="flex gap-4 justify-center">
           <button
-            onClick={() => setUseWeighbridge(true)}
+            onClick={() => {
+              playButtonClick();
+              setUseWeighbridge(true);
+            }}
             className={`px-10 py-6 rounded-xl font-bold text-2xl transition-all ${
               useWeighbridge === true
                 ? "bg-red-500 text-white scale-105 shadow-lg shadow-red-500/30"
@@ -80,7 +90,10 @@ export function PreLoadQuestions({ onComplete, config }: PreLoadQuestionsProps) 
             </span>
           </button>
           <button
-            onClick={() => setUseWeighbridge(false)}
+            onClick={() => {
+              playButtonClick();
+              setUseWeighbridge(false);
+            }}
             className={`px-10 py-6 rounded-xl font-bold text-2xl transition-all ${
               useWeighbridge === false
                 ? "bg-emerald-500 text-white scale-105 shadow-lg shadow-emerald-500/30"

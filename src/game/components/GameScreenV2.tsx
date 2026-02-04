@@ -6,7 +6,9 @@ import { SpillAnimation } from "./SpillAnimation";
 import { SpillMessagePopup } from "./SpillMessagePopup";
 import { GameTimer } from "./GameTimer";
 import { LoadMeter } from "./LoadMeter";
+import { SoundToggle } from "./SoundToggle";
 import { GameSessionV2, GameConfig } from "../hooks/useGameStateV2";
+import { useSoundEffects } from "../hooks/useSoundEffects";
 import piperLogo from "@/assets/piper-logo.png";
 
 interface GameScreenV2Props {
@@ -30,6 +32,17 @@ export function GameScreenV2({
   onAcknowledgeSpill,
   config,
 }: GameScreenV2Props) {
+  const {
+    startFillLoop,
+    stopFillLoop,
+    startAlarmLoop,
+    stopAlarmLoop,
+    playNudge,
+    playComplete,
+    isMuted,
+    toggleMute,
+  } = useSoundEffects();
+
   // Prevent context menu on long press (mobile)
   useEffect(() => {
     const handleContextMenu = (e: Event) => e.preventDefault();
@@ -37,7 +50,37 @@ export function GameScreenV2({
     return () => document.removeEventListener("contextmenu", handleContextMenu);
   }, []);
 
+  // Sound effects for filling
+  useEffect(() => {
+    if (isFilling && !session.spillAcknowledged) {
+      startFillLoop();
+    } else {
+      stopFillLoop();
+    }
+  }, [isFilling, session.spillAcknowledged, startFillLoop, stopFillLoop]);
+
+  // Sound effects for overfill alarm
+  useEffect(() => {
+    if (session.spillWarningActive && isFilling) {
+      startAlarmLoop();
+    } else {
+      stopAlarmLoop();
+    }
+  }, [session.spillWarningActive, isFilling, startAlarmLoop, stopAlarmLoop]);
+
   const targetFill = config.TARGET_FILL_L;
+
+  // Handle nudge with sound
+  const handleNudge = () => {
+    playNudge();
+    onNudge();
+  };
+
+  // Handle complete with sound
+  const handleComplete = () => {
+    playComplete();
+    onComplete();
+  };
 
   // Determine button state and text
   const getButtonState = () => {
@@ -233,7 +276,7 @@ export function GameScreenV2({
 
           {/* Nudge Button */}
           <button
-            onClick={onNudge}
+            onClick={handleNudge}
             disabled={session.spillAcknowledged}
             className={`px-4 md:px-6 py-4 md:py-6 rounded-xl md:rounded-2xl font-bold text-base md:text-lg transition-all shadow-xl ${
               session.spillAcknowledged
@@ -248,12 +291,19 @@ export function GameScreenV2({
 
         {/* Done Button */}
         <button
-          onClick={onComplete}
+          onClick={handleComplete}
           className="px-6 md:px-10 py-3 md:py-4 rounded-xl font-bold text-base md:text-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-xl hover:scale-105"
         >
           DONE — COMPLETE LOAD
         </button>
       </div>
+
+      {/* Sound Toggle */}
+      <SoundToggle
+        isMuted={isMuted}
+        onToggle={toggleMute}
+        className="absolute top-2 right-2 md:top-4 md:right-4 z-10"
+      />
     </div>
   );
 }

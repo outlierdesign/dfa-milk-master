@@ -304,10 +304,11 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
       const emptyCapacity = Math.max(0, targetFill - prev.currentFill);
       const milkLeftBehind = prev.farmTankLevel;
 
-      // Calculate total fill duration
+      // Calculate total fill duration - apply speed multiplier to represent real-world time
       const endTime = prev.fillEndTime ?? performance.now();
       const startTime = prev.fillStartTime ?? endTime;
-      const totalFillDuration = (endTime - startTime) / 1000; // Convert to seconds
+      const speedMultiplier = configRef.current.GAME_SPEED_MULTIPLIER || 1;
+      const totalFillDuration = ((endTime - startTime) / 1000) * speedMultiplier; // Simulated real-world seconds
 
       // Calculate average flow rate
       const averageFlowRate =

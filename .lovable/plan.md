@@ -1,187 +1,213 @@
 
 
-# Game Improvements: Overfill Experience, Load Meter, and Mobile Layout
+# Adding Sound Effects to Fill The Tank
 
 ## Overview
 
-Three improvements to enhance gameplay and mobile experience:
-
-1. **Overfill continuation with comedic popup** - Let players keep filling during overfill (with warning), show a funny "farmer text message" popup when they stop
-2. **Add load meter + centralize UI** - Visual progress bar showing fill level relative to target
-3. **Mobile-optimized layout** - Reduce dead space and fit everything without scrolling
+Add immersive audio feedback throughout the game using **pre-recorded sound files** for optimal performance at trade shows. This approach ensures instant playback with no latency or API dependencies.
 
 ---
 
-## 1. Overfill Behavior Change
+## Sound Effect Inventory
 
-### Current Behavior
-When overfill occurs, the game immediately:
-- Sets `spillTriggered = true`
-- Disables the fill button
-- Shows "MILK ON THE GROUND" overlay
-
-### New Behavior
-1. **Warning phase**: When `currentFill > TANKER_CAPACITY_L`:
-   - Show flashing warning overlay (but don't block controls)
-   - Button shows "WARNING: OVERFILL!" but still works
-   - Spill amount accumulates while they continue holding
-   
-2. **On release**: Show a comedic popup dialog styled as a "text message to the farmer":
-   > **From: Driver**  
-   > "Boss, we've had an overfill. I'll need to clean this up... does this farm have a cat we could borrow? "
-   > 
-   > **Spill Cost: €XX.XX**
-   
-3. **Popup has "Continue" button** that dismisses it (spill is now locked in)
-
-### Files to Modify
-| File | Changes |
-|------|---------|
-| `useGameStateV2.ts` | Add `spillWarningActive` state, don't immediately block filling when overfill starts |
-| `GameScreenV2.tsx` | Show warning indicator during overfill, add popup component for when filling stops |
-| `SpillAnimation.tsx` | Adjust to show warning state vs. final spill state |
+| Sound | Trigger Point | Description |
+|-------|--------------|-------------|
+| **Game Start** | `AttractModeV2` → "TAP TO PLAY" clicked | Upbeat chime/whoosh |
+| **Button Select** | `PreLoadQuestions` → option selected | Soft click/tap |
+| **Fill Start** | `GameScreenV2` → `onStartFilling` | Pump motor starts, liquid flow begins |
+| **Filling Loop** | While `isFilling === true` | Continuous liquid flow (looping) |
+| **Fill Stop** | `GameScreenV2` → `onStopFilling` | Pump stops, flow fades |
+| **Nudge** | `GameScreenV2` → `onNudge` clicked | Quick splash/squirt |
+| **Overfill Warning** | `spillWarningActive === true` | Alarm beeping (looping) |
+| **Spill Trigger** | `SpillMessagePopup` appears | Splash + cat meow |
+| **Load Complete** | "DONE - COMPLETE LOAD" clicked | Truck horn or valve closing |
+| **Success** | `ResultsScreenV2` with high accuracy | Celebratory fanfare |
+| **Poor Result** | `ResultsScreenV2` with low accuracy | Subdued tone |
 
 ---
 
-## 2. Load Meter + UI Centralization
+## Implementation Approach
 
-### Adding Load Meter
-A horizontal progress bar between the stats and graphics showing:
-- Current fill as a percentage of target
-- Color-coded: sky blue → amber (close) → emerald (target) → red (overfill)
+### 1. Create Sound Manager Hook
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ [=============================>          ] 72% of target   │
-└─────────────────────────────────────────────────────────────┘
+A centralized `useSoundEffects` hook that:
+- Preloads all audio files on component mount
+- Provides simple play functions
+- Handles looping sounds (fill flow, alarm)
+- Includes volume control
+- Gracefully handles audio restrictions (mobile autoplay)
+
+```typescript
+// src/game/hooks/useSoundEffects.ts
+interface SoundEffects {
+  playGameStart: () => void;
+  playButtonClick: () => void;
+  startFillLoop: () => void;
+  stopFillLoop: () => void;
+  playNudge: () => void;
+  startAlarmLoop: () => void;
+  stopAlarmLoop: () => void;
+  playSpill: () => void;
+  playComplete: () => void;
+  playSuccess: () => void;
+  playFailure: () => void;
+  setVolume: (volume: number) => void;
+  isMuted: boolean;
+  toggleMute: () => void;
+}
 ```
 
-### Centralizing the Layout
-Current layout has scattered elements. New layout:
+### 2. Add Audio Files
 
-```text
-┌────────────────────────────────────────────────────────────────┐
-│                      PIPER LOGO                                │
-│             FILL THE TANK - One shot. Real consequences.       │
-├────────────────────────────────────────────────────────────────┤
-│   FLOW RATE      LOAD TIME        REMAINING  TARGET  CURRENT  │
-│    125 L/s       00:32.5           9,000L   10,000L   3,000L  │
-├────────────────────────────────────────────────────────────────┤
-│   [========================================>    ] 72%         │
-├────────────────────────────────────────────────────────────────┤
-│           [FARM TANK] ═══════ [MILK TANKER]                   │
-├────────────────────────────────────────────────────────────────┤
-│                [HOLD TO FILL] [+25L] [DONE]                   │
-└────────────────────────────────────────────────────────────────┘
+Place royalty-free sound files in `/public/sounds/`:
+
+```
+public/sounds/
+├── game-start.mp3
+├── button-click.mp3
+├── fill-loop.mp3
+├── fill-stop.mp3
+├── nudge.mp3
+├── alarm-loop.mp3
+├── spill-splash.mp3
+├── cat-meow.mp3
+├── complete.mp3
+├── success.mp3
+└── failure.mp3
 ```
 
-### Files to Modify
-| File | Changes |
-|------|---------|
-| `GameScreenV2.tsx` | Add LoadMeter component, restructure header into single centered block |
+### 3. Integrate into Components
+
+**AttractModeV2.tsx**
+```typescript
+const { playGameStart } = useSoundEffects();
+
+<button onClick={() => {
+  playGameStart();
+  onStartGame();
+}}>
+```
+
+**GameScreenV2.tsx**
+```typescript
+const { 
+  startFillLoop, stopFillLoop, 
+  startAlarmLoop, stopAlarmLoop,
+  playNudge, playSpill, playComplete 
+} = useSoundEffects();
+
+// Start fill loop when filling begins
+useEffect(() => {
+  if (isFilling && !session.spillAcknowledged) {
+    startFillLoop();
+  } else {
+    stopFillLoop();
+  }
+}, [isFilling, session.spillAcknowledged]);
+
+// Alarm when overfilling
+useEffect(() => {
+  if (session.spillWarningActive && isFilling) {
+    startAlarmLoop();
+  } else {
+    stopAlarmLoop();
+  }
+}, [session.spillWarningActive, isFilling]);
+```
+
+**SpillMessagePopup.tsx**
+```typescript
+// Play spill + cat meow on mount
+useEffect(() => {
+  playSpill();
+}, []);
+```
+
+### 4. Volume Control & Mute Toggle
+
+Add a small mute button in the corner of the game screen:
+- 🔊 / 🔇 toggle
+- Persists preference in localStorage
+- Default: sounds ON
 
 ---
 
-## 3. Mobile Responsiveness
+## File Changes Summary
 
-### Current Issues (from screenshots)
-- Header elements spread across full width with lots of whitespace
-- Tank graphics use fixed scaling that causes overflow
-- Buttons have large padding that wastes space
-- Stats boxes have excessive margins
-
-### Mobile Optimizations
-1. **Compact header**: Stack logo and title vertically, reduce padding
-2. **Smaller stats boxes**: Reduce font sizes and padding on mobile
-3. **Shrink tank graphics further**: Use `scale-50` or smaller on mobile
-4. **Compact buttons**: Smaller padding, stacked vertically on narrow screens
-5. **Remove/reduce gaps**: Tighten `gap` and `mb` values on mobile
-6. **Use `min-h-screen h-full` instead of fixed heights**
-
-### Mobile Layout (viewport ~375px wide)
-```text
-┌──────────────────────────┐
-│      [PIPER LOGO]        │
-│      FILL THE TANK       │
-│      ⏱️ 00:32.5          │
-├──────────────────────────┤
-│ REMAINING TARGET CURRENT │
-│  9,000L  10,000L  3,000L │
-├──────────────────────────┤
-│ [═══════════════>  ] 72% │
-├──────────────────────────┤
-│  [TANK]═══[TANKER]       │
-│     (compact scale)      │
-├──────────────────────────┤
-│ [  HOLD TO FILL  ][+25L] │
-│ [   DONE - COMPLETE    ] │
-└──────────────────────────┘
-```
-
-### Files to Modify
 | File | Changes |
 |------|---------|
-| `GameScreenV2.tsx` | Add responsive classes, restructure for mobile-first |
-| `FarmTank.tsx` | Reduce dimensions on mobile |
-| `TankerV2.tsx` | Reduce dimensions on mobile |
-| `GameTimer.tsx` | Compact mode for mobile |
+| `src/game/hooks/useSoundEffects.ts` | **NEW** - Sound manager hook |
+| `src/game/components/AttractModeV2.tsx` | Add game start sound |
+| `src/game/components/PreLoadQuestions.tsx` | Add button click sounds |
+| `src/game/components/GameScreenV2.tsx` | Add fill loop, alarm, nudge, complete sounds |
+| `src/game/components/SpillMessagePopup.tsx` | Add spill/cat sounds |
+| `src/game/components/ResultsScreenV2.tsx` | Add success/failure sounds |
+| `src/game/FillTheTank.tsx` | Add SoundProvider and mute toggle UI |
+| `public/sounds/*.mp3` | **NEW** - 11 audio files |
+
+---
+
+## Audio Sourcing Options
+
+Since we need royalty-free sounds, I can either:
+
+1. **Use placeholder synthetic sounds** - Generate simple tones/beeps using the Web Audio API as placeholders
+2. **Use ElevenLabs integration** - Connect ElevenLabs to generate custom sound effects (requires API key setup)
+
+### Recommendation: Hybrid Approach
+
+For immediate implementation, I'll create the hook infrastructure with **Web Audio API synthetic sounds** as defaults. These provide:
+- Zero external dependencies
+- Instant playback
+- No file hosting needed
+
+You can later replace individual sounds with custom MP3 files by dropping them in `/public/sounds/`.
 
 ---
 
 ## Technical Details
 
-### New State in useGameStateV2
+### Web Audio API Synthetic Sounds
 
 ```typescript
-interface GameSessionV2 {
-  // ... existing
-  spillWarningActive: boolean; // True when overfill started but button still held
-  spillAcknowledged: boolean;  // True after popup dismissed
+// Generate a simple beep
+function playTone(frequency: number, duration: number, type: OscillatorType = 'sine') {
+  const audioContext = new AudioContext();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+  gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + duration);
 }
 ```
 
-### Overfill Logic Change
+### Mobile Audio Handling
 
-```typescript
-// Instead of immediately setting spillTriggered = true and stopping:
-if (newFill > config.TANKER_CAPACITY_L) {
-  spillWarningActive = true;
-  spillAmount = newFill - config.TANKER_CAPACITY_L;
-  // BUT keep filling allowed
-}
-
-// On stopFilling:
-if (spillWarningActive && spillAmount > 0) {
-  spillTriggered = true; // Now lock it in
-  showSpillPopup = true;  // Show the farmer text message
-}
-```
-
-### Spill Popup Component
-
-New component: `SpillMessagePopup.tsx`
-- Styled as a phone text message
-- Shows the comedic message
-- Displays spill cost
-- "Continue" button to dismiss
-
-### Load Meter Component
-
-New component: `LoadMeter.tsx`
-- Horizontal progress bar
-- Props: `currentFill`, `targetFill`, `tankerCapacity`, `spillTriggered`
-- Color transitions based on proximity to target
+Mobile browsers require user interaction before playing audio. The hook will:
+1. Create AudioContext on first user tap
+2. Resume suspended audio contexts
+3. Handle autoplay restrictions gracefully
 
 ---
 
 ## Summary
 
-| Feature | Key Change |
-|---------|------------|
-| Overfill popup | Allow continued filling, show farmer text message on release |
-| Load meter | Horizontal progress bar showing fill % relative to target |
-| Centralized UI | Reorganize header, stack elements more logically |
-| Mobile layout | Reduce padding/gaps, shrink graphics, stack buttons vertically |
+| Feature | Implementation |
+|---------|---------------|
+| Centralized sound system | `useSoundEffects` hook |
+| 11 sound trigger points | Across all game screens |
+| Looping sounds | Fill flow and alarm |
+| Volume control | Mute toggle with localStorage persistence |
+| Mobile-friendly | Handles autoplay restrictions |
+| Extensible | Easy to swap synthetic sounds for MP3 files |
 
-These changes make the game more engaging (comedic overfill experience), more informative (load meter), and fully playable on mobile without scrolling.
+This creates an engaging audio experience while keeping the implementation simple and trade-show-ready.
 

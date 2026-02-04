@@ -137,14 +137,14 @@ export function ResultsScreenV2({
 
           <div className="space-y-2 text-center">
             <div className="text-slate-400">
-              Daily: €{totalLoadCost.toFixed(2)} × {config.FARM_LOADS_PER_DAY} = 
-              <span className="text-red-400 font-bold ml-2">€{dailyCost.toFixed(2)}</span>
+              Daily: {config.CURRENCY}{totalLoadCost.toFixed(2)} × {config.FARM_LOADS_PER_DAY} = 
+              <span className="text-red-400 font-bold ml-2">{config.CURRENCY}{dailyCost.toFixed(2)}</span>
             </div>
             <div className="text-slate-400">
-              Annual: €{dailyCost.toFixed(2)} × {config.DAYS_PER_YEAR} = 
+              Annual: {config.CURRENCY}{dailyCost.toFixed(2)} × {config.DAYS_PER_YEAR} = 
             </div>
             <div className="text-4xl font-black text-red-400 mt-2">
-              €{annualCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              {config.CURRENCY}{annualCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </div>
             <div className="text-sm text-red-300">per year</div>
           </div>

@@ -50,6 +50,7 @@ export function LoadReceipt({
   const hasEmptyCapacity = emptyCapacity > 100;
   const emptyCapacityPercent = emptyCapacity / config.TANKER_CAPACITY_L;
   const nudgeTimePenalty = nudgeCount * (config.NUDGE_TIME_PENALTY_SEC / 60);
+  const currency = config.CURRENCY;
 
   return (
     <div className="bg-slate-800/80 p-6 rounded-xl border border-slate-600 max-w-lg w-full">
@@ -85,7 +86,7 @@ export function LoadReceipt({
         {hasSpill && (
           <div className="flex justify-between items-center text-red-400">
             <span>🥛 Milk spilled: {Math.round(spillAmount)}L</span>
-            <span className="font-bold">−€{spillCost.toFixed(2)}</span>
+            <span className="font-bold">−{currency}{spillCost.toFixed(2)}</span>
           </div>
         )}
 
@@ -93,7 +94,7 @@ export function LoadReceipt({
         {hasEmptyCapacity && (
           <div className="flex justify-between items-center text-amber-400">
             <span>🚛 Empty capacity: {(emptyCapacityPercent * 100).toFixed(1)}%</span>
-            <span className="font-bold">−€{haulageWasteCost.toFixed(2)}</span>
+            <span className="font-bold">−{currency}{haulageWasteCost.toFixed(2)}</span>
           </div>
         )}
 
@@ -104,7 +105,7 @@ export function LoadReceipt({
               ⏱️ Time {timeDelta > 0 ? "saved" : "lost"}: {Math.abs(timeDelta)} mins
             </span>
             <span className="font-bold">
-              {timeDelta > 0 ? `+€${timeSaved.toFixed(2)}` : `−€${timeCost.toFixed(2)}`}
+              {timeDelta > 0 ? `+${currency}${timeSaved.toFixed(2)}` : `−${currency}${timeCost.toFixed(2)}`}
             </span>
           </div>
         )}
@@ -138,7 +139,7 @@ export function LoadReceipt({
           <div className="flex justify-between items-center text-xl">
             <span className="text-white font-bold">LOAD COST</span>
             <span className={`font-bold ${totalLoadCost > 0 ? "text-red-400" : "text-emerald-400"}`}>
-              {totalLoadCost > 0 ? `−€${totalLoadCost.toFixed(2)}` : "€0.00"}
+              {totalLoadCost > 0 ? `−${currency}${totalLoadCost.toFixed(2)}` : `${currency}0.00`}
             </span>
           </div>
         </div>

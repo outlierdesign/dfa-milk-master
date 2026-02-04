@@ -86,7 +86,7 @@ export function ResultsScreenV2({
   }, [isPerfect, accuracy, playSuccess, playFailure]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-start p-6 overflow-y-auto">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-start p-6 pb-12 overflow-y-auto">
       {/* Piper Logo */}
       <div className="mb-4">
         <img src={piperLogo} alt="Piper" className="h-12 md:h-16" />
@@ -164,7 +164,7 @@ export function ResultsScreenV2({
       </div>
 
       {/* Play Again Button */}
-      <div className="mt-8 w-full max-w-lg">
+      <div className="mt-8 mb-8 w-full max-w-lg">
         <button
           onClick={onPlayAgain}
           className="w-full bg-emerald-500 hover:bg-emerald-400 text-white text-xl font-bold px-8 py-5 rounded-xl shadow-xl transition-all hover:scale-105"

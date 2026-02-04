@@ -121,7 +121,7 @@ export function FillTheTank() {
   }, [resetToAttract]);
 
   return (
-    <div className="w-full h-screen overflow-hidden bg-slate-900">
+    <div className={`w-full h-screen bg-slate-900 ${gameState === "results" ? "overflow-auto" : "overflow-hidden"}`}>
       {/* Admin Panel */}
       <AdminPanel
         settings={settings}

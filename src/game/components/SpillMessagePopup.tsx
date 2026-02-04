@@ -54,7 +54,7 @@ export function SpillMessagePopup({
               <div className="bg-red-600 rounded-2xl rounded-tr-sm px-4 py-3">
                 <div className="text-xs text-red-200 mb-1">Spill Cost:</div>
                 <div className="text-2xl font-bold text-white">
-                  €{spillCost.toFixed(2)}
+                  {config.CURRENCY}{spillCost.toFixed(2)}
                 </div>
                 <div className="text-xs text-red-200 mt-1">
                   ({Math.round(spillAmount)}L wasted)

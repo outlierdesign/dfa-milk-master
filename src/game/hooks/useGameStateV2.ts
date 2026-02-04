@@ -53,6 +53,7 @@ export interface GameConfig {
   ATTRACT_IDLE_TIME: number;
   TARGET_FILL_L: number;
   GAME_SPEED_MULTIPLIER: number;
+  CURRENCY: string;
 }
 
 const createInitialSession = (config: GameConfig): GameSessionV2 => ({

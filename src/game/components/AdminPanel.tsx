@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { GAME_CONFIG_V2 } from "../constantsV2";
 
+export type CurrencySymbol = "€" | "$";
+
 export interface AdminSettings {
   targetFillPercent: number;
   milkValuePerL: number;
@@ -12,6 +14,7 @@ export interface AdminSettings {
   agitationTimeSaved: number;
   weighbridgeTimeCost: number;
   gameSpeedMultiplier: number;
+  currency: CurrencySymbol;
 }
 
 const DEFAULT_SETTINGS: AdminSettings = {
@@ -25,6 +28,7 @@ const DEFAULT_SETTINGS: AdminSettings = {
   agitationTimeSaved: GAME_CONFIG_V2.AGITATION_TIME_SAVED,
   weighbridgeTimeCost: GAME_CONFIG_V2.WEIGHBRIDGE_TIME_COST,
   gameSpeedMultiplier: GAME_CONFIG_V2.GAME_SPEED_MULTIPLIER,
+  currency: "€",
 };
 
 const STORAGE_KEY = "fill-tank-admin-settings";
@@ -93,6 +97,7 @@ export function useAdminSettings() {
     RESULTS_DISPLAY_TIME: GAME_CONFIG_V2.RESULTS_DISPLAY_TIME,
     ATTRACT_IDLE_TIME: GAME_CONFIG_V2.ATTRACT_IDLE_TIME,
     GAME_SPEED_MULTIPLIER: settings.gameSpeedMultiplier,
+    CURRENCY: settings.currency,
     get TARGET_FILL_L() {
       return this.TANKER_CAPACITY_L * this.TARGET_FILL_PERCENT;
     },
@@ -181,14 +186,18 @@ export function AdminPanel({
           </SettingGroup>
 
           {/* Money Values */}
-          <SettingGroup title="Money Values (€)">
+          <SettingGroup title={`Money Values (${settings.currency})`}>
+            <CurrencySelector
+              value={settings.currency}
+              onChange={(v) => onUpdate("currency", v)}
+            />
             <SliderSetting
               label="Milk Value per Litre"
               value={settings.milkValuePerL}
               min={0.2}
               max={1.0}
               step={0.01}
-              unit="€/L"
+              unit={`${settings.currency}/L`}
               decimals={2}
               onChange={(v) => onUpdate("milkValuePerL", v)}
             />
@@ -198,7 +207,7 @@ export function AdminPanel({
               min={50}
               max={500}
               step={10}
-              unit="€"
+              unit={settings.currency}
               onChange={(v) => onUpdate("haulageCostPerLoad", v)}
             />
             <SliderSetting
@@ -207,7 +216,7 @@ export function AdminPanel({
               min={1}
               max={20}
               step={0.5}
-              unit="€/min"
+              unit={`${settings.currency}/min`}
               decimals={1}
               onChange={(v) => onUpdate("timeCostPerMin", v)}
             />
@@ -368,6 +377,39 @@ function SpeedSelector({ value, onChange }: SpeedSelectorProps) {
       </div>
       <div className="text-xs text-amber-400/80 text-center">
         ⚡ Higher speeds make demos faster while preserving accurate time-cost calculations
+      </div>
+    </div>
+  );
+}
+
+const CURRENCY_OPTIONS: { value: CurrencySymbol; label: string }[] = [
+  { value: "€", label: "Euro (€)" },
+  { value: "$", label: "Dollar ($)" },
+];
+
+interface CurrencySelectorProps {
+  value: CurrencySymbol;
+  onChange: (value: CurrencySymbol) => void;
+}
+
+function CurrencySelector({ value, onChange }: CurrencySelectorProps) {
+  return (
+    <div className="flex items-center gap-4">
+      <label className="flex-1 text-slate-300 text-sm">Currency</label>
+      <div className="flex gap-2">
+        {CURRENCY_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => onChange(option.value)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              value === option.value
+                ? "bg-emerald-600 text-white border-2 border-emerald-400"
+                : "bg-slate-700 text-slate-300 border-2 border-slate-600 hover:border-slate-500"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
     </div>
   );

@@ -212,7 +212,7 @@ export function PenaltyRevealScreen({
               <div className="mt-4 flex items-center justify-center gap-2 text-red-400">
                 <span className="text-2xl">💸</span>
                 <span className="text-xl font-bold">
-                  €{totalCost.toFixed(2)} time cost
+                  {config.CURRENCY}{totalCost.toFixed(2)} time cost
                 </span>
               </div>
             )}

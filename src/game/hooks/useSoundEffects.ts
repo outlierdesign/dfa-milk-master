@@ -181,14 +181,14 @@ export function useSoundEffects(): SoundEffects {
       const lfo = ctx.createOscillator();
       const lfoGain = ctx.createGain();
 
-      // Main low rumble
-      oscillator.type = "sawtooth";
-      oscillator.frequency.value = 80;
+      // Main low rumble - deeper tone
+      oscillator.type = "sine";
+      oscillator.frequency.value = 45;
       
-      // LFO for bubbling effect
+      // LFO for subtle flow effect - slower and gentler
       lfo.type = "sine";
-      lfo.frequency.value = 8;
-      lfoGain.gain.value = 30;
+      lfo.frequency.value = 1.5;
+      lfoGain.gain.value = 8;
       
       lfo.connect(lfoGain);
       lfoGain.connect(oscillator.frequency);

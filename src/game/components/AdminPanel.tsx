@@ -362,6 +362,9 @@ function SliderSetting({
   decimals = 0,
   onChange,
 }: SliderSettingProps) {
+  // Fallback to min if value is undefined (e.g., new setting not in localStorage)
+  const safeValue = value ?? min;
+  
   return (
     <div className="flex items-center gap-4">
       <label className="flex-1 text-slate-300 text-sm">{label}</label>
@@ -370,12 +373,12 @@ function SliderSetting({
         min={min}
         max={max}
         step={step}
-        value={value}
+        value={safeValue}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="w-32 accent-emerald-500"
       />
       <span className="w-24 text-right font-mono text-white">
-        {value.toFixed(decimals)} {unit}
+        {safeValue.toFixed(decimals)} {unit}
       </span>
     </div>
   );

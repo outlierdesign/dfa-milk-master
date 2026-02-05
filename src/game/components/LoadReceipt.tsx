@@ -48,6 +48,10 @@ export function LoadReceipt({
   const hasEmptyCapacity = emptyCapacity > 100;
   const emptyCapacityPercent = emptyCapacity / config.TANKER_CAPACITY_L;
   const currency = config.CURRENCY;
+  
+  // Calculate overfill percentage and determine if major
+  const overfillPercent = (currentFill / config.TANKER_CAPACITY_L) * 100;
+  const isMajorOverspill = spillAmount > ((config as any).OVERFILL_TOLERANCE_L ?? 440);
 
   return (
     <div className="bg-slate-800/80 p-6 rounded-xl border border-slate-600 max-w-lg w-full">
@@ -81,9 +85,19 @@ export function LoadReceipt({
       <div className="space-y-3">
         {/* Spill */}
         {hasSpill && (
-          <div className="flex justify-between items-center text-red-400">
-            <span>🥛 Milk spilled: {Math.round(spillAmount)}L</span>
-            <span className="font-bold">−{currency}{spillCost.toFixed(2)}</span>
+          <div className="space-y-1">
+            <div className="flex justify-between items-center text-red-400">
+              <span>🥛 Milk spilled: {Math.round(spillAmount)}L</span>
+              <span className="font-bold">−{currency}{spillCost.toFixed(2)}</span>
+            </div>
+            {isMajorOverspill && (
+              <div className="text-red-500 text-xs font-bold text-center bg-red-900/30 py-1 rounded">
+                ⚠️ MAJOR OVERSPILL
+              </div>
+            )}
+            <div className="text-red-300 text-xs text-center">
+              Fill: {overfillPercent.toFixed(1)}% of capacity
+            </div>
           </div>
         )}
 

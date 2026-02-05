@@ -175,27 +175,34 @@ export function useSoundEffects(): SoundEffects {
     try {
       const ctx = await ensureAudioContextResumed();
       
-      // Create a bubbling/flowing sound
+      // Create a low-tone pump sound
       const oscillator = ctx.createOscillator();
       const gainNode = ctx.createGain();
       const lfo = ctx.createOscillator();
       const lfoGain = ctx.createGain();
 
-      // Main low rumble - deeper tone
-      oscillator.type = "sine";
-      oscillator.frequency.value = 45;
+      // Deep bass pump tone - sawtooth for mechanical pump feel
+      oscillator.type = "sawtooth";
+      oscillator.frequency.value = 35; // Very low tone
       
-      // LFO for subtle flow effect - slower and gentler
+      // LFO creates rhythmic pulsing like a pump
       lfo.type = "sine";
-      lfo.frequency.value = 1.5;
-      lfoGain.gain.value = 8;
+      lfo.frequency.value = 2.5; // Pump rhythm
+      lfoGain.gain.value = 12; // Subtle frequency wobble
       
       lfo.connect(lfoGain);
       lfoGain.connect(oscillator.frequency);
       
-      gainNode.gain.value = 0.08 * volume;
+      // Low-pass filter to smooth the sawtooth
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 150; // Cut high frequencies for deep rumble
+      filter.Q.value = 1;
+      
+      gainNode.gain.value = 0.12 * volume;
 
-      oscillator.connect(gainNode);
+      oscillator.connect(filter);
+      filter.connect(gainNode);
       gainNode.connect(ctx.destination);
 
       oscillator.start();

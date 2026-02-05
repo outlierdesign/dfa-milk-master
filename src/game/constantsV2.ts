@@ -32,6 +32,9 @@ export const GAME_CONFIG_V2 = {
   PIPER_SLOWDOWN_THRESHOLD: 0.90, // Start slowing at 90% fill
   PIPER_SLOWDOWN_FACTOR: 0.3, // Reduce to 30% of flow rate at 100%
 
+  // Overfill tolerance (lbs converted to litres: 1000 lbs ≈ 440L)
+  OVERFILL_TOLERANCE_L: 440, // Allow minor overfill before major spill
+
   // UI timing (milliseconds)
   RESULTS_DISPLAY_TIME: 15_000,
   ATTRACT_IDLE_TIME: 20_000,

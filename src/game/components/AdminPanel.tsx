@@ -9,12 +9,14 @@ export interface AdminSettings {
   haulageCostPerLoad: number;
   timeCostPerMin: number;
   farmLoadsPerDay: number;
-  flowRateMin: number;
-  flowRateMax: number;
+  flowRateBase: number;
+  flowRateVariance: number;
   agitationTimeSaved: number;
   weighbridgeTimeCost: number;
   gameSpeedMultiplier: number;
   currency: CurrencySymbol;
+  piperSlowdownThreshold: number;
+  piperSlowdownFactor: number;
 }
 
 const DEFAULT_SETTINGS: AdminSettings = {
@@ -23,12 +25,14 @@ const DEFAULT_SETTINGS: AdminSettings = {
   haulageCostPerLoad: GAME_CONFIG_V2.HAULAGE_COST_PER_LOAD,
   timeCostPerMin: GAME_CONFIG_V2.TIME_COST_PER_MIN,
   farmLoadsPerDay: GAME_CONFIG_V2.FARM_LOADS_PER_DAY,
-  flowRateMin: GAME_CONFIG_V2.FLOW_RATE_MIN_LPS,
-  flowRateMax: GAME_CONFIG_V2.FLOW_RATE_MAX_LPS,
+  flowRateBase: GAME_CONFIG_V2.FLOW_RATE_BASE_LPS,
+  flowRateVariance: GAME_CONFIG_V2.FLOW_VARIANCE_PERCENT,
   agitationTimeSaved: GAME_CONFIG_V2.AGITATION_TIME_SAVED,
   weighbridgeTimeCost: GAME_CONFIG_V2.WEIGHBRIDGE_TIME_COST,
   gameSpeedMultiplier: GAME_CONFIG_V2.GAME_SPEED_MULTIPLIER,
   currency: "€",
+  piperSlowdownThreshold: GAME_CONFIG_V2.PIPER_SLOWDOWN_THRESHOLD * 100,
+  piperSlowdownFactor: GAME_CONFIG_V2.PIPER_SLOWDOWN_FACTOR * 100,
 };
 
 const STORAGE_KEY = "fill-tank-admin-settings";
@@ -48,12 +52,10 @@ export function useAdminSettings() {
 
   const [isOpen, setIsOpen] = useState(false);
 
-  // Save to localStorage when settings change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
 
-  // Keyboard shortcut: Ctrl+Shift+A to toggle admin panel
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === "A") {
@@ -77,7 +79,7 @@ export function useAdminSettings() {
     setSettings(DEFAULT_SETTINGS);
   };
 
-  // Computed config that mirrors GAME_CONFIG_V2 structure
+  // Computed config
   const config = {
     TANKER_CAPACITY_L: GAME_CONFIG_V2.TANKER_CAPACITY_L,
     FARM_TANK_CAPACITY_L: GAME_CONFIG_V2.FARM_TANK_CAPACITY_L,
@@ -89,11 +91,13 @@ export function useAdminSettings() {
     DAYS_PER_YEAR: GAME_CONFIG_V2.DAYS_PER_YEAR,
     AGITATION_TIME_SAVED: settings.agitationTimeSaved,
     WEIGHBRIDGE_TIME_COST: settings.weighbridgeTimeCost,
-    FLOW_RATE_MIN_LPS: settings.flowRateMin,
-    FLOW_RATE_MAX_LPS: settings.flowRateMax,
+    FLOW_RATE_BASE_LPS: settings.flowRateBase,
+    FLOW_RATE_MIN_LPS: settings.flowRateBase * (1 - settings.flowRateVariance / 100),
+    FLOW_RATE_MAX_LPS: settings.flowRateBase * (1 + settings.flowRateVariance / 100),
+    FLOW_VARIANCE_PERCENT: settings.flowRateVariance,
     FLOW_VARIANCE_INTERVAL_MS: GAME_CONFIG_V2.FLOW_VARIANCE_INTERVAL_MS,
-    NUDGE_AMOUNT_L: GAME_CONFIG_V2.NUDGE_AMOUNT_L,
-    NUDGE_TIME_PENALTY_SEC: GAME_CONFIG_V2.NUDGE_TIME_PENALTY_SEC,
+    PIPER_SLOWDOWN_THRESHOLD: settings.piperSlowdownThreshold / 100,
+    PIPER_SLOWDOWN_FACTOR: settings.piperSlowdownFactor / 100,
     RESULTS_DISPLAY_TIME: GAME_CONFIG_V2.RESULTS_DISPLAY_TIME,
     ATTRACT_IDLE_TIME: GAME_CONFIG_V2.ATTRACT_IDLE_TIME,
     GAME_SPEED_MULTIPLIER: settings.gameSpeedMultiplier,
@@ -166,23 +170,48 @@ export function AdminPanel({
               onChange={(v) => onUpdate("targetFillPercent", v)}
             />
             <SliderSetting
-              label="Flow Rate Min"
-              value={settings.flowRateMin}
-              min={20}
-              max={150}
-              step={5}
-              unit="L/s"
-              onChange={(v) => onUpdate("flowRateMin", v)}
+              label="Base Flow Rate"
+              value={settings.flowRateBase}
+              min={500}
+              max={3000}
+              step={50}
+              unit="L/min"
+              onChange={(v) => onUpdate("flowRateBase", v)}
             />
             <SliderSetting
-              label="Flow Rate Max"
-              value={settings.flowRateMax}
-              min={50}
-              max={200}
-              step={5}
-              unit="L/s"
-              onChange={(v) => onUpdate("flowRateMax", v)}
+              label="Flow Rate Variance"
+              value={settings.flowRateVariance}
+              min={0}
+              max={20}
+              step={1}
+              unit="%"
+              onChange={(v) => onUpdate("flowRateVariance", v)}
             />
+          </SettingGroup>
+
+          {/* Piper Mode Settings */}
+          <SettingGroup title="Piper Mode (Visual Mode)">
+            <SliderSetting
+              label="Slowdown Threshold"
+              value={settings.piperSlowdownThreshold}
+              min={70}
+              max={98}
+              step={1}
+              unit="%"
+              onChange={(v) => onUpdate("piperSlowdownThreshold", v)}
+            />
+            <SliderSetting
+              label="Minimum Speed at 100%"
+              value={settings.piperSlowdownFactor}
+              min={10}
+              max={50}
+              step={5}
+              unit="%"
+              onChange={(v) => onUpdate("piperSlowdownFactor", v)}
+            />
+            <div className="text-xs text-slate-400 mt-2">
+              Flow slows from {settings.piperSlowdownThreshold}% fill down to {settings.piperSlowdownFactor}% speed at 100%
+            </div>
           </SettingGroup>
 
           {/* Money Values */}
@@ -331,7 +360,7 @@ function SliderSetting({
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="w-32 accent-emerald-500"
       />
-      <span className="w-20 text-right font-mono text-white">
+      <span className="w-24 text-right font-mono text-white">
         {value.toFixed(decimals)} {unit}
       </span>
     </div>
@@ -339,10 +368,10 @@ function SliderSetting({
 }
 
 const SPEED_OPTIONS = [
-  { value: 1, label: "1×", description: "Real-time (~60-90s)" },
-  { value: 2, label: "2×", description: "~30-45s" },
-  { value: 5, label: "5×", description: "~12-18s" },
-  { value: 10, label: "10×", description: "~6-9s" },
+  { value: 1, label: "1×", description: "Real-time (~12s)" },
+  { value: 2, label: "2×", description: "~6s" },
+  { value: 5, label: "5×", description: "~2.5s" },
+  { value: 10, label: "10×", description: "~1.2s" },
 ];
 
 interface SpeedSelectorProps {

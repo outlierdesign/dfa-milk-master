@@ -3,7 +3,7 @@ import { GAME_CONFIG_V2, GameStateV2 } from "../constantsV2";
 
 export interface GameSessionV2 {
   // Pre-load decisions
-  usePiperSampling: boolean;
+  usePiperSampling: boolean; // Now means "using Piper System" (visual mode)
   useWeighbridge: boolean;
 
   // Fill state
@@ -11,24 +11,27 @@ export interface GameSessionV2 {
   farmTankLevel: number;
   currentFlowRate: number;
 
+  // One-shot fill mechanics
+  hasStartedFilling: boolean; // Prevent multiple presses
+  fillLocked: boolean; // After release, cannot restart
+
   // Outcomes
   spillAmount: number;
   spillTriggered: boolean;
-  spillWarningActive: boolean; // Warning shown but can still fill
-  spillAcknowledged: boolean; // Popup dismissed
-  showSpillPopup: boolean; // Show the farmer text message popup
+  spillWarningActive: boolean;
+  spillAcknowledged: boolean;
+  showSpillPopup: boolean;
   emptyCapacity: number;
   milkLeftBehind: number;
 
   // Time tracking
-  timeDelta: number; // +/- minutes from decisions
-  nudgeCount: number;
+  timeDelta: number;
 
   // Timing metrics for receipt
   fillStartTime: number | null;
   fillEndTime: number | null;
-  totalFillDuration: number; // seconds
-  flowRateSamples: number[]; // for calculating average
+  totalFillDuration: number;
+  flowRateSamples: number[];
   averageFlowRate: number;
 }
 
@@ -46,9 +49,11 @@ export interface GameConfig {
   WEIGHBRIDGE_TIME_COST: number;
   FLOW_RATE_MIN_LPS: number;
   FLOW_RATE_MAX_LPS: number;
+  FLOW_RATE_BASE_LPS: number;
+  FLOW_VARIANCE_PERCENT: number;
   FLOW_VARIANCE_INTERVAL_MS: number;
-  NUDGE_AMOUNT_L: number;
-  NUDGE_TIME_PENALTY_SEC: number;
+  PIPER_SLOWDOWN_THRESHOLD: number;
+  PIPER_SLOWDOWN_FACTOR: number;
   RESULTS_DISPLAY_TIME: number;
   ATTRACT_IDLE_TIME: number;
   TARGET_FILL_L: number;
@@ -61,7 +66,9 @@ const createInitialSession = (config: GameConfig): GameSessionV2 => ({
   useWeighbridge: false,
   currentFill: 0,
   farmTankLevel: config.FARM_TANK_CAPACITY_L,
-  currentFlowRate: config.FLOW_RATE_MIN_LPS,
+  currentFlowRate: config.FLOW_RATE_BASE_LPS,
+  hasStartedFilling: false,
+  fillLocked: false,
   spillAmount: 0,
   spillTriggered: false,
   spillWarningActive: false,
@@ -70,8 +77,6 @@ const createInitialSession = (config: GameConfig): GameSessionV2 => ({
   emptyCapacity: 0,
   milkLeftBehind: 0,
   timeDelta: 0,
-  nudgeCount: 0,
-  // Timing metrics
   fillStartTime: null,
   fillEndTime: null,
   totalFillDuration: 0,
@@ -93,10 +98,12 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
   const fillIntervalRef = useRef<number | null>(null);
   const lastTickRef = useRef<number>(0);
 
-  // Random flow rate generator
+  // Random flow rate with ±5% variance
   const getRandomFlowRate = useCallback(() => {
-    const min = configRef.current.FLOW_RATE_MIN_LPS;
-    const max = configRef.current.FLOW_RATE_MAX_LPS;
+    const base = configRef.current.FLOW_RATE_BASE_LPS;
+    const variance = configRef.current.FLOW_VARIANCE_PERCENT / 100;
+    const min = base * (1 - variance);
+    const max = base * (1 + variance);
     return Math.random() * (max - min) + min;
   }, []);
 
@@ -118,43 +125,54 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     }
   }, [gameState, getRandomFlowRate, config.FLOW_VARIANCE_INTERVAL_MS]);
 
-  // Filling loop - allows continued filling during overfill warning
+  // Filling loop
   useEffect(() => {
-    if (isFilling && !session.spillAcknowledged) {
+    if (isFilling && !session.fillLocked) {
       lastTickRef.current = performance.now();
 
       fillIntervalRef.current = window.setInterval(() => {
         const now = performance.now();
-        const deltaTime = (now - lastTickRef.current) / 1000; // seconds
+        const deltaTime = (now - lastTickRef.current) / 1000;
         lastTickRef.current = now;
 
         setSession((prev) => {
-          // Don't fill if spill already acknowledged (popup dismissed)
-          if (prev.spillAcknowledged) return prev;
+          if (prev.fillLocked) return prev;
 
-          // Apply speed multiplier to fill rate (not to displayed time)
           const speedMultiplier = configRef.current.GAME_SPEED_MULTIPLIER || 1;
-          const fillDelta = prev.currentFlowRate * deltaTime * speedMultiplier;
+          
+          // Calculate effective flow rate with Piper slowdown
+          let effectiveFlowRate = prev.currentFlowRate;
+          
+          if (prev.usePiperSampling) {
+            const fillPercent = prev.currentFill / configRef.current.TANKER_CAPACITY_L;
+            const threshold = configRef.current.PIPER_SLOWDOWN_THRESHOLD;
+            
+            if (fillPercent > threshold) {
+              // Progressive slowdown from threshold to 100%
+              const slowProgress = (fillPercent - threshold) / (1 - threshold);
+              const slowFactor = 1 - (slowProgress * (1 - configRef.current.PIPER_SLOWDOWN_FACTOR));
+              effectiveFlowRate *= slowFactor;
+            }
+          }
+
+          const fillDelta = effectiveFlowRate * deltaTime * speedMultiplier;
           let newFill = prev.currentFill + fillDelta;
           let newFarmLevel = prev.farmTankLevel - fillDelta;
 
-          // Check for overfill - track spill amount but don't stop filling
           let spillAmount = prev.spillAmount;
           let spillWarningActive = prev.spillWarningActive;
+          let spillTriggered = prev.spillTriggered;
 
           if (newFill > configRef.current.TANKER_CAPACITY_L) {
-            // Calculate how much we're over capacity
             spillAmount = newFill - configRef.current.TANKER_CAPACITY_L;
             spillWarningActive = true;
-            // Cap the visual fill at capacity, but track the overflow
+            spillTriggered = true;
             newFill = configRef.current.TANKER_CAPACITY_L;
           }
 
-          // Don't drain below 0
           newFarmLevel = Math.max(0, newFarmLevel);
 
-          // Sample flow rate for averaging (use raw flow rate, not multiplied)
-          const newFlowRateSamples = [...prev.flowRateSamples, prev.currentFlowRate];
+          const newFlowRateSamples = [...prev.flowRateSamples, effectiveFlowRate];
 
           return {
             ...prev,
@@ -162,10 +180,11 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
             farmTankLevel: newFarmLevel,
             spillAmount,
             spillWarningActive,
+            spillTriggered,
             flowRateSamples: newFlowRateSamples,
           };
         });
-      }, 16); // ~60fps
+      }, 16);
 
       return () => {
         if (fillIntervalRef.current) {
@@ -173,7 +192,7 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
         }
       };
     }
-  }, [isFilling, session.spillAcknowledged]);
+  }, [isFilling, session.fillLocked]);
 
   // Start game from attract mode
   const startGame = useCallback(() => {
@@ -187,7 +206,7 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
       // Calculate time delta from decisions
       let timeDelta = 0;
 
-      // Piper sampling: YES = +X mins saved, NO = -X mins lost
+      // Piper system: YES = +X mins saved, NO = -X mins lost (agitation time)
       if (usePiperSampling) {
         timeDelta += configRef.current.AGITATION_TIME_SAVED;
       } else {
@@ -212,41 +231,34 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     [getRandomFlowRate]
   );
 
-  // Start filling
+  // Start filling - only works once
   const startFilling = useCallback(() => {
-    // Allow filling if spill not yet acknowledged
-    if (!session.spillAcknowledged) {
-      setIsFilling(true);
-      // Record fill start time if this is the first fill
-      setSession((prev) => ({
-        ...prev,
-        fillStartTime: prev.fillStartTime ?? performance.now(),
-      }));
+    if (session.hasStartedFilling || session.fillLocked) {
+      return; // Already started or locked - no second chances
     }
-  }, [session.spillAcknowledged]);
+    
+    setIsFilling(true);
+    setSession((prev) => ({
+      ...prev,
+      hasStartedFilling: true,
+      fillStartTime: performance.now(),
+    }));
+  }, [session.hasStartedFilling, session.fillLocked]);
 
-  // Stop filling - show popup if there was spillage
+  // Stop filling - locks permanently
   const stopFilling = useCallback(() => {
+    if (!isFilling) return;
+    
     setIsFilling(false);
-    // Record end time for duration calculation
-    setSession((prev) => {
-      // If there was spillage and we haven't shown popup yet, show it now
-      if (prev.spillWarningActive && prev.spillAmount > 0 && !prev.spillAcknowledged) {
-        return {
-          ...prev,
-          fillEndTime: performance.now(),
-          spillTriggered: true,
-          showSpillPopup: true,
-        };
-      }
-      return {
-        ...prev,
-        fillEndTime: performance.now(),
-      };
-    });
-  }, []);
+    setSession((prev) => ({
+      ...prev,
+      fillLocked: true,
+      fillEndTime: performance.now(),
+      showSpillPopup: prev.spillTriggered && prev.spillAmount > 0,
+    }));
+  }, [isFilling]);
 
-  // Acknowledge spill (dismiss popup)
+  // Acknowledge spill (for splat screen)
   const acknowledgeSpill = useCallback(() => {
     setSession((prev) => ({
       ...prev,
@@ -255,62 +267,20 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     }));
   }, []);
 
-  // Nudge (small increment)
-  const nudgeFill = useCallback(() => {
-    // Block nudge if spill already acknowledged
-    if (session.spillAcknowledged) return;
-
-    setSession((prev) => {
-      let newFill = prev.currentFill + configRef.current.NUDGE_AMOUNT_L;
-      let newFarmLevel = prev.farmTankLevel - configRef.current.NUDGE_AMOUNT_L;
-
-      // Check for overfill
-      let spillAmount = prev.spillAmount;
-      let spillWarningActive = prev.spillWarningActive;
-      let spillTriggered = prev.spillTriggered;
-      let showSpillPopup = prev.showSpillPopup;
-
-      if (newFill > configRef.current.TANKER_CAPACITY_L) {
-        spillAmount = newFill - configRef.current.TANKER_CAPACITY_L;
-        newFill = configRef.current.TANKER_CAPACITY_L;
-        spillWarningActive = true;
-        // For nudge, immediately trigger the popup since it's a discrete action
-        spillTriggered = true;
-        showSpillPopup = true;
-      }
-
-      newFarmLevel = Math.max(0, newFarmLevel);
-
-      return {
-        ...prev,
-        currentFill: newFill,
-        farmTankLevel: newFarmLevel,
-        spillAmount,
-        spillWarningActive,
-        spillTriggered,
-        showSpillPopup,
-        nudgeCount: prev.nudgeCount + 1,
-      };
-    });
-  }, [session.spillAcknowledged]);
-
   // Complete load and go to penalty reveal
   const completeLoad = useCallback(() => {
     setIsFilling(false);
 
-    // Calculate final values including timing metrics
     setSession((prev) => {
       const targetFill = configRef.current.TARGET_FILL_L;
       const emptyCapacity = Math.max(0, targetFill - prev.currentFill);
       const milkLeftBehind = prev.farmTankLevel;
 
-      // Calculate total fill duration - apply speed multiplier to represent real-world time
       const endTime = prev.fillEndTime ?? performance.now();
       const startTime = prev.fillStartTime ?? endTime;
       const speedMultiplier = configRef.current.GAME_SPEED_MULTIPLIER || 1;
-      const totalFillDuration = ((endTime - startTime) / 1000) * speedMultiplier; // Simulated real-world seconds
+      const totalFillDuration = ((endTime - startTime) / 1000) * speedMultiplier;
 
-      // Calculate average flow rate
       const averageFlowRate =
         prev.flowRateSamples.length > 0
           ? prev.flowRateSamples.reduce((a, b) => a + b, 0) / prev.flowRateSamples.length
@@ -354,8 +324,7 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     const emptyCapacityPercent = session.emptyCapacity / cfg.TANKER_CAPACITY_L;
     const haulageWasteCost = emptyCapacityPercent * cfg.HAULAGE_COST_PER_LOAD;
 
-    const nudgeTimePenalty = session.nudgeCount * (cfg.NUDGE_TIME_PENALTY_SEC / 60);
-    const totalTimeMin = Math.abs(session.timeDelta) + nudgeTimePenalty;
+    const totalTimeMin = Math.abs(session.timeDelta);
     const timeCost = session.timeDelta < 0 ? totalTimeMin * cfg.TIME_COST_PER_MIN : 0;
 
     const totalLoadCost = spillCost + haulageWasteCost + timeCost;
@@ -383,7 +352,6 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     completeQuestions,
     startFilling,
     stopFilling,
-    nudgeFill,
     completeLoad,
     showLeadCapture,
     showResults,

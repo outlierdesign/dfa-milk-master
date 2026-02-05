@@ -27,7 +27,6 @@ export function FillTheTank() {
     completeQuestions,
     startFilling,
     stopFilling,
-    nudgeFill,
     completeLoad,
     showLeadCapture,
     showResults,
@@ -45,7 +44,7 @@ export function FillTheTank() {
     }
 
     if (gameState === "attract") {
-      return; // Already in attract mode
+      return;
     }
 
     idleTimeoutRef.current = window.setTimeout(() => {
@@ -149,7 +148,6 @@ export function FillTheTank() {
           isFilling={isFilling}
           onStartFilling={startFilling}
           onStopFilling={stopFilling}
-          onNudge={nudgeFill}
           onComplete={completeLoad}
           onAcknowledgeSpill={acknowledgeSpill}
           config={config}
@@ -161,7 +159,7 @@ export function FillTheTank() {
           fillDuration={session.totalFillDuration}
           usePiperSampling={session.usePiperSampling}
           useWeighbridge={session.useWeighbridge}
-          nudgeCount={session.nudgeCount}
+          nudgeCount={0}
           config={config}
           onComplete={showLeadCapture}
         />
@@ -192,7 +190,7 @@ export function FillTheTank() {
           emptyCapacity={session.emptyCapacity}
           milkLeftBehind={session.milkLeftBehind}
           timeDelta={session.timeDelta}
-          nudgeCount={session.nudgeCount}
+          nudgeCount={0}
           totalFillDuration={session.totalFillDuration}
           averageFlowRate={session.averageFlowRate}
           usedPiperSampling={session.usePiperSampling}

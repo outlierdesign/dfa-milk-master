@@ -23,7 +23,6 @@ export function PenaltyRevealScreen({
   fillDuration,
   usePiperSampling,
   useWeighbridge,
-  nudgeCount,
   config,
   onComplete,
 }: PenaltyRevealScreenProps) {
@@ -54,19 +53,8 @@ export function PenaltyRevealScreen({
       });
     }
 
-    if (nudgeCount > 0) {
-      const nudgeSeconds = nudgeCount * config.NUDGE_TIME_PENALTY_SEC;
-      list.push({
-        id: "nudges",
-        label: `Nudges (${nudgeCount}× ${config.NUDGE_TIME_PENALTY_SEC}s)`,
-        minutes: nudgeSeconds / 60,
-        icon: "⏱️",
-        isWarning: false,
-      });
-    }
-
     return list;
-  }, [usePiperSampling, useWeighbridge, nudgeCount, config]);
+  }, [usePiperSampling, useWeighbridge, config]);
 
   // Calculate totals
   const totalPenaltyMinutes = penalties.reduce((sum, p) => sum + p.minutes, 0);

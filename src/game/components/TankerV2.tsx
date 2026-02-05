@@ -7,6 +7,7 @@ interface TankerV2Props {
   spillTriggered: boolean;
   spillAmount: number;
   config: GameConfig;
+  isBlindMode?: boolean;
 }
 
 export function TankerV2({
@@ -16,6 +17,7 @@ export function TankerV2({
   spillTriggered,
   spillAmount,
   config,
+  isBlindMode = false,
 }: TankerV2Props) {
   const fillPercentage = Math.min(
     (currentFill / config.TANKER_CAPACITY_L) * 100,
@@ -26,11 +28,10 @@ export function TankerV2({
 
   // Determine fill color based on proximity to target
   const difference = Math.abs(currentFill - targetFill);
-  const tolerance = 200; // 200L tolerance for color feedback
+  const tolerance = 200;
 
-  // Base milk color is cream (#FDFFF5), change based on state
-  let fillColor = "from-[#FDFFF5] to-[#F5F7E8]"; // Cream milk color
-  if (currentFill > 0) {
+  let fillColor = "from-[#FDFFF5] to-[#F5F7E8]";
+  if (currentFill > 0 && !isBlindMode) {
     if (spillTriggered) {
       fillColor = "from-red-400 to-red-500";
     } else if (difference <= tolerance * 0.5) {
@@ -52,7 +53,6 @@ export function TankerV2({
             <div className="absolute bottom-0 left-0 w-full h-10 bg-gradient-to-b from-blue-800 to-blue-900 rounded-b-sm">
               {/* Silver grill */}
               <div className="absolute bottom-1 left-2 right-2 h-6 bg-gradient-to-b from-slate-300 to-slate-400 rounded border border-slate-500">
-                {/* Grill lines */}
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="w-full h-0.5 bg-slate-600 mt-1" />
                 ))}
@@ -61,9 +61,7 @@ export function TankerV2({
             
             {/* Windshield */}
             <div className="absolute top-2 left-2 right-3 h-11 bg-gradient-to-br from-sky-300 via-sky-400 to-sky-500 rounded-t-lg border-2 border-slate-600 overflow-hidden">
-              {/* Glass reflection */}
               <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent" />
-              {/* Windshield wiper line */}
               <div className="absolute bottom-1 left-1/4 right-1/4 h-0.5 bg-slate-700/50" />
             </div>
             
@@ -78,7 +76,7 @@ export function TankerV2({
             <div className="absolute bottom-2 left-1 w-1.5 h-2 bg-amber-300 rounded-full shadow-lg shadow-amber-300/50" />
           </div>
           
-          {/* Cab wheels - dual rear axle */}
+          {/* Cab wheels */}
           <div className="absolute -bottom-1 left-1 w-9 h-9 bg-slate-900 rounded-full border-3 border-slate-700">
             <div className="absolute inset-1.5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full border-2 border-slate-800">
               <div className="absolute inset-1 bg-slate-400 rounded-full" />
@@ -98,7 +96,6 @@ export function TankerV2({
         <div className="relative flex-1 min-w-[320px] -ml-4">
           {/* Black frame/undercarriage */}
           <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-b from-slate-800 to-slate-900 rounded border-2 border-slate-700">
-            {/* Frame details */}
             <div className="absolute top-1 left-4 right-4 h-1 bg-slate-600 rounded" />
           </div>
           
@@ -119,62 +116,83 @@ export function TankerV2({
               </span>
             </div>
 
-            {/* Inner tank cutaway view (semi-transparent window) */}
-            <div className="absolute inset-4 rounded-full bg-gradient-to-b from-slate-700/80 to-slate-800/80 overflow-hidden border-2 border-slate-600/50">
-              {/* Liquid fill */}
-              <div
-                className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t ${fillColor} transition-all duration-75 ease-out`}
-                style={{ height: `${fillPercentage}%` }}
-              >
-                {/* Liquid surface animation */}
-                {isFilling && (
-                  <div className="absolute top-0 left-0 right-0 h-3 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
+            {/* Inner tank - HIDDEN in blind mode */}
+            {!isBlindMode ? (
+              <div className="absolute inset-4 rounded-full bg-gradient-to-b from-slate-700/80 to-slate-800/80 overflow-hidden border-2 border-slate-600/50">
+                {/* Liquid fill */}
+                <div
+                  className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t ${fillColor} transition-all duration-75 ease-out`}
+                  style={{ height: `${fillPercentage}%` }}
+                >
+                  {/* Liquid surface animation */}
+                  {isFilling && (
+                    <div className="absolute top-0 left-0 right-0 h-3 overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
+                    </div>
+                  )}
+
+                  {/* Liquid bubbles when filling */}
+                  {isFilling && (
+                    <div className="absolute inset-0 overflow-hidden">
+                      {[...Array(5)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="absolute w-1.5 h-1.5 rounded-full bg-white/40 animate-bounce"
+                          style={{
+                            left: `${10 + i * 20}%`,
+                            animationDelay: `${i * 0.1}s`,
+                            animationDuration: "0.4s",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Target line - only in visual mode */}
+                {!spillTriggered && (
+                  <div
+                    className="absolute left-0 right-0 h-0.5 bg-emerald-400 shadow-lg shadow-emerald-400/50 z-10"
+                    style={{ bottom: `${targetPercentage}%` }}
+                  >
+                    <div className="absolute -left-1 top-1/2 -translate-y-1/2">
+                      <div className="w-2 h-3 bg-emerald-400 rounded-l" />
+                    </div>
+                    <div className="absolute -right-1 top-1/2 -translate-y-1/2">
+                      <div className="w-2 h-3 bg-emerald-400 rounded-r" />
+                    </div>
                   </div>
                 )}
 
-                {/* Liquid bubbles when filling */}
-                {isFilling && (
-                  <div className="absolute inset-0 overflow-hidden">
-                    {[...Array(5)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="absolute w-1.5 h-1.5 rounded-full bg-white/40 animate-bounce"
-                        style={{
-                          left: `${10 + i * 20}%`,
-                          animationDelay: `${i * 0.1}s`,
-                          animationDuration: "0.4s",
-                        }}
-                      />
-                    ))}
+                {/* Overfill warning */}
+                {spillTriggered && (
+                  <div className="absolute top-0 left-0 right-0 h-8 bg-red-500/50 animate-pulse flex items-center justify-center">
+                    <span className="text-xs font-bold text-white">
+                      OVERFILL!
+                    </span>
                   </div>
                 )}
               </div>
-
-              {/* Target line */}
-              {!spillTriggered && (
-                <div
-                  className="absolute left-0 right-0 h-0.5 bg-emerald-400 shadow-lg shadow-emerald-400/50 z-10"
-                  style={{ bottom: `${targetPercentage}%` }}
-                >
-                  <div className="absolute -left-1 top-1/2 -translate-y-1/2">
-                    <div className="w-2 h-3 bg-emerald-400 rounded-l" />
-                  </div>
-                  <div className="absolute -right-1 top-1/2 -translate-y-1/2">
-                    <div className="w-2 h-3 bg-emerald-400 rounded-r" />
+            ) : (
+              /* Opaque tank interior for blind mode */
+              <div className="absolute inset-4 rounded-full bg-gradient-to-b from-slate-600 to-slate-700 overflow-hidden border-2 border-slate-500">
+                {/* Mystery interior - can't see inside */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-slate-400 text-lg font-bold">
+                    {isFilling ? "🔊 FILLING..." : "❓"}
                   </div>
                 </div>
-              )}
-
-              {/* Overfill warning */}
-              {spillTriggered && (
-                <div className="absolute top-0 left-0 right-0 h-8 bg-red-500/50 animate-pulse flex items-center justify-center">
-                  <span className="text-xs font-bold text-white">
-                    OVERFILL!
-                  </span>
-                </div>
-              )}
-            </div>
+                
+                {/* Overfill warning still shows */}
+                {spillTriggered && (
+                  <div className="absolute inset-0 bg-red-500/70 animate-pulse flex items-center justify-center">
+                    <span className="text-xl font-black text-white">
+                      💥 OVERFILL!
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Top hatches */}
             <div className="absolute -top-1 left-[20%] w-8 h-3 bg-slate-500 rounded-t-lg border-2 border-slate-400" />
@@ -182,11 +200,11 @@ export function TankerV2({
             <div className="absolute -top-1 right-[20%] w-8 h-3 bg-slate-500 rounded-t-lg border-2 border-slate-400" />
           </div>
 
-          {/* End caps - front and back of tank */}
+          {/* End caps */}
           <div className="absolute left-0 top-6 bottom-12 w-4 bg-gradient-to-r from-slate-400 to-slate-300 rounded-l-full border-2 border-slate-400" />
           <div className="absolute right-0 top-6 bottom-12 w-4 bg-gradient-to-l from-slate-400 to-slate-300 rounded-r-full border-2 border-slate-400" />
 
-          {/* Trailer wheels - dual axles */}
+          {/* Trailer wheels */}
           <div className="absolute -bottom-1 left-16 flex gap-1">
             <div className="w-10 h-10 bg-slate-900 rounded-full border-3 border-slate-700">
               <div className="absolute inset-1.5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full border-2 border-slate-800">
@@ -233,8 +251,6 @@ export function TankerV2({
           )}
         </div>
       </div>
-
-      {/* Fill level display removed - now shown in prominent stats bar above graphics */}
     </div>
   );
 }

@@ -17,7 +17,6 @@ interface LoadReceiptProps {
   timeCost: number;
   timeSaved: number;
   timeDelta: number;
-  nudgeCount: number;
   totalLoadCost: number;
   
   // Decisions
@@ -40,7 +39,6 @@ export function LoadReceipt({
   timeCost,
   timeSaved,
   timeDelta,
-  nudgeCount,
   totalLoadCost,
   usedPiperSampling,
   usedWeighbridge,
@@ -49,7 +47,6 @@ export function LoadReceipt({
   const hasSpill = spillAmount > 0;
   const hasEmptyCapacity = emptyCapacity > 100;
   const emptyCapacityPercent = emptyCapacity / config.TANKER_CAPACITY_L;
-  const nudgeTimePenalty = nudgeCount * (config.NUDGE_TIME_PENALTY_SEC / 60);
   const currency = config.CURRENCY;
 
   return (
@@ -66,7 +63,7 @@ export function LoadReceipt({
         </div>
         <div className="flex justify-between items-center text-slate-300">
           <span>Avg Flow Rate:</span>
-          <span className="font-bold text-white">{Math.round(averageFlowRate)} L/s</span>
+          <span className="font-bold text-white">{Math.round(averageFlowRate)} L/min</span>
         </div>
         <div className="flex justify-between items-center text-slate-300">
           <span>Volume Loaded:</span>
@@ -110,18 +107,10 @@ export function LoadReceipt({
           </div>
         )}
 
-        {/* Nudge penalty */}
-        {nudgeCount > 0 && (
-          <div className="flex justify-between items-center text-slate-400 text-sm">
-            <span>👆 Nudges used: {nudgeCount}</span>
-            <span>+{(nudgeTimePenalty * 60).toFixed(0)}s delay</span>
-          </div>
-        )}
-
         {/* Decision summary */}
         <div className="pt-3 border-t border-slate-600 text-sm text-slate-400 space-y-1">
           <div className="flex justify-between">
-            <span>Piper Sampling</span>
+            <span>Piper System</span>
             <span className={usedPiperSampling ? "text-emerald-400" : "text-red-400"}>
               {usedPiperSampling ? "✓ YES" : "✗ NO"}
             </span>

@@ -28,7 +28,6 @@ export function GameTimer({
   // Calculate pending penalties
   const agitationPenalty = !usePiperSampling ? config.AGITATION_TIME_SAVED : 0;
   const weighbridgePenalty = useWeighbridge ? config.WEIGHBRIDGE_TIME_COST : 0;
-  const nudgePenalty = nudgeCount * (config.NUDGE_TIME_PENALTY_SEC / 60); // Convert to minutes
   const totalPenaltyMinutes = agitationPenalty + weighbridgePenalty;
   const hasPenalties = totalPenaltyMinutes > 0;
 
@@ -136,13 +135,6 @@ export function GameTimer({
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Nudge Penalty - Compact on mobile */}
-      {nudgeCount > 0 && (
-        <div className="mt-0.5 md:mt-1 text-[10px] md:text-xs text-amber-400/70 text-center">
-          +{(nudgePenalty * 60).toFixed(0)}s ({nudgeCount} nudge{nudgeCount > 1 ? "s" : ""})
         </div>
       )}
     </div>

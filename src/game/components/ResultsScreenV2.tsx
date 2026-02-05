@@ -12,7 +12,7 @@ interface ResultsScreenV2Props {
   milkLeftBehind: number;
   
   // Time results
-  timeDelta: number; // +/- minutes from decisions
+  timeDelta: number;
   nudgeCount: number;
   
   // Timing metrics
@@ -34,9 +34,7 @@ export function ResultsScreenV2({
   currentFill,
   spillAmount,
   emptyCapacity,
-  milkLeftBehind,
   timeDelta,
-  nudgeCount,
   totalFillDuration,
   averageFlowRate,
   usedPiperSampling,
@@ -53,8 +51,7 @@ export function ResultsScreenV2({
   const emptyCapacityPercent = emptyCapacity / config.TANKER_CAPACITY_L;
   const haulageWasteCost = emptyCapacityPercent * config.HAULAGE_COST_PER_LOAD;
   
-  const nudgeTimePenalty = nudgeCount * (config.NUDGE_TIME_PENALTY_SEC / 60);
-  const totalTimeMin = Math.abs(timeDelta) + nudgeTimePenalty;
+  const totalTimeMin = Math.abs(timeDelta);
   const timeCost = timeDelta < 0 ? totalTimeMin * config.TIME_COST_PER_MIN : 0;
   const timeSaved = timeDelta > 0 ? timeDelta * config.TIME_COST_PER_MIN : 0;
 
@@ -69,12 +66,11 @@ export function ResultsScreenV2({
   const accuracy = Math.max(0, 100 - (Math.abs(currentFill - targetFill) / targetFill) * 100);
 
   const hasSpill = spillAmount > 0;
-  const hasEmptyCapacity = emptyCapacity > 100; // More than 100L empty
+  const hasEmptyCapacity = emptyCapacity > 100;
   const isPerfect = !hasSpill && !hasEmptyCapacity && accuracy >= 98;
 
   // Play result sound and show annualized after delay
   useEffect(() => {
-    // Play appropriate sound based on result
     if (isPerfect || accuracy >= 95) {
       playSuccess();
     } else {
@@ -117,7 +113,6 @@ export function ResultsScreenV2({
         timeCost={timeCost}
         timeSaved={timeSaved}
         timeDelta={timeDelta}
-        nudgeCount={nudgeCount}
         totalLoadCost={totalLoadCost}
         usedPiperSampling={usedPiperSampling}
         usedWeighbridge={usedWeighbridge}

@@ -116,8 +116,8 @@ export function TankerV2({
               </span>
             </div>
 
-            {/* Inner tank - HIDDEN in blind mode */}
-            {!isBlindMode ? (
+            {/* Inner tank - HIDDEN in blind mode (solid aluminum exterior) */}
+            {!isBlindMode && (
               <div className="absolute inset-4 rounded-full bg-gradient-to-b from-slate-700/80 to-slate-800/80 overflow-hidden border-2 border-slate-600/50">
                 {/* Liquid fill */}
                 <div
@@ -173,24 +173,14 @@ export function TankerV2({
                   </div>
                 )}
               </div>
-            ) : (
-              /* Opaque tank interior for blind mode */
-              <div className="absolute inset-4 rounded-full bg-gradient-to-b from-slate-600 to-slate-700 overflow-hidden border-2 border-slate-500">
-                {/* Mystery interior - can't see inside */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-slate-400 text-lg font-bold">
-                    {isFilling ? "🔊 FILLING..." : "❓"}
-                  </div>
-                </div>
-                
-                {/* Overfill warning still shows */}
-                {spillTriggered && (
-                  <div className="absolute inset-0 bg-red-500/70 animate-pulse flex items-center justify-center">
-                    <span className="text-xl font-black text-white">
-                      💥 OVERFILL!
-                    </span>
-                  </div>
-                )}
+            )}
+            
+            {/* Overfill warning for blind mode - shows on exterior */}
+            {isBlindMode && spillTriggered && (
+              <div className="absolute inset-4 rounded-full bg-red-500/40 animate-pulse flex items-center justify-center border-4 border-red-500">
+                <span className="text-xl font-black text-white drop-shadow-lg">
+                  💥 OVERFILL!
+                </span>
               </div>
             )}
 

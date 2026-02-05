@@ -4,6 +4,7 @@ import { GAME_CONFIG_V2 } from "../constantsV2";
 export type CurrencySymbol = "€" | "$";
 
 export interface AdminSettings {
+  tankerCapacityL: number;
   targetFillPercent: number;
   milkValuePerL: number;
   haulageCostPerLoad: number;
@@ -20,6 +21,7 @@ export interface AdminSettings {
 }
 
 const DEFAULT_SETTINGS: AdminSettings = {
+  tankerCapacityL: GAME_CONFIG_V2.TANKER_CAPACITY_L,
   targetFillPercent: GAME_CONFIG_V2.TARGET_FILL_PERCENT * 100,
   milkValuePerL: GAME_CONFIG_V2.MILK_VALUE_PER_L,
   haulageCostPerLoad: GAME_CONFIG_V2.HAULAGE_COST_PER_LOAD,
@@ -81,8 +83,8 @@ export function useAdminSettings() {
 
   // Computed config
   const config = {
-    TANKER_CAPACITY_L: GAME_CONFIG_V2.TANKER_CAPACITY_L,
-    FARM_TANK_CAPACITY_L: GAME_CONFIG_V2.FARM_TANK_CAPACITY_L,
+    TANKER_CAPACITY_L: settings.tankerCapacityL,
+    FARM_TANK_CAPACITY_L: settings.tankerCapacityL + 3000, // Slightly more than tanker
     TARGET_FILL_PERCENT: settings.targetFillPercent / 100,
     MILK_VALUE_PER_L: settings.milkValuePerL,
     HAULAGE_COST_PER_LOAD: settings.haulageCostPerLoad,
@@ -158,8 +160,20 @@ export function AdminPanel({
             />
           </SettingGroup>
 
-          {/* Target Fill */}
-          <SettingGroup title="Target & Difficulty">
+          {/* Tanker & Target */}
+          <SettingGroup title="Tanker & Target">
+            <SliderSetting
+              label="Tanker Capacity"
+              value={settings.tankerCapacityL}
+              min={10000}
+              max={35000}
+              step={1000}
+              unit="L"
+              onChange={(v) => onUpdate("tankerCapacityL", v)}
+            />
+            <div className="text-xs text-slate-400 -mt-2 mb-2">
+              ≈ {Math.round(settings.tankerCapacityL * 2.27).toLocaleString()} lbs
+            </div>
             <SliderSetting
               label="Target Fill %"
               value={settings.targetFillPercent}

@@ -61,9 +61,14 @@ export function ResultsScreenV2({
   const dailyCost = totalLoadCost * config.FARM_LOADS_PER_DAY;
   const annualCost = dailyCost * config.DAYS_PER_YEAR;
 
-  // Calculate accuracy
+  // Calculate accuracy - overfill reduces accuracy below 100%
   const targetFill = config.TARGET_FILL_L;
-  const accuracy = Math.max(0, 100 - (Math.abs(currentFill - targetFill) / targetFill) * 100);
+  const fillDifference = Math.abs(currentFill - targetFill);
+  const accuracy = Math.max(0, 100 - (fillDifference / targetFill) * 100);
+  
+  // Check for major overspill (beyond tolerance)
+  const overfillTolerance = (config as any).OVERFILL_TOLERANCE_L ?? 440;
+  const isMajorOverspill = spillAmount > overfillTolerance;
 
   const hasSpill = spillAmount > 0;
   const hasEmptyCapacity = emptyCapacity > 100;
@@ -91,7 +96,7 @@ export function ResultsScreenV2({
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
-          {isPerfect ? "🎉 Perfect Load!" : hasSpill ? "💔 Milk Lost" : "Load Complete"}
+          {isPerfect ? "🎉 Perfect Load!" : isMajorOverspill ? "💥 Major Overspill!" : hasSpill ? "💔 Milk Lost" : "Load Complete"}
         </h2>
         <div className="text-xl text-slate-400">
           Accuracy: <span className={`font-bold ${accuracy >= 95 ? "text-emerald-400" : accuracy >= 80 ? "text-amber-400" : "text-red-400"}`}>

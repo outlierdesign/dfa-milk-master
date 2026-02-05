@@ -163,11 +163,20 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
           let spillWarningActive = prev.spillWarningActive;
           let spillTriggered = prev.spillTriggered;
 
-          if (newFill > configRef.current.TANKER_CAPACITY_L) {
-            spillAmount = newFill - configRef.current.TANKER_CAPACITY_L;
+          const capacity = configRef.current.TANKER_CAPACITY_L;
+          const tolerance = (configRef.current as any).OVERFILL_TOLERANCE_L ?? 440;
+          const maxAllowedFill = capacity + tolerance;
+
+          if (newFill > capacity) {
+            // Calculate overfill amount
+            spillAmount = newFill - capacity;
             spillWarningActive = true;
-            spillTriggered = true;
-            newFill = configRef.current.TANKER_CAPACITY_L;
+            
+            // Major spill triggered when exceeding tolerance
+            if (newFill > maxAllowedFill) {
+              spillTriggered = true;
+              newFill = maxAllowedFill; // Cap at max
+            }
           }
 
           newFarmLevel = Math.max(0, newFarmLevel);

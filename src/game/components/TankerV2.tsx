@@ -28,12 +28,7 @@ export function TankerV2({
   const difference = Math.abs(currentFill - targetFill);
   const tolerance = targetFill * 0.004; // ~0.4%
 
-  let fillColor = "from-[#FDFFF5] to-[#F5F7E8]";
-  if (currentFill > 0 && !isBlindMode) {
-    if (spillTriggered) fillColor = "from-red-400 to-red-500";
-    else if (difference <= tolerance * 0.5) fillColor = "from-emerald-400 to-emerald-500";
-    else if (difference <= tolerance) fillColor = "from-amber-400 to-amber-500";
-  }
+  const fillColor = "from-[#FDFFF5] to-[#F5F7E8]";
 
   return (
     <div className="relative">

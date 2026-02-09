@@ -1,55 +1,21 @@
 import { useState, useEffect } from "react";
-import { GAME_CONFIG_V2 } from "../constantsV2";
+import { GAME_DEFAULTS, GameSettings, GameConfig, settingsToConfig } from "../constantsV2";
 
-export type CurrencySymbol = "€" | "$";
+export type CurrencySymbol = "$" | "€";
 
-export interface AdminSettings {
-  tankerCapacityL: number;
-  targetFillPercent: number;
-  milkValuePerL: number;
-  haulageCostPerLoad: number;
-  timeCostPerMin: number;
-  farmLoadsPerDay: number;
-  flowRateBase: number;
-  flowRateVariance: number;
-  agitationTimeSaved: number;
-  weighbridgeTimeCost: number;
-  gameSpeedMultiplier: number;
-  currency: CurrencySymbol;
-  piperSlowdownThreshold: number;
-  piperSlowdownFactor: number;
-}
-
-const DEFAULT_SETTINGS: AdminSettings = {
-  tankerCapacityL: GAME_CONFIG_V2.TANKER_CAPACITY_L,
-  targetFillPercent: GAME_CONFIG_V2.TARGET_FILL_PERCENT * 100,
-  milkValuePerL: GAME_CONFIG_V2.MILK_VALUE_PER_L,
-  haulageCostPerLoad: GAME_CONFIG_V2.HAULAGE_COST_PER_LOAD,
-  timeCostPerMin: GAME_CONFIG_V2.TIME_COST_PER_MIN,
-  farmLoadsPerDay: GAME_CONFIG_V2.FARM_LOADS_PER_DAY,
-  flowRateBase: GAME_CONFIG_V2.FLOW_RATE_BASE_LPS,
-  flowRateVariance: GAME_CONFIG_V2.FLOW_VARIANCE_PERCENT,
-  agitationTimeSaved: GAME_CONFIG_V2.AGITATION_TIME_SAVED,
-  weighbridgeTimeCost: GAME_CONFIG_V2.WEIGHBRIDGE_TIME_COST,
-  gameSpeedMultiplier: GAME_CONFIG_V2.GAME_SPEED_MULTIPLIER,
-  currency: "€",
-  piperSlowdownThreshold: GAME_CONFIG_V2.PIPER_SLOWDOWN_THRESHOLD * 100,
-  piperSlowdownFactor: GAME_CONFIG_V2.PIPER_SLOWDOWN_FACTOR * 100,
-};
-
-const STORAGE_KEY = "fill-tank-admin-settings";
+const STORAGE_KEY = "fill-tank-admin-settings-v2";
 
 export function useAdminSettings() {
-  const [settings, setSettings] = useState<AdminSettings>(() => {
+  const [settings, setSettings] = useState<GameSettings>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+        return { ...GAME_DEFAULTS, ...JSON.parse(saved) } as GameSettings;
       } catch {
-        return DEFAULT_SETTINGS;
+        return { ...GAME_DEFAULTS } as GameSettings;
       }
     }
-    return DEFAULT_SETTINGS;
+    return { ...GAME_DEFAULTS } as GameSettings;
   });
 
   const [isOpen, setIsOpen] = useState(false);
@@ -65,75 +31,34 @@ export function useAdminSettings() {
         setIsOpen((prev) => !prev);
       }
     };
-
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const updateSetting = <K extends keyof AdminSettings>(
-    key: K,
-    value: AdminSettings[K]
-  ) => {
+  const updateSetting = <K extends keyof GameSettings>(key: K, value: GameSettings[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
   const resetToDefaults = () => {
-    setSettings(DEFAULT_SETTINGS);
+    setSettings({ ...GAME_DEFAULTS } as GameSettings);
   };
 
-  // Computed config
-  const config = {
-    TANKER_CAPACITY_L: settings.tankerCapacityL,
-    FARM_TANK_CAPACITY_L: settings.tankerCapacityL + 3000, // Slightly more than tanker
-    TARGET_FILL_PERCENT: settings.targetFillPercent / 100,
-    MILK_VALUE_PER_L: settings.milkValuePerL,
-    HAULAGE_COST_PER_LOAD: settings.haulageCostPerLoad,
-    TIME_COST_PER_MIN: settings.timeCostPerMin,
-    FARM_LOADS_PER_DAY: settings.farmLoadsPerDay,
-    DAYS_PER_YEAR: GAME_CONFIG_V2.DAYS_PER_YEAR,
-    AGITATION_TIME_SAVED: settings.agitationTimeSaved,
-    WEIGHBRIDGE_TIME_COST: settings.weighbridgeTimeCost,
-    FLOW_RATE_BASE_LPS: settings.flowRateBase,
-    FLOW_RATE_MIN_LPS: settings.flowRateBase * (1 - settings.flowRateVariance / 100),
-    FLOW_RATE_MAX_LPS: settings.flowRateBase * (1 + settings.flowRateVariance / 100),
-    FLOW_VARIANCE_PERCENT: settings.flowRateVariance,
-    FLOW_VARIANCE_INTERVAL_MS: GAME_CONFIG_V2.FLOW_VARIANCE_INTERVAL_MS,
-    PIPER_SLOWDOWN_THRESHOLD: settings.piperSlowdownThreshold / 100,
-    PIPER_SLOWDOWN_FACTOR: settings.piperSlowdownFactor / 100,
-    RESULTS_DISPLAY_TIME: GAME_CONFIG_V2.RESULTS_DISPLAY_TIME,
-    ATTRACT_IDLE_TIME: GAME_CONFIG_V2.ATTRACT_IDLE_TIME,
-    GAME_SPEED_MULTIPLIER: settings.gameSpeedMultiplier,
-    CURRENCY: settings.currency,
-    get TARGET_FILL_L() {
-      return this.TANKER_CAPACITY_L * this.TARGET_FILL_PERCENT;
-    },
-  };
+  const config: GameConfig = settingsToConfig(settings);
 
-  return {
-    settings,
-    config,
-    isOpen,
-    setIsOpen,
-    updateSetting,
-    resetToDefaults,
-  };
+  return { settings, config, isOpen, setIsOpen, updateSetting, resetToDefaults };
 }
 
+// --- Admin Panel UI ---
+
 interface AdminPanelProps {
-  settings: AdminSettings;
+  settings: GameSettings;
   isOpen: boolean;
   onClose: () => void;
-  onUpdate: <K extends keyof AdminSettings>(key: K, value: AdminSettings[K]) => void;
+  onUpdate: <K extends keyof GameSettings>(key: K, value: GameSettings[K]) => void;
   onReset: () => void;
 }
 
-export function AdminPanel({
-  settings,
-  isOpen,
-  onClose,
-  onUpdate,
-  onReset,
-}: AdminPanelProps) {
+export function AdminPanel({ settings, isOpen, onClose, onUpdate, onReset }: AdminPanelProps) {
   if (!isOpen) return null;
 
   return (
@@ -142,206 +67,94 @@ export function AdminPanel({
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-slate-600">
           <h2 className="text-xl font-bold text-white">⚙️ Admin Settings</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white text-2xl"
-          >
-            ×
-          </button>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">×</button>
         </div>
 
-        {/* Settings */}
         <div className="p-4 space-y-6">
           {/* Game Speed */}
           <SettingGroup title="Game Speed (Trade Show Mode)">
-            <SpeedSelector
-              value={settings.gameSpeedMultiplier}
-              onChange={(v) => onUpdate("gameSpeedMultiplier", v)}
-            />
+            <SpeedSelector value={settings.gameSpeedMultiplier} onChange={(v) => onUpdate("gameSpeedMultiplier", v)} />
           </SettingGroup>
 
-          {/* Tanker & Target */}
-          <SettingGroup title="Tanker & Target">
-            <SliderSetting
-              label="Tanker Capacity"
-              value={settings.tankerCapacityL}
-              min={10000}
-              max={35000}
-              step={1000}
-              unit="L"
-              onChange={(v) => onUpdate("tankerCapacityL", v)}
-            />
-            <div className="text-xs text-slate-400 -mt-2 mb-2">
-              ≈ {Math.round(settings.tankerCapacityL * 2.27).toLocaleString()} lbs
+          {/* Load & Production */}
+          <SettingGroup title="Load & Production">
+            <NumberSetting label="Target Load" value={settings.targetLoadLbs} min={10000} max={100000} step={1000} unit="lbs" onChange={(v) => onUpdate("targetLoadLbs", v)} />
+            <NumberSetting label="Max Overfill" value={settings.maxOverfillLbs} min={1000} max={30000} step={500} unit="lbs" onChange={(v) => onUpdate("maxOverfillLbs", v)} />
+            <NumberSetting label="Loads per Day" value={settings.loadsPerDay} min={1} max={20} step={1} unit="loads" onChange={(v) => onUpdate("loadsPerDay", v)} />
+            <NumberSetting label="Days per Year" value={settings.daysPerYear} min={1} max={366} step={1} unit="days" onChange={(v) => onUpdate("daysPerYear", v)} />
+            <div className="text-xs text-slate-400 mt-1">
+              Annual loads: {settings.annualLoadsOverride ?? (settings.loadsPerDay * settings.daysPerYear)}
             </div>
-            <SliderSetting
-              label="Target Fill %"
-              value={settings.targetFillPercent}
-              min={80}
-              max={100}
-              step={1}
-              unit="%"
-              onChange={(v) => onUpdate("targetFillPercent", v)}
-            />
-            <SliderSetting
-              label="Base Flow Rate"
-              value={settings.flowRateBase}
-              min={500}
-              max={3000}
-              step={50}
-              unit="L/min"
-              onChange={(v) => onUpdate("flowRateBase", v)}
-            />
-            <SliderSetting
-              label="Flow Rate Variance"
-              value={settings.flowRateVariance}
-              min={0}
-              max={20}
-              step={1}
-              unit="%"
-              onChange={(v) => onUpdate("flowRateVariance", v)}
-            />
           </SettingGroup>
 
-          {/* Piper Mode Settings */}
+          {/* Overfill Rules */}
+          <SettingGroup title="Overfill Rules">
+            <NumberSetting label="Overfill Events/Year" value={settings.overfillEventsPerYear} min={1} max={100} step={1} unit="events" onChange={(v) => onUpdate("overfillEventsPerYear", v)} />
+            <ToggleSetting label="Fire on 3 Overfills" value={settings.fireOnThreeOverfills} onChange={(v) => onUpdate("fireOnThreeOverfills", v)} />
+          </SettingGroup>
+
+          {/* Cost Assumptions */}
+          <SettingGroup title={`Cost Assumptions (${settings.currency})`}>
+            <CurrencySelector value={settings.currency} onChange={(v) => onUpdate("currency", v)} />
+            <NumberSetting label="Underfill Cost per Load" value={settings.underfillCostPerLoad} min={0} max={5000} step={50} unit={settings.currency} onChange={(v) => onUpdate("underfillCostPerLoad", v)} />
+            <NumberSetting label="Milk Cost per lb" value={settings.milkCostPerLb} min={0.01} max={2} step={0.01} unit={`${settings.currency}/lb`} decimals={2} onChange={(v) => onUpdate("milkCostPerLb", v)} />
+            <NumberSetting label="Driver Rate per Hour" value={settings.driverRatePerHour} min={10} max={500} step={10} unit={`${settings.currency}/hr`} onChange={(v) => onUpdate("driverRatePerHour", v)} />
+          </SettingGroup>
+
+          {/* Time Penalties */}
+          <SettingGroup title="Time Penalties">
+            <NumberSetting label="Agitation Minutes" value={settings.agitationMinutes} min={0} max={60} step={1} unit="mins" onChange={(v) => onUpdate("agitationMinutes", v)} />
+            <NumberSetting label="Weigh Scale Minutes" value={settings.weighScaleMinutes} min={0} max={60} step={1} unit="mins" onChange={(v) => onUpdate("weighScaleMinutes", v)} />
+          </SettingGroup>
+
+          {/* Flow Mechanics */}
+          <SettingGroup title="Flow Mechanics">
+            <NumberSetting label="Flow Rate" value={settings.flowRateLbsPerMin} min={500} max={10000} step={100} unit="lbs/min" onChange={(v) => onUpdate("flowRateLbsPerMin", v)} />
+            <NumberSetting label="Flow Jitter" value={settings.flowJitterPercent} min={0} max={20} step={1} unit="%" onChange={(v) => onUpdate("flowJitterPercent", v)} />
+            <ToggleSetting label="Auto-stop at Max Overfill" value={settings.stopAutomaticallyAtMaxOverfill} onChange={(v) => onUpdate("stopAutomaticallyAtMaxOverfill", v)} />
+          </SettingGroup>
+
+          {/* Piper Mode */}
           <SettingGroup title="Piper Mode (Visual Mode)">
-            <SliderSetting
-              label="Slowdown Threshold"
-              value={settings.piperSlowdownThreshold}
-              min={70}
-              max={98}
-              step={1}
-              unit="%"
-              onChange={(v) => onUpdate("piperSlowdownThreshold", v)}
-            />
-            <SliderSetting
-              label="Minimum Speed at 100%"
-              value={settings.piperSlowdownFactor}
-              min={10}
-              max={50}
-              step={5}
-              unit="%"
-              onChange={(v) => onUpdate("piperSlowdownFactor", v)}
-            />
-            <div className="text-xs text-slate-400 mt-2">
-              Flow slows from {settings.piperSlowdownThreshold}% fill down to {settings.piperSlowdownFactor}% speed at 100%
-            </div>
-          </SettingGroup>
-
-          {/* Money Values */}
-          <SettingGroup title={`Money Values (${settings.currency})`}>
-            <CurrencySelector
-              value={settings.currency}
-              onChange={(v) => onUpdate("currency", v)}
-            />
-            <SliderSetting
-              label="Milk Value per Litre"
-              value={settings.milkValuePerL}
-              min={0.2}
-              max={1.0}
-              step={0.01}
-              unit={`${settings.currency}/L`}
-              decimals={2}
-              onChange={(v) => onUpdate("milkValuePerL", v)}
-            />
-            <SliderSetting
-              label="Haulage Cost per Load"
-              value={settings.haulageCostPerLoad}
-              min={50}
-              max={500}
-              step={10}
-              unit={settings.currency}
-              onChange={(v) => onUpdate("haulageCostPerLoad", v)}
-            />
-            <SliderSetting
-              label="Time Cost per Minute"
-              value={settings.timeCostPerMin}
-              min={1}
-              max={20}
-              step={0.5}
-              unit={`${settings.currency}/min`}
-              decimals={1}
-              onChange={(v) => onUpdate("timeCostPerMin", v)}
-            />
-          </SettingGroup>
-
-          {/* Time Settings */}
-          <SettingGroup title="Time Penalties/Savings">
-            <SliderSetting
-              label="Agitation Time Saved (Piper)"
-              value={settings.agitationTimeSaved}
-              min={5}
-              max={60}
-              step={5}
-              unit="mins"
-              onChange={(v) => onUpdate("agitationTimeSaved", v)}
-            />
-            <SliderSetting
-              label="Weighbridge Time Cost"
-              value={settings.weighbridgeTimeCost}
-              min={5}
-              max={30}
-              step={5}
-              unit="mins"
-              onChange={(v) => onUpdate("weighbridgeTimeCost", v)}
-            />
-          </SettingGroup>
-
-          {/* Scaling */}
-          <SettingGroup title="Annualized Scaling">
-            <SliderSetting
-              label="Farm Loads per Day"
-              value={settings.farmLoadsPerDay}
-              min={1}
-              max={20}
-              step={1}
-              unit="loads"
-              onChange={(v) => onUpdate("farmLoadsPerDay", v)}
-            />
+            <NumberSetting label="Slowdown Threshold" value={settings.piperSlowdownThreshold} min={70} max={98} step={1} unit="%" onChange={(v) => onUpdate("piperSlowdownThreshold", v)} />
+            <NumberSetting label="Min Speed at 100%" value={settings.piperSlowdownFactor} min={10} max={50} step={5} unit="%" onChange={(v) => onUpdate("piperSlowdownFactor", v)} />
           </SettingGroup>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center p-4 border-t border-slate-600">
-          <button
-            onClick={onReset}
-            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium transition-colors"
-          >
-            Reset to Defaults
-          </button>
-          <div className="text-sm text-slate-400">
-            Press <kbd className="bg-slate-700 px-2 py-1 rounded">Ctrl+Shift+A</kbd> to toggle
+        <div className="p-4 border-t border-slate-600 space-y-3">
+          <p className="text-xs text-amber-400/80 text-center">
+            ⚠️ Changing these values affects future games only.
+          </p>
+          <div className="flex justify-between items-center">
+            <button onClick={onReset} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium transition-colors">
+              Reset to Piper Defaults
+            </button>
+            <div className="text-sm text-slate-400">
+              <kbd className="bg-slate-700 px-2 py-1 rounded">Ctrl+Shift+A</kbd>
+            </div>
+            <button onClick={onClose} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors">
+              Save & Apply
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors"
-          >
-            Done
-          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function SettingGroup({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+// --- Sub-components ---
+
+function SettingGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="text-sm font-bold text-slate-400 mb-3 uppercase tracking-wide">
-        {title}
-      </h3>
+      <h3 className="text-sm font-bold text-slate-400 mb-3 uppercase tracking-wide">{title}</h3>
       <div className="space-y-4 bg-slate-700/50 p-4 rounded-lg">{children}</div>
     </div>
   );
 }
 
-interface SliderSettingProps {
+interface NumberSettingProps {
   label: string;
   value: number;
   min: number;
@@ -352,19 +165,8 @@ interface SliderSettingProps {
   onChange: (value: number) => void;
 }
 
-function SliderSetting({
-  label,
-  value,
-  min,
-  max,
-  step,
-  unit,
-  decimals = 0,
-  onChange,
-}: SliderSettingProps) {
-  // Fallback to min if value is undefined (e.g., new setting not in localStorage)
+function NumberSetting({ label, value, min, max, step, unit, decimals = 0, onChange }: NumberSettingProps) {
   const safeValue = value ?? min;
-  
   return (
     <div className="flex items-center gap-4">
       <label className="flex-1 text-slate-300 text-sm">{label}</label>
@@ -374,86 +176,81 @@ function SliderSetting({
         max={max}
         step={step}
         value={safeValue}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
+        onChange={(e) => onChange(Math.max(0, parseFloat(e.target.value)))}
         className="w-32 accent-emerald-500"
       />
-      <span className="w-24 text-right font-mono text-white">
+      <span className="w-28 text-right font-mono text-white text-sm">
         {safeValue.toFixed(decimals)} {unit}
       </span>
     </div>
   );
 }
 
+function ToggleSetting({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-slate-300 text-sm">{label}</span>
+      <button
+        onClick={() => onChange(!value)}
+        className={`relative w-12 h-6 rounded-full transition-colors ${value ? "bg-emerald-500" : "bg-slate-600"}`}
+      >
+        <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${value ? "left-6" : "left-0.5"}`} />
+      </button>
+    </div>
+  );
+}
+
 const SPEED_OPTIONS = [
-  { value: 1, label: "1×", description: "Real-time (~12s)" },
+  { value: 1, label: "1×", description: "Real-time" },
   { value: 2, label: "2×", description: "~6s" },
   { value: 5, label: "5×", description: "~2.5s" },
   { value: 10, label: "10×", description: "~1.2s" },
 ];
 
-interface SpeedSelectorProps {
-  value: number;
-  onChange: (value: number) => void;
-}
-
-function SpeedSelector({ value, onChange }: SpeedSelectorProps) {
+function SpeedSelector({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-slate-300 text-sm">Demo Speed</span>
-        <span className="text-xs text-slate-400">
-          Timer shows simulated real-world time
-        </span>
-      </div>
       <div className="flex gap-2">
-        {SPEED_OPTIONS.map((option) => (
+        {SPEED_OPTIONS.map((opt) => (
           <button
-            key={option.value}
-            onClick={() => onChange(option.value)}
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
             className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${
-              value === option.value
+              value === opt.value
                 ? "bg-emerald-600 text-white border-2 border-emerald-400"
                 : "bg-slate-700 text-slate-300 border-2 border-slate-600 hover:border-slate-500"
             }`}
           >
-            <div className="text-lg font-bold">{option.label}</div>
-            <div className="text-xs opacity-75">{option.description}</div>
+            <div className="text-lg font-bold">{opt.label}</div>
+            <div className="text-xs opacity-75">{opt.description}</div>
           </button>
         ))}
-      </div>
-      <div className="text-xs text-amber-400/80 text-center">
-        ⚡ Higher speeds make demos faster while preserving accurate time-cost calculations
       </div>
     </div>
   );
 }
 
 const CURRENCY_OPTIONS: { value: CurrencySymbol; label: string }[] = [
-  { value: "€", label: "Euro (€)" },
   { value: "$", label: "Dollar ($)" },
+  { value: "€", label: "Euro (€)" },
 ];
 
-interface CurrencySelectorProps {
-  value: CurrencySymbol;
-  onChange: (value: CurrencySymbol) => void;
-}
-
-function CurrencySelector({ value, onChange }: CurrencySelectorProps) {
+function CurrencySelector({ value, onChange }: { value: CurrencySymbol; onChange: (v: CurrencySymbol) => void }) {
   return (
     <div className="flex items-center gap-4">
       <label className="flex-1 text-slate-300 text-sm">Currency</label>
       <div className="flex gap-2">
-        {CURRENCY_OPTIONS.map((option) => (
+        {CURRENCY_OPTIONS.map((opt) => (
           <button
-            key={option.value}
-            onClick={() => onChange(option.value)}
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              value === option.value
+              value === opt.value
                 ? "bg-emerald-600 text-white border-2 border-emerald-400"
                 : "bg-slate-700 text-slate-300 border-2 border-slate-600 hover:border-slate-500"
             }`}
           >
-            {option.label}
+            {opt.label}
           </button>
         ))}
       </div>

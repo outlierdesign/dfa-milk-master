@@ -1,33 +1,31 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { GAME_CONFIG_V2, GameStateV2 } from "../constantsV2";
+import { GameStateV2, GameConfig, RoundResult } from "../constantsV2";
 
 export interface GameSessionV2 {
-  // Pre-load decisions
-  usePiperSampling: boolean; // Now means "using Piper System" (visual mode)
+  // Pre-load decisions (apply to all 3 rounds)
+  usePiperSampling: boolean;
   useWeighbridge: boolean;
 
-  // Fill state
+  // Round tracking
+  currentRound: number; // 1, 2, or 3
+  totalRounds: number; // always 3
+  rounds: RoundResult[]; // completed round data
+  isFired: boolean;
+
+  // Current round fill state (lbs)
   currentFill: number;
-  farmTankLevel: number;
-  currentFlowRate: number;
+  currentFlowRate: number; // lbs/min
+  hasStartedFilling: boolean;
+  fillLocked: boolean;
 
-  // One-shot fill mechanics
-  hasStartedFilling: boolean; // Prevent multiple presses
-  fillLocked: boolean; // After release, cannot restart
-
-  // Outcomes
+  // Spill state
   spillAmount: number;
   spillTriggered: boolean;
   spillWarningActive: boolean;
   spillAcknowledged: boolean;
   showSpillPopup: boolean;
-  emptyCapacity: number;
-  milkLeftBehind: number;
 
   // Time tracking
-  timeDelta: number;
-
-  // Timing metrics for receipt
   fillStartTime: number | null;
   fillEndTime: number | null;
   totalFillDuration: number;
@@ -35,38 +33,15 @@ export interface GameSessionV2 {
   averageFlowRate: number;
 }
 
-// Config type that can be overridden by admin settings
-export interface GameConfig {
-  TANKER_CAPACITY_L: number;
-  FARM_TANK_CAPACITY_L: number;
-  TARGET_FILL_PERCENT: number;
-  MILK_VALUE_PER_L: number;
-  HAULAGE_COST_PER_LOAD: number;
-  TIME_COST_PER_MIN: number;
-  FARM_LOADS_PER_DAY: number;
-  DAYS_PER_YEAR: number;
-  AGITATION_TIME_SAVED: number;
-  WEIGHBRIDGE_TIME_COST: number;
-  FLOW_RATE_MIN_LPS: number;
-  FLOW_RATE_MAX_LPS: number;
-  FLOW_RATE_BASE_LPS: number;
-  FLOW_VARIANCE_PERCENT: number;
-  FLOW_VARIANCE_INTERVAL_MS: number;
-  PIPER_SLOWDOWN_THRESHOLD: number;
-  PIPER_SLOWDOWN_FACTOR: number;
-  RESULTS_DISPLAY_TIME: number;
-  ATTRACT_IDLE_TIME: number;
-  TARGET_FILL_L: number;
-  GAME_SPEED_MULTIPLIER: number;
-  CURRENCY: string;
-}
-
-const createInitialSession = (config: GameConfig): GameSessionV2 => ({
+const createInitialSession = (): GameSessionV2 => ({
   usePiperSampling: false,
   useWeighbridge: false,
+  currentRound: 1,
+  totalRounds: 3,
+  rounds: [],
+  isFired: false,
   currentFill: 0,
-  farmTankLevel: config.FARM_TANK_CAPACITY_L,
-  currentFlowRate: config.FLOW_RATE_BASE_LPS,
+  currentFlowRate: 0,
   hasStartedFilling: false,
   fillLocked: false,
   spillAmount: 0,
@@ -74,9 +49,6 @@ const createInitialSession = (config: GameConfig): GameSessionV2 => ({
   spillWarningActive: false,
   spillAcknowledged: false,
   showSpillPopup: false,
-  emptyCapacity: 0,
-  milkLeftBehind: 0,
-  timeDelta: 0,
   fillStartTime: null,
   fillEndTime: null,
   totalFillDuration: 0,
@@ -84,30 +56,46 @@ const createInitialSession = (config: GameConfig): GameSessionV2 => ({
   averageFlowRate: 0,
 });
 
-export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as GameConfig) {
+const resetRoundState = (session: GameSessionV2, flowRate: number): GameSessionV2 => ({
+  ...session,
+  currentFill: 0,
+  currentFlowRate: flowRate,
+  hasStartedFilling: false,
+  fillLocked: false,
+  spillAmount: 0,
+  spillTriggered: false,
+  spillWarningActive: false,
+  spillAcknowledged: false,
+  showSpillPopup: false,
+  fillStartTime: null,
+  fillEndTime: null,
+  totalFillDuration: 0,
+  flowRateSamples: [],
+  averageFlowRate: 0,
+});
+
+export function useGameStateV2(config: GameConfig) {
   const [gameState, setGameState] = useState<GameStateV2>("attract");
-  const [session, setSession] = useState<GameSessionV2>(() => createInitialSession(config));
+  const [session, setSession] = useState<GameSessionV2>(createInitialSession);
   const [isFilling, setIsFilling] = useState(false);
 
-  // Store config ref for use in intervals
   const configRef = useRef(config);
   configRef.current = config;
 
-  // Flow rate variance timer
   const flowRateIntervalRef = useRef<number | null>(null);
   const fillIntervalRef = useRef<number | null>(null);
   const lastTickRef = useRef<number>(0);
 
-  // Random flow rate with ±5% variance
+  // Random flow rate with jitter
   const getRandomFlowRate = useCallback(() => {
-    const base = configRef.current.FLOW_RATE_BASE_LPS;
-    const variance = configRef.current.FLOW_VARIANCE_PERCENT / 100;
+    const base = configRef.current.flowRateLbsPerMin;
+    const variance = configRef.current.flowJitterPercent / 100;
     const min = base * (1 - variance);
     const max = base * (1 + variance);
     return Math.random() * (max - min) + min;
   }, []);
 
-  // Start flow rate variance when playing
+  // Flow rate variance timer
   useEffect(() => {
     if (gameState === "playing") {
       flowRateIntervalRef.current = window.setInterval(() => {
@@ -115,15 +103,13 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
           ...prev,
           currentFlowRate: getRandomFlowRate(),
         }));
-      }, config.FLOW_VARIANCE_INTERVAL_MS);
+      }, config.flowVarianceIntervalMs);
 
       return () => {
-        if (flowRateIntervalRef.current) {
-          clearInterval(flowRateIntervalRef.current);
-        }
+        if (flowRateIntervalRef.current) clearInterval(flowRateIntervalRef.current);
       };
     }
-  }, [gameState, getRandomFlowRate, config.FLOW_VARIANCE_INTERVAL_MS]);
+  }, [gameState, getRandomFlowRate, config.flowVarianceIntervalMs]);
 
   // Filling loop
   useEffect(() => {
@@ -132,120 +118,106 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
 
       fillIntervalRef.current = window.setInterval(() => {
         const now = performance.now();
-        const deltaTime = (now - lastTickRef.current) / 1000;
+        const deltaTime = (now - lastTickRef.current) / 1000; // seconds
         lastTickRef.current = now;
 
         setSession((prev) => {
           if (prev.fillLocked) return prev;
 
-          const speedMultiplier = configRef.current.GAME_SPEED_MULTIPLIER || 1;
-          
+          const cfg = configRef.current;
+          const speedMultiplier = cfg.gameSpeedMultiplier || 1;
+
           // Calculate effective flow rate with Piper slowdown
           let effectiveFlowRate = prev.currentFlowRate;
-          
+
           if (prev.usePiperSampling) {
-            const fillPercent = prev.currentFill / configRef.current.TANKER_CAPACITY_L;
-            const threshold = configRef.current.PIPER_SLOWDOWN_THRESHOLD;
-            
+            const fillPercent = prev.currentFill / cfg.targetLoadLbs;
+            const threshold = cfg.piperSlowdownThreshold;
+
             if (fillPercent > threshold) {
-              // Progressive slowdown from threshold to 100%
               const slowProgress = (fillPercent - threshold) / (1 - threshold);
-              const slowFactor = 1 - (slowProgress * (1 - configRef.current.PIPER_SLOWDOWN_FACTOR));
+              const slowFactor = 1 - slowProgress * (1 - cfg.piperSlowdownFactor);
               effectiveFlowRate *= slowFactor;
             }
           }
 
+          // Flow rate is lbs/min, deltaTime is seconds
+          // 1 real second = 1 simulated minute
           const fillDelta = effectiveFlowRate * deltaTime * speedMultiplier;
           let newFill = prev.currentFill + fillDelta;
-          let newFarmLevel = prev.farmTankLevel - fillDelta;
 
           let spillAmount = prev.spillAmount;
           let spillWarningActive = prev.spillWarningActive;
           let spillTriggered = prev.spillTriggered;
 
-          const capacity = configRef.current.TANKER_CAPACITY_L;
-          const tolerance = (configRef.current as any).OVERFILL_TOLERANCE_L ?? 440;
-          const maxAllowedFill = capacity + tolerance;
+          const target = cfg.targetLoadLbs;
+          const maxAllowed = cfg.maxAllowedFill;
 
-          if (newFill > capacity) {
-            // Calculate overfill amount
-            spillAmount = newFill - capacity;
+          if (newFill > target) {
+            spillAmount = newFill - target;
             spillWarningActive = true;
-            
-            // Major spill triggered when exceeding tolerance
-            if (newFill > maxAllowedFill) {
+
+            if (newFill > maxAllowed) {
               spillTriggered = true;
-              newFill = maxAllowedFill; // Cap at max
+              newFill = maxAllowed;
             }
           }
 
-          newFarmLevel = Math.max(0, newFarmLevel);
-
-          const newFlowRateSamples = [...prev.flowRateSamples, effectiveFlowRate];
+          // Auto-stop at max overfill
+          if (spillTriggered && cfg.stopAutomaticallyAtMaxOverfill) {
+            return {
+              ...prev,
+              currentFill: newFill,
+              spillAmount,
+              spillWarningActive,
+              spillTriggered,
+              fillLocked: true,
+              fillEndTime: performance.now(),
+              showSpillPopup: true,
+              flowRateSamples: [...prev.flowRateSamples, effectiveFlowRate],
+            };
+          }
 
           return {
             ...prev,
             currentFill: newFill,
-            farmTankLevel: newFarmLevel,
             spillAmount,
             spillWarningActive,
             spillTriggered,
-            flowRateSamples: newFlowRateSamples,
+            flowRateSamples: [...prev.flowRateSamples, effectiveFlowRate],
           };
         });
       }, 16);
 
       return () => {
-        if (fillIntervalRef.current) {
-          clearInterval(fillIntervalRef.current);
-        }
+        if (fillIntervalRef.current) clearInterval(fillIntervalRef.current);
       };
     }
   }, [isFilling, session.fillLocked]);
 
-  // Start game from attract mode
+  // Start game from attract
   const startGame = useCallback(() => {
-    setSession(createInitialSession(configRef.current));
+    setSession(createInitialSession());
     setGameState("questions");
   }, []);
 
   // Complete pre-load questions
   const completeQuestions = useCallback(
     (usePiperSampling: boolean, useWeighbridge: boolean) => {
-      // Calculate time delta from decisions
-      let timeDelta = 0;
-
-      // Piper system: YES = +X mins saved, NO = -X mins lost (agitation time)
-      if (usePiperSampling) {
-        timeDelta += configRef.current.AGITATION_TIME_SAVED;
-      } else {
-        timeDelta -= configRef.current.AGITATION_TIME_SAVED;
-      }
-
-      // Weighbridge: YES = -X mins, NO (Piper) = 0
-      if (useWeighbridge) {
-        timeDelta -= configRef.current.WEIGHBRIDGE_TIME_COST;
-      }
-
       setSession((prev) => ({
         ...prev,
         usePiperSampling,
         useWeighbridge,
-        timeDelta,
         currentFlowRate: getRandomFlowRate(),
       }));
-
       setGameState("playing");
     },
     [getRandomFlowRate]
   );
 
-  // Start filling - only works once
+  // Start filling — only works once per round
   const startFilling = useCallback(() => {
-    if (session.hasStartedFilling || session.fillLocked) {
-      return; // Already started or locked - no second chances
-    }
-    
+    if (session.hasStartedFilling || session.fillLocked) return;
     setIsFilling(true);
     setSession((prev) => ({
       ...prev,
@@ -254,10 +226,9 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     }));
   }, [session.hasStartedFilling, session.fillLocked]);
 
-  // Stop filling - locks permanently
+  // Stop filling — locks permanently for this round
   const stopFilling = useCallback(() => {
     if (!isFilling) return;
-    
     setIsFilling(false);
     setSession((prev) => ({
       ...prev,
@@ -267,7 +238,7 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     }));
   }, [isFilling]);
 
-  // Acknowledge spill (for splat screen)
+  // Acknowledge spill popup
   const acknowledgeSpill = useCallback(() => {
     setSession((prev) => ({
       ...prev,
@@ -276,18 +247,15 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
     }));
   }, []);
 
-  // Complete load and go to penalty reveal
+  // Complete current round — calculate results and move to roundResult
   const completeLoad = useCallback(() => {
     setIsFilling(false);
 
     setSession((prev) => {
-      const targetFill = configRef.current.TARGET_FILL_L;
-      const emptyCapacity = Math.max(0, targetFill - prev.currentFill);
-      const milkLeftBehind = prev.farmTankLevel;
-
+      const cfg = configRef.current;
       const endTime = prev.fillEndTime ?? performance.now();
       const startTime = prev.fillStartTime ?? endTime;
-      const speedMultiplier = configRef.current.GAME_SPEED_MULTIPLIER || 1;
+      const speedMultiplier = cfg.gameSpeedMultiplier || 1;
       const totalFillDuration = ((endTime - startTime) / 1000) * speedMultiplier;
 
       const averageFlowRate =
@@ -295,18 +263,81 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
           ? prev.flowRateSamples.reduce((a, b) => a + b, 0) / prev.flowRateSamples.length
           : prev.currentFlowRate;
 
+      const fillLbs = prev.currentFill;
+      const creditedLbs = Math.min(fillLbs, cfg.targetLoadLbs);
+      const spillLbs = Math.max(0, fillLbs - cfg.targetLoadLbs);
+      const isOverfill = fillLbs > cfg.targetLoadLbs;
+
+      const roundResult: RoundResult = {
+        roundNumber: prev.currentRound,
+        fillLbs,
+        creditedLbs,
+        spillLbs,
+        isOverfill,
+        fillDuration: totalFillDuration,
+        averageFlowRate,
+      };
+
+      const rounds = [...prev.rounds, roundResult];
+
       return {
         ...prev,
-        emptyCapacity,
-        milkLeftBehind,
-        fillEndTime: endTime,
         totalFillDuration,
         averageFlowRate,
+        rounds,
       };
     });
 
-    setGameState("penaltyReveal");
+    setGameState("roundResult");
   }, []);
+
+  // Advance to next round or to scoring
+  const nextRound = useCallback(() => {
+    setSession((prev) => {
+      const cfg = configRef.current;
+      const nextRoundNum = prev.currentRound + 1;
+
+      if (nextRoundNum > prev.totalRounds) {
+        // All rounds done — check fired
+        const overfillCount = prev.rounds.filter((r) => r.isOverfill).length;
+        if (cfg.fireOnThreeOverfills && overfillCount >= 3) {
+          return { ...prev, isFired: true };
+        }
+        return prev;
+      }
+
+      // Reset for next round
+      return resetRoundState(
+        { ...prev, currentRound: nextRoundNum },
+        getRandomFlowRate()
+      );
+    });
+
+    // Check if we should transition state
+    setSession((prev) => {
+      if (prev.currentRound > prev.totalRounds || prev.isFired) {
+        // Will transition in next tick
+        return prev;
+      }
+      return prev;
+    });
+
+    // Use setTimeout to read updated session
+    setTimeout(() => {
+      setSession((prev) => {
+        if (prev.isFired) {
+          setGameState("fired");
+          return prev;
+        }
+        if (prev.currentRound > prev.totalRounds) {
+          setGameState("penaltyReveal");
+          return prev;
+        }
+        setGameState("playing");
+        return prev;
+      });
+    }, 0);
+  }, [getRandomFlowRate]);
 
   // Transition from penalty reveal to lead capture
   const showLeadCapture = useCallback(() => {
@@ -320,48 +351,21 @@ export function useGameStateV2(config: GameConfig = GAME_CONFIG_V2 as unknown as
 
   // Reset to attract mode
   const resetToAttract = useCallback(() => {
-    setSession(createInitialSession(configRef.current));
+    setSession(createInitialSession());
     setIsFilling(false);
     setGameState("attract");
   }, []);
-
-  // Calculated costs (for display)
-  const calculateCosts = useCallback(() => {
-    const cfg = configRef.current;
-    const spillCost = session.spillAmount * cfg.MILK_VALUE_PER_L;
-
-    const emptyCapacityPercent = session.emptyCapacity / cfg.TANKER_CAPACITY_L;
-    const haulageWasteCost = emptyCapacityPercent * cfg.HAULAGE_COST_PER_LOAD;
-
-    const totalTimeMin = Math.abs(session.timeDelta);
-    const timeCost = session.timeDelta < 0 ? totalTimeMin * cfg.TIME_COST_PER_MIN : 0;
-
-    const totalLoadCost = spillCost + haulageWasteCost + timeCost;
-    const dailyCost = totalLoadCost * cfg.FARM_LOADS_PER_DAY;
-    const annualCost = dailyCost * cfg.DAYS_PER_YEAR;
-
-    return {
-      spillCost,
-      haulageWasteCost,
-      timeCost,
-      totalLoadCost,
-      dailyCost,
-      annualCost,
-    };
-  }, [session]);
 
   return {
     gameState,
     session,
     isFilling,
-    costs: calculateCosts(),
-
-    // Actions
     startGame,
     completeQuestions,
     startFilling,
     stopFilling,
     completeLoad,
+    nextRound,
     showLeadCapture,
     showResults,
     resetToAttract,

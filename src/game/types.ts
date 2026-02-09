@@ -3,7 +3,7 @@ export type GameState = "attract" | "playing" | "results";
 export interface LevelConfig {
   level: number;
   name: string;
-  compartments: number; // Number of compartments in the tanker
+  compartments: number;
   flowRate: number;
   tolerance: number;
   targetFill: number;
@@ -21,23 +21,24 @@ export interface LoadResult {
 
 export interface GameSession {
   currentLevel: number;
-  currentCompartment: number; // Which compartment we're filling
+  currentCompartment: number;
   totalCompartmentsInLevel: number;
-  compartmentFillLevels: number[]; // Fill level for each compartment
+  compartmentFillLevels: number[];
   loadResults: LoadResult[];
   totalMoneyKept: number;
   totalMoneyLost: number;
   tankersFilledProgress: number;
   tankersFilled: number;
-  elapsedTime: number; // Seconds elapsed (counts UP)
+  elapsedTime: number;
   isComplete: boolean;
 }
 
 export interface LeaderboardEntry {
   id: string;
   playerName: string;
-  score: number;
+  score: number; // total variable cost (lower = better)
   accuracy: number;
   tankersFilled: number;
   date: string;
+  settingsHash?: string;
 }

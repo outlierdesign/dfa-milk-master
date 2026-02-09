@@ -127,19 +127,7 @@ export function useGameStateV2(config: GameConfig) {
           const cfg = configRef.current;
           const speedMultiplier = cfg.gameSpeedMultiplier || 1;
 
-          // Calculate effective flow rate with Piper slowdown
-          let effectiveFlowRate = prev.currentFlowRate;
-
-          if (prev.usePiperSampling) {
-            const fillPercent = prev.currentFill / cfg.targetLoadLbs;
-            const threshold = cfg.piperSlowdownThreshold;
-
-            if (fillPercent > threshold) {
-              const slowProgress = (fillPercent - threshold) / (1 - threshold);
-              const slowFactor = 1 - slowProgress * (1 - cfg.piperSlowdownFactor);
-              effectiveFlowRate *= slowFactor;
-            }
-          }
+          const effectiveFlowRate = prev.currentFlowRate;
 
           // Flow rate is lbs/min, deltaTime is seconds
           // 1 real second = 1 simulated minute
@@ -197,9 +185,12 @@ export function useGameStateV2(config: GameConfig) {
 
   // Start game from attract
   const startGame = useCallback(() => {
-    setSession(createInitialSession());
-    setGameState("questions");
-  }, []);
+    const initial = createInitialSession();
+    initial.useWeighbridge = true;
+    initial.currentFlowRate = getRandomFlowRate();
+    setSession(initial);
+    setGameState("playing");
+  }, [getRandomFlowRate]);
 
   // Complete pre-load questions
   const completeQuestions = useCallback(

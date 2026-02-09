@@ -3,7 +3,7 @@ import { useGameStateV2 } from "./hooks/useGameStateV2";
 import { useLeaderboard } from "./hooks/useLeaderboard";
 import { useAdminSettings, AdminPanel } from "./components/AdminPanel";
 import { AttractModeV2 } from "./components/AttractModeV2";
-import { PreLoadQuestions } from "./components/PreLoadQuestions";
+
 import { GameScreenV2 } from "./components/GameScreenV2";
 import { RoundResultScreen } from "./components/RoundResultScreen";
 import { PenaltyRevealScreen } from "./components/PenaltyRevealScreen";
@@ -80,10 +80,6 @@ export function FillTheTank() {
 
       {gameState === "attract" && (
         <AttractModeV2 onStartGame={startGame} leaderboardEntries={entries} config={config} />
-      )}
-
-      {gameState === "questions" && (
-        <PreLoadQuestions onComplete={completeQuestions} config={config} />
       )}
 
       {gameState === "playing" && (

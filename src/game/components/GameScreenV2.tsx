@@ -49,7 +49,6 @@ export function GameScreenV2({
   }, [session.spillTriggered, startAlarmLoop, stopAlarmLoop]);
 
   const targetLbs = config.targetLoadLbs;
-  const usePiper = session.usePiperSampling;
 
   const handleComplete = () => { playComplete(); onComplete(); };
 
@@ -83,7 +82,7 @@ export function GameScreenV2({
           FILL THE TANK — Round {session.currentRound}/{session.totalRounds}
         </div>
         <div className="text-[10px] md:text-xs text-slate-400">
-          {usePiper ? "Visual Mode — See the fill" : "Blind Mode — Calculate the fill"}
+          Fill the tanker to the target weight
         </div>
         <div className="text-[10px] md:text-xs text-amber-400 mt-1">
           ⚠️ ONE SHOT ONLY — Release to stop permanently
@@ -109,41 +108,26 @@ export function GameScreenV2({
         />
       </div>
 
-      {/* Target (Piper mode only) */}
-      {usePiper && (
-        <div className="flex justify-center gap-2 md:gap-4 mb-2 md:mb-3">
-          <div className="bg-slate-800/90 px-3 md:px-5 py-2 md:py-3 rounded-xl border-2 border-emerald-600">
-            <div className="text-[10px] md:text-xs text-emerald-300 mb-0.5 text-center font-bold">TARGET</div>
-            <div className="text-lg md:text-2xl font-mono font-bold text-emerald-400">
-              {targetLbs.toLocaleString()} lbs
-            </div>
+      {/* Target */}
+      <div className="flex justify-center gap-2 md:gap-4 mb-2 md:mb-3">
+        <div className="bg-slate-800/90 px-3 md:px-5 py-2 md:py-3 rounded-xl border-2 border-emerald-600">
+          <div className="text-[10px] md:text-xs text-emerald-300 mb-0.5 text-center font-bold">TARGET</div>
+          <div className="text-lg md:text-2xl font-mono font-bold text-emerald-400">
+            {targetLbs.toLocaleString()} lbs
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Blind mode hint */}
-      {!usePiper && !session.fillLocked && (
-        <div className="text-center mb-2 md:mb-3">
-          <div className="inline-block bg-amber-900/50 px-4 py-2 rounded-lg border border-amber-600">
-            <div className="text-amber-300 text-sm md:text-base font-semibold">
-              💡 Calculate: Flow Rate × Time = Weight
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Load Meter (Piper only) */}
-      {usePiper && (
-        <div className="mb-2 md:mb-3 max-w-2xl mx-auto w-full">
-          <LoadMeter
-            currentFill={session.currentFill}
-            targetFill={targetLbs}
-            maxFill={config.maxAllowedFill}
-            spillTriggered={session.spillTriggered}
-            spillWarningActive={session.spillWarningActive}
-          />
-        </div>
-      )}
+      {/* Load Meter */}
+      <div className="mb-2 md:mb-3 max-w-2xl mx-auto w-full">
+        <LoadMeter
+          currentFill={session.currentFill}
+          targetFill={targetLbs}
+          maxFill={config.maxAllowedFill}
+          spillTriggered={session.spillTriggered}
+          spillWarningActive={session.spillWarningActive}
+        />
+      </div>
 
       {/* Main Game Area */}
       <div className="flex-1 flex items-center justify-center min-h-0">
@@ -158,7 +142,7 @@ export function GameScreenV2({
             spillTriggered={session.spillTriggered}
             spillAmount={session.spillAmount}
             config={config}
-            isBlindMode={!usePiper}
+            isBlindMode={false}
           />
         </div>
       </div>

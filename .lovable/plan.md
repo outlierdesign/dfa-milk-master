@@ -1,253 +1,295 @@
 
 
-# With/Without Piper System - Game Mechanics Overhaul
+# Settings Panel Overhaul + 3-Round Game + Lbs Unit System
 
 ## Overview
 
-This is a major gameplay redesign that creates two distinct game modes:
-- **Without Piper**: "Blind" mode - harder, must guess timing based on flow rate
-- **With Piper**: Visual feedback mode - can see the tanker filling, but only one shot
+This is a significant restructuring that touches nearly every game file. The changes fall into three categories:
 
-Both modes remove the current "easy mode" features (nudging, multiple button presses, live numbers).
-
----
-
-## New Game Rules (Both Modes)
-
-| Current Behavior | New Behavior |
-|------------------|--------------|
-| Hold/release button multiple times | **One press only** - start filling, release to stop. No second chances. |
-| Nudge button to add 25L increments | **Remove nudge completely** |
-| Live litre count during filling | **Hide numbers during fill** - only show at end |
-| Spill popup with continue option | **Splat the screen** - game over, show loss |
-| Variable flow rate (80-140 L/s) | **Fixed flow rate** with slight variance (±5%) |
+1. **3-Round Game Structure** -- Each session now has 3 loading rounds with annualised scoring
+2. **Switch to lbs as primary unit** -- All settings, display, and calculations use lbs
+3. **Expanded Cost Model** -- New cost parameters (underfill cost, driver rate, overfill events/year)
 
 ---
 
-## New Flow Rate & Time Settings
+## 1. Unit System Change (Litres to Lbs)
 
-Based on your specs:
-- **Flow rate**: 4,000 lbs/min (real-world Piper capability)
-- **Tanker capacity**: 50,000 lbs
-- **Time mapping**: 1 second real = 1 minute simulated
-- **Target fill time**: ~12.5 seconds (50,000 ÷ 4,000 = 12.5 minutes → 12.5 seconds)
-- **Overfill penalty**: 1 second over = 4,000 lbs on ground
+All internal values switch to lbs. The conversion factor (1 litre = 2.27 lbs) is used only for optional display.
 
-For unit flexibility (lbs vs litres):
-- 1 litre of milk ≈ 2.27 lbs
-- 50,000 lbs ≈ 22,026 litres
-- 4,000 lbs/min ≈ 1,762 L/min ≈ 29.4 L/s (displayed)
+| Current (Litres) | New (Lbs) |
+|---|---|
+| TANKER_CAPACITY_L: 22,026 | TARGET_LOAD_LBS: 50,000 |
+| MILK_VALUE_PER_L: 0.42 | MILK_COST_PER_LB: 0.19 |
+| FLOW_RATE_BASE_LPS: 1,762 | FLOW_RATE_LBS_PER_MIN: 2,000 |
+| OVERFILL_TOLERANCE_L: 440 | MAX_OVERFILL_LBS: 12,000 |
 
 ---
 
-## Mode-Specific Differences
+## 2. New Admin Settings (Full List)
 
-### WITHOUT PIPER (Blind Mode)
-| Feature | State |
-|---------|-------|
-| Progress bar (LoadMeter) | **Hidden** |
-| Tanker fill visual | **Opaque** - cannot see inside tank |
-| Current fill number | **Hidden** during fill |
-| Flow rate display | **Visible** - this is your only clue |
-| Target number | **Hidden** |
-| Timer | **Visible** - use with flow rate to calculate |
+### Load and Production
+- `targetLoadLbs` (default: 50,000) -- Target load weight
+- `maxOverfillLbs` (default: 12,000) -- Max allowed overfill before auto-stop
+- `loadsPerDay` (default: 5)
+- `daysPerYear` (default: 365)
+- `annualLoadsOverride` (optional) -- Manually set annual loads instead of auto-calculating
 
-Player must mentally calculate: `Flow Rate × Time = Volume`
+### Overfill Rules
+- `overfillEventsPerYear` (default: 12) -- Used in annualisation weighting
+- `fireOnThreeOverfills` (boolean, default: true) -- 3 overfills = game over
 
-### WITH PIPER (Visual Mode)
-| Feature | State |
-|---------|-------|
-| Progress bar (LoadMeter) | **Visible** |
-| Tanker fill visual | **Visible** - can see liquid level |
-| Current fill number | **Hidden during fill** (shown at end) |
-| Flow rate display | **Visible** |
-| Target number | **Visible** |
-| Flow rate behavior | **Slows down near target** (easier to hit) |
+### Cost Assumptions
+- `underfillCostPerLoad` (default: 500) -- Cost per extra load needed
+- `milkCostPerLb` (default: 0.19)
+- `driverRatePerHour` (default: 120)
+- `agitationMinutes` (default: 20)
+- `weighScaleMinutes` (default: 15)
 
-Both modes: Numbers only appear on results screen.
+### Flow Mechanics
+- `flowRateLbsPerMin` (default: 2,000)
+- `flowJitterPercent` (default: 3) -- Random flow rate variance
+- `stopAutomaticallyAtMaxOverfill` (boolean, default: true)
+- `gameSpeedMultiplier` (1x/2x/5x/10x)
 
----
+### Piper Mode (unchanged conceptually)
+- `piperSlowdownThreshold` (default: 90%)
+- `piperSlowdownFactor` (default: 30%)
 
-## Updated Pre-Load Questions Flow
-
-**Current questions:**
-1. "Sampling with Piper?" → YES/NO
-2. "Need weighbridge?" → YES/NO
-
-**New questions:**
-1. "Are you collecting with a Piper System?" → YES/NO
-   - YES = Visual mode with progress bar
-   - NO = Blind mode, no visual feedback
-
-Remove the weighbridge question (or make it secondary) since the main gameplay difference is now Piper vs No Piper.
+### Currency
+- `currency` ("$" or "euro")
 
 ---
 
-## Technical Changes
+## 3. Three-Round Game Flow
 
-### 1. Update Game Session State
-**File:** `src/game/hooks/useGameStateV2.ts`
+```text
+ATTRACT --> QUESTIONS --> ROUND 1 --> ROUND 2 --> ROUND 3 --> SCORING --> LEAD CAPTURE --> RESULTS
+                            |           |           |
+                            v           v           v
+                        (fill once) (fill once) (fill once)
+                            |           |           |
+                        penalty     penalty     penalty
+                        reveal      reveal      reveal
+```
 
-Add new tracking fields:
+### New Game States
+- `attract` -- Unchanged
+- `questions` -- Pre-load Piper YES/NO choice (applies to all 3 rounds)
+- `playing` -- Active filling round (tracks current round number 1-3)
+- `roundResult` -- NEW: Brief per-round feedback before next round
+- `penaltyReveal` -- Shows after all 3 rounds
+- `leadCapture` -- Unchanged
+- `results` -- Final combined results with annualised scoring
+
+### Session State Changes
+
 ```typescript
 interface GameSessionV2 {
-  // NEW fields
-  usePiperSystem: boolean;  // Main toggle for game mode
-  hasStartedFilling: boolean;  // Prevent multiple presses
-  fillLocked: boolean;  // After release, cannot restart
+  // Pre-load decisions (apply to all rounds)
+  usePiperSampling: boolean;
+  useWeighbridge: boolean;
+
+  // Round tracking
+  currentRound: number;        // 1, 2, or 3
+  totalRounds: number;         // always 3
+  rounds: RoundResult[];       // completed round data
+  isFired: boolean;            // true if 3 overfills
+
+  // Current round fill state
+  currentFill: number;
+  currentFlowRate: number;
+  hasStartedFilling: boolean;
+  fillLocked: boolean;
+  spillTriggered: boolean;
+  spillAmount: number;
+  fillStartTime: number | null;
+  fillEndTime: number | null;
+  // ... etc
+}
+
+interface RoundResult {
+  roundNumber: number;
+  fillLbs: number;
+  creditedLbs: number;     // min(fillLbs, targetLoad)
+  spillLbs: number;         // max(0, fillLbs - targetLoad)
+  isOverfill: boolean;
+  fillDuration: number;
+  averageFlowRate: number;
 }
 ```
 
-### 2. Modify Filling Logic
-**File:** `src/game/hooks/useGameStateV2.ts`
-
-- `startFilling()`: Only works if `!hasStartedFilling`
-- `stopFilling()`: Sets `fillLocked = true`, triggers immediate results/splat
-- Remove `nudgeFill()` function entirely
-- Flow rate: Use constant rate with ±5% variance (not 80-140 range)
-
-### 3. Update Pre-Load Questions
-**File:** `src/game/components/PreLoadQuestions.tsx`
-
-Simplify to single primary question:
-- "Collecting with a Piper System?" YES/NO
-- YES enables visual mode, NO enables blind mode
-
-### 4. Conditionally Hide UI Elements
-**File:** `src/game/components/GameScreenV2.tsx`
-
-Based on `session.usePiperSystem`:
-```tsx
-// Without Piper: Hide these
-{session.usePiperSystem && <LoadMeter ... />}
-{session.usePiperSystem && (
-  <div>TARGET: {target}L</div>
-)}
-
-// Always hide current fill during gameplay
-// Only show: Flow Rate, Timer
-```
-
-### 5. Make Tanker Opaque (Without Piper)
-**File:** `src/game/components/TankerV2.tsx`
-
-Add prop `isBlindMode`:
-- When true: Hide the inner tank cutaway view, show solid metal tank
-- Remove liquid fill animation, target line, all internal elements
-
-### 6. Remove Nudge Button
-**File:** `src/game/components/GameScreenV2.tsx`
-
-- Delete nudge button entirely
-- Remove nudge-related UI (count display, time penalty warning)
-
-### 7. Add Splat Animation for Overfill
-**File:** `src/game/components/SpillAnimation.tsx` (update)
-
-Create dramatic "splat the screen" effect:
-- Full screen white/cream splash
-- Milk dripping down from top
-- "GAME OVER" or "MILK EVERYWHERE!" message
-- No continue button - auto-proceeds to results
-
-### 8. Update Config Constants
-**File:** `src/game/constantsV2.ts`
-
-```typescript
-// New values based on your specs
-TANKER_CAPACITY_L: 22_026, // 50,000 lbs equivalent
-FLOW_RATE_LPS: 29.4, // 4,000 lbs/min equivalent
-FLOW_VARIANCE_PERCENT: 5, // ±5% variance (slight)
-TIME_MAPPING_RATIO: 60, // 1 real second = 60 simulated seconds
-
-// Piper mode specific
-PIPER_SLOWDOWN_THRESHOLD: 0.90, // Start slowing at 90% fill
-PIPER_SLOWDOWN_FACTOR: 0.3, // Reduce to 30% of flow rate
-```
-
-### 9. Implement Flow Rate Slowdown (Piper Mode)
-**File:** `src/game/hooks/useGameStateV2.ts`
-
-In the fill loop, when `usePiperSystem` and fill > 90%:
-```typescript
-let effectiveFlowRate = currentFlowRate;
-if (session.usePiperSystem && fillPercent > 0.9) {
-  const slowFactor = 1 - ((fillPercent - 0.9) / 0.1) * 0.7;
-  effectiveFlowRate *= slowFactor;
-}
-```
-
-### 10. Update Button Logic
-**File:** `src/game/components/GameScreenV2.tsx`
-
-Change button behavior:
-- First press: "HOLD TO FILL" → starts filling
-- Release: Immediately stops AND locks (cannot restart)
-- Show "FILLING..." only while held
-- After release: "STOPPED" (disabled)
+### "Fired" Logic
+- After each round, check if overfill count across all rounds equals 3
+- If `fireOnThreeOverfills` is enabled and all 3 rounds overfill: show "You're Fired" screen, no leaderboard submission
+- If fewer than 3 overfills: proceed to scoring
 
 ---
 
-## Files to Modify
+## 4. Scoring Engine (Annualised Weighting)
+
+The scoring exactly follows the spec's weighting system:
+
+```typescript
+function calculateScore(rounds: RoundResult[], config: GameSettings) {
+  const N = config.annualLoadsOverride ?? (config.loadsPerDay * config.daysPerYear);
+  const overfillRounds = rounds.filter(r => r.isOverfill);
+  const underfillRounds = rounds.filter(r => !r.isOverfill);
+  const k = overfillRounds.length; // number of overfill rounds
+
+  // Assign annual weights based on overfill count
+  let weights: Map<number, number>;
+  
+  if (k === 0) {
+    // Each round weighted N/3
+    weights = new Map(rounds.map(r => [r.roundNumber, N / 3]));
+  } else if (k === 1) {
+    // Overfill round weighted 12 (overfillEventsPerYear)
+    // Remaining (N - 12) split evenly between 2 underfill rounds
+    const underfillWeight = (N - config.overfillEventsPerYear) / 2;
+    weights = new Map();
+    rounds.forEach(r => {
+      weights.set(r.roundNumber, r.isOverfill ? config.overfillEventsPerYear : underfillWeight);
+    });
+  } else if (k === 2) {
+    // Each overfill weighted overfillEventsPerYear / 2
+    // Remaining assigned to single underfill round
+    const overfillWeight = config.overfillEventsPerYear / 2;
+    const underfillWeight = N - config.overfillEventsPerYear;
+    weights = new Map();
+    rounds.forEach(r => {
+      weights.set(r.roundNumber, r.isOverfill ? overfillWeight : underfillWeight);
+    });
+  }
+  // k === 3 handled separately (fired)
+
+  // Average credited capacity
+  let weightedCredited = 0;
+  rounds.forEach(r => {
+    weightedCredited += (weights.get(r.roundNumber) ?? 0) * r.creditedLbs;
+  });
+  const avgCredited = weightedCredited / N;
+
+  // Cost calculation
+  const annualMilkBaseline = config.targetLoadLbs * N;
+  const actualLoads = annualMilkBaseline / avgCredited;
+  const extraLoads = actualLoads - N;
+  const underfillCost = extraLoads * config.underfillCostPerLoad;
+
+  // Spill cost (annualised)
+  let totalSpillCost = 0;
+  rounds.forEach(r => {
+    totalSpillCost += r.spillLbs * (weights.get(r.roundNumber) ?? 0) * config.milkCostPerLb;
+  });
+
+  // Time cost (driver rate)
+  const agitationCost = !usePiper
+    ? (config.agitationMinutes / 60) * config.driverRatePerHour * N
+    : 0;
+  const weighbridgeCost = useWeighbridge
+    ? (config.weighScaleMinutes / 60) * config.driverRatePerHour * N
+    : 0;
+
+  return {
+    avgCredited,
+    underfillCost,
+    spillCost: totalSpillCost,
+    agitationCost,
+    weighbridgeCost,
+    totalScore: underfillCost + totalSpillCost, // leaderboard score
+  };
+}
+```
+
+---
+
+## 5. Updated Admin Panel UI
+
+The panel keeps the same Ctrl+Shift+A access and modal design but reorganises into new groups:
+
+### Groups:
+1. **Game Speed** -- Speed multiplier buttons (unchanged)
+2. **Load and Production** -- targetLoadLbs, maxOverfillLbs, loadsPerDay, daysPerYear, annualLoadsOverride
+3. **Overfill Rules** -- overfillEventsPerYear, fireOnThreeOverfills (toggle switch)
+4. **Cost Assumptions** -- underfillCostPerLoad, milkCostPerLb, driverRatePerHour, currency selector
+5. **Time Penalties** -- agitationMinutes, weighScaleMinutes
+6. **Flow Mechanics** -- flowRateLbsPerMin, flowJitterPercent, stopAutomaticallyAtMaxOverfill (toggle)
+7. **Piper Mode** -- Slowdown threshold and factor (unchanged)
+
+### UI Additions:
+- Warning text at bottom: "Changing these values affects future games only."
+- "Reset to Piper Defaults" button (replaces current "Reset to Defaults")
+- Toggle switches for boolean settings (fireOnThreeOverfills, stopAutomaticallyAtMaxOverfill)
+- Inline validation preventing negative numbers
+
+---
+
+## 6. New UI Components Needed
+
+### RoundResultScreen (new)
+- Brief feedback shown between rounds (2-3 seconds)
+- Shows: "Round X Complete", fill amount, over/under status
+- "Next Round" auto-transition or tap to continue
+
+### FiredScreen (new)
+- Shown when all 3 rounds are overfills
+- Dramatic "You're Fired!" message
+- "Try Again" button (no leaderboard submission)
+
+### Updated ResultsScreenV2
+- Shows per-round breakdown table (Round 1/2/3 with credited, spilled, weight)
+- Shows annualised scoring breakdown
+- Final score displayed as currency (lower = better)
+- "Your Score: $X,XXX" prominently displayed
+
+---
+
+## 7. Leaderboard Updates
+
+- Leaderboard sorted by **lowest total variable cost** (lower = better)
+- Each entry stores a `settingsHash` (hash of the active settings at time of play)
+- Existing entries remain valid when settings change
+- "Fired" players cannot submit scores
+
+---
+
+## 8. Files to Modify
 
 | File | Changes |
-|------|---------|
-| `src/game/constantsV2.ts` | New flow rate, capacity values, slowdown config |
-| `src/game/hooks/useGameStateV2.ts` | Add `usePiperSystem`, `fillLocked`, remove nudge, update flow logic |
-| `src/game/components/PreLoadQuestions.tsx` | Simplify to Piper YES/NO question |
-| `src/game/components/GameScreenV2.tsx` | Conditional UI hiding, remove nudge button, update button logic |
-| `src/game/components/TankerV2.tsx` | Add blind mode (opaque tank) |
-| `src/game/components/LoadMeter.tsx` | No changes, just conditionally rendered |
-| `src/game/components/SpillAnimation.tsx` | Add dramatic splat effect |
-| `src/game/FillTheTank.tsx` | Update props passed to components |
-| `src/game/components/AdminPanel.tsx` | Update settings for new config values |
+|---|---|
+| `src/game/constantsV2.ts` | Complete rewrite: all values in lbs, new cost params, new game states |
+| `src/game/hooks/useGameStateV2.ts` | 3-round logic, round tracking, fired detection, lbs units |
+| `src/game/components/AdminPanel.tsx` | New settings fields, toggle switches, reorganised groups, validation |
+| `src/game/components/GameScreenV2.tsx` | Round indicator, lbs display, auto-stop at max overfill |
+| `src/game/components/ResultsScreenV2.tsx` | Per-round table, annualised scoring, new cost breakdown |
+| `src/game/components/LoadReceipt.tsx` | Lbs units, new cost line items |
+| `src/game/components/PenaltyRevealScreen.tsx` | Lbs units, updated penalty list |
+| `src/game/components/SpillAnimation.tsx` | Lbs display |
+| `src/game/components/TankerV2.tsx` | Fill calculations use lbs |
+| `src/game/components/LoadMeter.tsx` | Lbs units |
+| `src/game/components/FarmTank.tsx` | Lbs units |
+| `src/game/components/AttractModeV2.tsx` | Updated leaderboard display (score = cost) |
+| `src/game/components/PreLoadQuestions.tsx` | Minor text updates |
+| `src/game/components/GameTimer.tsx` | Minor unit updates |
+| `src/game/FillTheTank.tsx` | Route 3-round flow, new states |
+| `src/game/hooks/useLeaderboard.ts` | Sort by lowest cost, store settingsHash |
+| `src/game/types.ts` | Update LeaderboardEntry type |
+
+### New Files
+| File | Purpose |
+|---|---|
+| `src/game/components/RoundResultScreen.tsx` | Between-round feedback |
+| `src/game/components/FiredScreen.tsx` | "You're Fired" game over |
+| `src/game/utils/scoringEngine.ts` | Standalone scoring calculation (no hardcoded constants) |
 
 ---
 
-## Gameplay Flow Summary
+## 9. Implementation Order
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    PRE-LOAD QUESTION                        │
-│         "Collecting with a Piper System?"                   │
-│                                                             │
-│           ┌─────────┐         ┌─────────┐                   │
-│           │   YES   │         │   NO    │                   │
-│           └────┬────┘         └────┬────┘                   │
-│                │                   │                        │
-│                ▼                   ▼                        │
-│      ┌────────────────┐   ┌────────────────┐                │
-│      │  VISUAL MODE   │   │   BLIND MODE   │                │
-│      │                │   │                │                │
-│      │ • See progress │   │ • Opaque tank  │                │
-│      │ • See target   │   │ • No progress  │                │
-│      │ • Flow slows   │   │ • No target #  │                │
-│      │   near end     │   │ • Flow + Timer │                │
-│      │                │   │   only         │                │
-│      └────────────────┘   └────────────────┘                │
-│                                                             │
-│              BOTH MODES:                                    │
-│              • ONE button press only                        │
-│              • Release = Stop permanently                   │
-│              • No nudge                                     │
-│              • Numbers shown at END only                    │
-│              • Overfill = SPLAT → Results                   │
-└─────────────────────────────────────────────────────────────┘
-```
+Given the scope, this will be implemented in stages:
 
----
-
-## User Experience Impact
-
-**Without Piper** (Hard Mode):
-- Player sees: Flow rate (e.g., "29 L/s") and timer
-- Must calculate: "29 L/s × 12.5s = 362.5L... wait that's not right..."
-- Challenge: Mental math under pressure with no visual confirmation
-
-**With Piper** (Easier Mode):
-- Player sees: Tank filling, progress bar, flow slowing near target
-- Still challenging: One shot, no nudges, flow rate changes
-- Advantage: Visual feedback shows when to stop
-
-This creates a clear "aha!" moment: "With Piper, I can actually see what I'm doing!"
+**Stage 1**: Constants + Settings Panel (new defaults in lbs, expanded admin panel)
+**Stage 2**: Game state refactor (3-round loop, round tracking, fired logic)
+**Stage 3**: Scoring engine (annualisation weighting, new cost model)
+**Stage 4**: UI updates (round indicator, per-round results, fired screen, lbs display throughout)
+**Stage 5**: Leaderboard updates (sort by lowest cost, settings hash)
 

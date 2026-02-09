@@ -3,7 +3,7 @@
 export const GAME_DEFAULTS = {
   // Load & Production (lbs)
   targetLoadLbs: 50_000,
-  maxOverfillLbs: 12_000,
+  maxOverfillLbs: 4,
   loadsPerDay: 5,
   daysPerYear: 365,
   annualLoadsOverride: undefined as number | undefined,

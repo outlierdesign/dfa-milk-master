@@ -63,8 +63,9 @@ export function GameScreenV2({
   const buttonState = getButtonState();
 
   // Farm tank level — approximate using flow
-  const farmTankCapacity = config.targetLoadLbs * 1.15;
-  const farmTankLevel = Math.max(0, farmTankCapacity - session.currentFill);
+  const farmTankCapacity = 260_000;
+  const previousRoundsFill = session.rounds?.reduce((sum, r) => sum + r.fillLbs, 0) ?? 0;
+  const farmTankLevel = Math.max(0, farmTankCapacity - previousRoundsFill - session.currentFill);
 
   return (
     <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col p-2 md:p-4 select-none relative overflow-hidden">

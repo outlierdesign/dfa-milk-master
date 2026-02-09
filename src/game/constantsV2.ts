@@ -1,55 +1,164 @@
-// Fill the Tank v2 — Configuration Constants
-// All values are admin-configurable for trade show tuning
+// Fill the Tank v2 — Configuration Constants (lbs-based)
 
-export const GAME_CONFIG_V2 = {
-  // Capacity (litres) - 50,000 lbs ≈ 22,026 litres
-  TANKER_CAPACITY_L: 22_026,
-  FARM_TANK_CAPACITY_L: 25_000, // Slightly more than tanker
-  TARGET_FILL_PERCENT: 0.98, // Adjustable: 0.90, 0.95, 0.98, 1.00
+export const GAME_DEFAULTS = {
+  // Load & Production (lbs)
+  targetLoadLbs: 50_000,
+  maxOverfillLbs: 12_000,
+  loadsPerDay: 5,
+  daysPerYear: 365,
+  annualLoadsOverride: undefined as number | undefined,
 
-  // Money values (€)
-  MILK_VALUE_PER_L: 0.42,
-  HAULAGE_COST_PER_LOAD: 180.0,
-  TIME_COST_PER_MIN: 4.0,
+  // Overfill Rules
+  overfillEventsPerYear: 12,
+  fireOnThreeOverfills: true,
 
-  // Scaling for annualized impact
-  FARM_LOADS_PER_DAY: 5,
-  DAYS_PER_YEAR: 365,
+  // Cost Assumptions
+  underfillCostPerLoad: 500,
+  milkCostPerLb: 0.19,
+  driverRatePerHour: 120,
 
-  // Time penalties/savings (minutes)
-  AGITATION_TIME_SAVED: 20, // Piper sampling saves this
-  WEIGHBRIDGE_TIME_COST: 10, // Traditional weighbridge costs this
+  // Time Penalties (minutes)
+  agitationMinutes: 20,
+  weighScaleMinutes: 15,
 
-  // Flow mechanics - Based on 4,000 lbs/min (≈1,762 L/min ≈ 29.4 L/s)
-  // With 1 sec real = 1 min simulated, we use higher values for visible action
-  FLOW_RATE_BASE_LPS: 1762, // 4,000 lbs/min equivalent in L/min (displayed as L/s in game time)
-  FLOW_RATE_MIN_LPS: 1674, // 5% variance below base
-  FLOW_RATE_MAX_LPS: 1850, // 5% variance above base
-  FLOW_VARIANCE_PERCENT: 5, // ±5% variance (slight)
-  FLOW_VARIANCE_INTERVAL_MS: 2000, // Change flow rate every 2 seconds
+  // Flow Mechanics (lbs/min)
+  flowRateLbsPerMin: 2_000,
+  flowJitterPercent: 3,
+  stopAutomaticallyAtMaxOverfill: true,
 
-  // Piper mode specific
-  PIPER_SLOWDOWN_THRESHOLD: 0.90, // Start slowing at 90% fill
-  PIPER_SLOWDOWN_FACTOR: 0.3, // Reduce to 30% of flow rate at 100%
+  // Game speed
+  gameSpeedMultiplier: 1,
 
-  // Overfill tolerance (lbs converted to litres: 1000 lbs ≈ 440L)
-  OVERFILL_TOLERANCE_L: 440, // Allow minor overfill before major spill
+  // Piper Mode
+  piperSlowdownThreshold: 90, // percent
+  piperSlowdownFactor: 30, // percent of base speed at 100%
 
-  // UI timing (milliseconds)
-  RESULTS_DISPLAY_TIME: 15_000,
-  ATTRACT_IDLE_TIME: 20_000,
+  // Currency
+  currency: "$" as "$" | "€",
 
-  // Game speed (for trade show demo acceleration)
-  GAME_SPEED_MULTIPLIER: 1, // 1, 2, 5, or 10
+  // UI timing
+  resultsDisplayTime: 15_000,
+  attractIdleTime: 20_000,
 
-  // Derived values (computed)
-  get TARGET_FILL_L() {
-    return this.TANKER_CAPACITY_L * this.TARGET_FILL_PERCENT;
-  },
+  // Flow variance interval
+  flowVarianceIntervalMs: 2_000,
 } as const;
 
-// Game states for v2 flow
-export type GameStateV2 = "attract" | "questions" | "playing" | "penaltyReveal" | "leadCapture" | "results";
+export interface GameSettings {
+  targetLoadLbs: number;
+  maxOverfillLbs: number;
+  loadsPerDay: number;
+  daysPerYear: number;
+  annualLoadsOverride?: number;
+  overfillEventsPerYear: number;
+  fireOnThreeOverfills: boolean;
+  underfillCostPerLoad: number;
+  milkCostPerLb: number;
+  driverRatePerHour: number;
+  agitationMinutes: number;
+  weighScaleMinutes: number;
+  flowRateLbsPerMin: number;
+  flowJitterPercent: number;
+  stopAutomaticallyAtMaxOverfill: boolean;
+  gameSpeedMultiplier: number;
+  piperSlowdownThreshold: number;
+  piperSlowdownFactor: number;
+  currency: "$" | "€";
+  resultsDisplayTime: number;
+  attractIdleTime: number;
+  flowVarianceIntervalMs: number;
+}
+
+// Computed config derived from settings — used throughout the game
+export interface GameConfig {
+  // Core lbs values
+  targetLoadLbs: number;
+  maxOverfillLbs: number;
+  maxAllowedFill: number; // targetLoadLbs + maxOverfillLbs
+
+  // Production
+  loadsPerDay: number;
+  daysPerYear: number;
+  annualLoads: number; // override or loadsPerDay * daysPerYear
+  annualLoadsOverride?: number;
+
+  // Overfill rules
+  overfillEventsPerYear: number;
+  fireOnThreeOverfills: boolean;
+
+  // Cost
+  underfillCostPerLoad: number;
+  milkCostPerLb: number;
+  driverRatePerHour: number;
+
+  // Time
+  agitationMinutes: number;
+  weighScaleMinutes: number;
+
+  // Flow (lbs/min)
+  flowRateLbsPerMin: number;
+  flowJitterPercent: number;
+  stopAutomaticallyAtMaxOverfill: boolean;
+
+  // Game speed
+  gameSpeedMultiplier: number;
+
+  // Piper (stored as decimals 0-1)
+  piperSlowdownThreshold: number;
+  piperSlowdownFactor: number;
+
+  // Currency
+  currency: "$" | "€";
+
+  // UI timing
+  resultsDisplayTime: number;
+  attractIdleTime: number;
+  flowVarianceIntervalMs: number;
+}
+
+export function settingsToConfig(s: GameSettings): GameConfig {
+  const annualLoads = s.annualLoadsOverride ?? (s.loadsPerDay * s.daysPerYear);
+  return {
+    targetLoadLbs: s.targetLoadLbs,
+    maxOverfillLbs: s.maxOverfillLbs,
+    maxAllowedFill: s.targetLoadLbs + s.maxOverfillLbs,
+    loadsPerDay: s.loadsPerDay,
+    daysPerYear: s.daysPerYear,
+    annualLoads,
+    annualLoadsOverride: s.annualLoadsOverride,
+    overfillEventsPerYear: s.overfillEventsPerYear,
+    fireOnThreeOverfills: s.fireOnThreeOverfills,
+    underfillCostPerLoad: s.underfillCostPerLoad,
+    milkCostPerLb: s.milkCostPerLb,
+    driverRatePerHour: s.driverRatePerHour,
+    agitationMinutes: s.agitationMinutes,
+    weighScaleMinutes: s.weighScaleMinutes,
+    flowRateLbsPerMin: s.flowRateLbsPerMin,
+    flowJitterPercent: s.flowJitterPercent,
+    stopAutomaticallyAtMaxOverfill: s.stopAutomaticallyAtMaxOverfill,
+    gameSpeedMultiplier: s.gameSpeedMultiplier,
+    piperSlowdownThreshold: s.piperSlowdownThreshold / 100,
+    piperSlowdownFactor: s.piperSlowdownFactor / 100,
+    currency: s.currency,
+    resultsDisplayTime: s.resultsDisplayTime,
+    attractIdleTime: s.attractIdleTime,
+    flowVarianceIntervalMs: s.flowVarianceIntervalMs,
+  };
+}
+
+// Game states for v2 flow (now includes roundResult and fired)
+export type GameStateV2 = "attract" | "questions" | "playing" | "roundResult" | "penaltyReveal" | "leadCapture" | "results" | "fired";
+
+// Round result data
+export interface RoundResult {
+  roundNumber: number;
+  fillLbs: number;
+  creditedLbs: number; // min(fillLbs, targetLoad)
+  spillLbs: number; // max(0, fillLbs - targetLoad)
+  isOverfill: boolean;
+  fillDuration: number;
+  averageFlowRate: number;
+}
 
 // Pre-load decision options
 export interface PreLoadDecisions {

@@ -5,137 +5,81 @@ import { useAdminSettings, AdminPanel } from "./components/AdminPanel";
 import { AttractModeV2 } from "./components/AttractModeV2";
 import { PreLoadQuestions } from "./components/PreLoadQuestions";
 import { GameScreenV2 } from "./components/GameScreenV2";
+import { RoundResultScreen } from "./components/RoundResultScreen";
 import { PenaltyRevealScreen } from "./components/PenaltyRevealScreen";
 import { LeadCaptureScreen } from "./components/LeadCaptureScreen";
 import { ResultsScreenV2 } from "./components/ResultsScreenV2";
+import { FiredScreen } from "./components/FiredScreen";
+import { calculateScore } from "./utils/scoringEngine";
 
 export function FillTheTank() {
-  const {
-    settings,
-    config,
-    isOpen: isAdminOpen,
-    setIsOpen: setAdminOpen,
-    updateSetting,
-    resetToDefaults,
-  } = useAdminSettings();
+  const { settings, config, isOpen: isAdminOpen, setIsOpen: setAdminOpen, updateSetting, resetToDefaults } = useAdminSettings();
 
   const {
-    gameState,
-    session,
-    isFilling,
-    startGame,
-    completeQuestions,
-    startFilling,
-    stopFilling,
-    completeLoad,
-    showLeadCapture,
-    showResults,
-    resetToAttract,
-    acknowledgeSpill,
+    gameState, session, isFilling,
+    startGame, completeQuestions, startFilling, stopFilling,
+    completeLoad, nextRound, showLeadCapture, showResults, resetToAttract, acknowledgeSpill,
   } = useGameStateV2(config);
 
   const { entries, addEntry } = useLeaderboard();
   const idleTimeoutRef = useRef<number | null>(null);
 
-  // Reset idle timer on any interaction
+  // Idle timer
   const resetIdleTimer = useCallback(() => {
-    if (idleTimeoutRef.current) {
-      clearTimeout(idleTimeoutRef.current);
-    }
-
-    if (gameState === "attract") {
-      return;
-    }
-
+    if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+    if (gameState === "attract") return;
     idleTimeoutRef.current = window.setTimeout(() => {
-      if (gameState === "results") {
-        resetToAttract();
-      }
-    }, config.ATTRACT_IDLE_TIME);
-  }, [gameState, resetToAttract, config.ATTRACT_IDLE_TIME]);
+      if (gameState === "results") resetToAttract();
+    }, config.attractIdleTime);
+  }, [gameState, resetToAttract, config.attractIdleTime]);
 
-  // Set up idle detection
   useEffect(() => {
     const events = ["mousedown", "touchstart", "keydown"];
-    events.forEach((event) => {
-      document.addEventListener(event, resetIdleTimer);
-    });
-
+    events.forEach((e) => document.addEventListener(e, resetIdleTimer));
     return () => {
-      events.forEach((event) => {
-        document.removeEventListener(event, resetIdleTimer);
-      });
-      if (idleTimeoutRef.current) {
-        clearTimeout(idleTimeoutRef.current);
-      }
+      events.forEach((e) => document.removeEventListener(e, resetIdleTimer));
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
     };
   }, [resetIdleTimer]);
 
-  // Handle adding score to leaderboard
-  const handleAddToLeaderboard = useCallback(
-    (name: string) => {
-      const targetFill = config.TARGET_FILL_L;
-      const accuracy = Math.max(
-        0,
-        100 - (Math.abs(session.currentFill - targetFill) / targetFill) * 100
-      );
-      addEntry(name, 0, accuracy, 1);
-    },
-    [addEntry, session.currentFill, config.TARGET_FILL_L]
-  );
-
-  // Handle play again
-  const handlePlayAgain = useCallback(() => {
-    startGame();
-  }, [startGame]);
-
-  // Fullscreen toggle (F11 or double-click)
+  // Fullscreen (F11)
   useEffect(() => {
-    const handleFullscreen = (e: KeyboardEvent) => {
+    const h = (e: KeyboardEvent) => {
       if (e.key === "F11") {
         e.preventDefault();
-        if (document.fullscreenElement) {
-          document.exitFullscreen();
-        } else {
-          document.documentElement.requestFullscreen();
-        }
+        document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
       }
     };
-
-    document.addEventListener("keydown", handleFullscreen);
-    return () => document.removeEventListener("keydown", handleFullscreen);
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
   }, []);
 
-  // Hidden reset shortcut (Ctrl+Shift+R)
+  // Hidden reset (Ctrl+Shift+R)
   useEffect(() => {
-    const handleReset = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === "R") {
-        e.preventDefault();
-        resetToAttract();
-      }
+    const h = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === "R") { e.preventDefault(); resetToAttract(); }
     };
-
-    document.addEventListener("keydown", handleReset);
-    return () => document.removeEventListener("keydown", handleReset);
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
   }, [resetToAttract]);
+
+  // Handle lead capture results
+  const handleLeadCaptureResults = useCallback(() => {
+    const score = calculateScore(session.rounds, config, session.usePiperSampling, session.useWeighbridge);
+    return {
+      accuracy: score.avgCredited / config.targetLoadLbs * 100,
+      loadTime: session.rounds.reduce((s, r) => s + r.fillDuration, 0),
+      volumeLoaded: session.rounds.reduce((s, r) => s + r.fillLbs, 0),
+      totalCost: score.totalScore,
+    };
+  }, [session.rounds, config, session.usePiperSampling, session.useWeighbridge]);
 
   return (
     <div className={`w-full h-screen bg-slate-900 ${gameState === "results" ? "overflow-auto" : "overflow-hidden"}`}>
-      {/* Admin Panel */}
-      <AdminPanel
-        settings={settings}
-        isOpen={isAdminOpen}
-        onClose={() => setAdminOpen(false)}
-        onUpdate={updateSetting}
-        onReset={resetToDefaults}
-      />
+      <AdminPanel settings={settings} isOpen={isAdminOpen} onClose={() => setAdminOpen(false)} onUpdate={updateSetting} onReset={resetToDefaults} />
 
       {gameState === "attract" && (
-        <AttractModeV2
-          onStartGame={startGame}
-          leaderboardEntries={entries}
-          config={config}
-        />
+        <AttractModeV2 onStartGame={startGame} leaderboardEntries={entries} config={config} />
       )}
 
       {gameState === "questions" && (
@@ -144,22 +88,30 @@ export function FillTheTank() {
 
       {gameState === "playing" && (
         <GameScreenV2
-          session={session}
-          isFilling={isFilling}
-          onStartFilling={startFilling}
-          onStopFilling={stopFilling}
-          onComplete={completeLoad}
-          onAcknowledgeSpill={acknowledgeSpill}
-          config={config}
+          session={session} isFilling={isFilling}
+          onStartFilling={startFilling} onStopFilling={stopFilling}
+          onComplete={completeLoad} onAcknowledgeSpill={acknowledgeSpill} config={config}
         />
+      )}
+
+      {gameState === "roundResult" && session.rounds.length > 0 && (
+        <RoundResultScreen
+          round={session.rounds[session.rounds.length - 1]}
+          totalRounds={session.totalRounds}
+          config={config}
+          onContinue={nextRound}
+        />
+      )}
+
+      {gameState === "fired" && (
+        <FiredScreen onTryAgain={startGame} />
       )}
 
       {gameState === "penaltyReveal" && (
         <PenaltyRevealScreen
-          fillDuration={session.totalFillDuration}
+          rounds={session.rounds}
           usePiperSampling={session.usePiperSampling}
           useWeighbridge={session.useWeighbridge}
-          nudgeCount={0}
           config={config}
           onComplete={showLeadCapture}
         />
@@ -167,17 +119,7 @@ export function FillTheTank() {
 
       {gameState === "leadCapture" && (
         <LeadCaptureScreen
-          gameResults={{
-            accuracy: Math.max(
-              0,
-              100 - (Math.abs(session.currentFill - config.TARGET_FILL_L) / config.TARGET_FILL_L) * 100
-            ),
-            loadTime: session.totalFillDuration,
-            volumeLoaded: session.currentFill,
-            totalCost:
-              session.spillAmount * config.MILK_VALUE_PER_L +
-              (session.emptyCapacity / config.TANKER_CAPACITY_L) * config.HAULAGE_COST_PER_LOAD,
-          }}
+          gameResults={handleLeadCaptureResults()}
           onSubmit={showResults}
           onSkip={showResults}
         />
@@ -185,17 +127,10 @@ export function FillTheTank() {
 
       {gameState === "results" && (
         <ResultsScreenV2
-          currentFill={session.currentFill}
-          spillAmount={session.spillAmount}
-          emptyCapacity={session.emptyCapacity}
-          milkLeftBehind={session.milkLeftBehind}
-          timeDelta={session.timeDelta}
-          nudgeCount={0}
-          totalFillDuration={session.totalFillDuration}
-          averageFlowRate={session.averageFlowRate}
+          rounds={session.rounds}
           usedPiperSampling={session.usePiperSampling}
           usedWeighbridge={session.useWeighbridge}
-          onPlayAgain={handlePlayAgain}
+          onPlayAgain={startGame}
           config={config}
         />
       )}

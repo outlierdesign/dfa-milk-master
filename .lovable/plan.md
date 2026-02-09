@@ -1,63 +1,47 @@
 
 
-# Re-integrate Overfill Effects, Transparent Tanker, Remove Piper Question
+# Fix Milk Color, Farm Tank Capacity, and Overfill Limit
 
 ## Overview
 
-Three changes to simplify the game flow and enhance the overfill experience:
+Three changes based on your requirements:
 
-1. **Full-screen milk spill animation with red flashing** -- already exists in `SpillAnimation.tsx` but needs to be more prominent with a red screen flash effect added
-2. **Always show transparent tanker** -- remove the `isBlindMode` prop so the fill level is always visible
-3. **Remove the Piper/Blind mode question** -- skip the `questions` state entirely, go straight from `attract` to `playing`
+1. **Milk stays cream-colored** -- currently the tanker fill changes to green (near target) and orange/amber (close to target), which is unrealistic. It should always be cream/milk white.
+2. **Farm tank holds 260,000 lbs** -- currently calculated as `targetLoad * 1.15` (57,500 lbs). Needs to be 260,000 lbs and visually drain by ~50,000 lbs per round.
+3. **Max overfill is 4 lbs** -- currently set to 12,000 lbs. The player can overfill up to 4 lbs before the hard stop.
 
 ---
 
 ## Changes
 
-### 1. Skip the Questions Screen
+### 1. Keep Milk Always Cream-Colored
 
-**File: `src/game/hooks/useGameStateV2.ts`**
-- Change `startGame` to go directly to `"playing"` instead of `"questions"`
-- Set default session values: `usePiperSampling: false`, `useWeighbridge: true`
-- Remove the `completeQuestions` callback (or keep it unused)
-- Initialise `currentFlowRate` with a random flow rate in `startGame`
+**File: `src/game/components/TankerV2.tsx`**
+- Remove the conditional color logic (lines 31-36) that changes `fillColor` to green or amber based on proximity to target
+- Always use `from-[#FDFFF5] to-[#F5F7E8]` (cream white) for the fill
+- Keep the red overfill indicator as a separate overlay element rather than changing the milk color itself
 
-**File: `src/game/FillTheTank.tsx`**
-- Remove the `questions` state rendering block
-- Remove the `PreLoadQuestions` import
+**File: `src/game/components/LoadMeter.tsx`**
+- No changes needed here -- the load meter bar is a UI indicator (not milk), so color feedback (green/amber/red) is appropriate
 
-### 2. Transparent Tanker (Always Visible Fill)
+### 2. Farm Tank = 260,000 lbs, Drains Per Round
 
 **File: `src/game/components/GameScreenV2.tsx`**
-- Remove `isBlindMode={!usePiper}` prop from `TankerV2` (or set it to `false`)
-- Always show the `LoadMeter` (remove the `usePiper &&` condition)
-- Always show the TARGET stat box (remove the `usePiper &&` condition)
-- Remove the "Blind mode hint" section
-- Remove the "Visual Mode / Blind Mode" subtitle text
-- Keep flow rate display and timer
+- Change `farmTankCapacity` from `config.targetLoadLbs * 1.15` to a fixed `260000`
+- Change `farmTankLevel` calculation to account for all rounds: subtract milk loaded in previous rounds plus the current round's fill
+- Formula: `260000 - (sum of previous rounds' fillLbs) - session.currentFill`
 
-### 3. Enhance Spill Animation with Red Flash
+### 3. Max Overfill = 4 lbs
 
-**File: `src/game/components/SpillAnimation.tsx`**
-- Add a red screen flash/pulse overlay that flashes rapidly when overfill triggers
-- Add a pulsing red border effect around the entire screen
-- Keep existing milk splat, drips, and spots
-- Keep the central "MILK EVERYWHERE" message card
-
-### 4. Remove Piper Slowdown from Fill Loop
-
-**File: `src/game/hooks/useGameStateV2.ts`**
-- Remove the Piper slowdown logic block in the fill interval (lines 132-142) since Piper mode is no longer used
-- Flow rate stays constant (with jitter only)
+**File: `src/game/constantsV2.ts`**
+- Change `maxOverfillLbs` default from `12_000` to `4`
+- This flows through to `maxAllowedFill` (50,004 lbs) automatically via `settingsToConfig`
 
 ---
 
-## Summary of State Flow Change
+## Technical Details
 
-```text
-BEFORE: attract -> questions -> playing -> roundResult -> ...
-AFTER:  attract -> playing -> roundResult -> ...
-```
+The farm tank drain across rounds requires access to `session.rounds` (completed rounds data) in `GameScreenV2`. This is already available on the `session` prop, so no new props are needed.
 
-No changes to scoring engine, admin panel, leaderboard, or results screens.
+The overfill change of 4 lbs means the load meter and tanker visuals will have a very tight window between target and max -- the target line and overfill cap will be nearly indistinguishable visually on the meter. The `LoadMeter` component uses `maxFill` (which will now be 50,004) as its display max, so the bar will essentially fill to ~100% at target with almost no visible overfill zone. This may need the meter's display range adjusted so the overfill zone is still visible, but that can be addressed as a follow-up if needed.
 

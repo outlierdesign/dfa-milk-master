@@ -1,47 +1,38 @@
 
 
-# Fix Milk Color, Farm Tank Capacity, and Overfill Limit
+# Add Leaderboard to Results Screen
 
 ## Overview
 
-Three changes based on your requirements:
-
-1. **Milk stays cream-colored** -- currently the tanker fill changes to green (near target) and orange/amber (close to target), which is unrealistic. It should always be cream/milk white.
-2. **Farm tank holds 260,000 lbs** -- currently calculated as `targetLoad * 1.15` (57,500 lbs). Needs to be 260,000 lbs and visually drain by ~50,000 lbs per round.
-3. **Max overfill is 4 lbs** -- currently set to 12,000 lbs. The player can overfill up to 4 lbs before the hard stop.
-
----
+Show the leaderboard at the bottom of the results screen after the game ends, and save the player's score to it. Currently the leaderboard hook (`useLeaderboard`) exists and is used on the attract screen, but scores are never actually saved to it.
 
 ## Changes
 
-### 1. Keep Milk Always Cream-Colored
+### 1. Pass leaderboard data and save function to ResultsScreenV2
 
-**File: `src/game/components/TankerV2.tsx`**
-- Remove the conditional color logic (lines 31-36) that changes `fillColor` to green or amber based on proximity to target
-- Always use `from-[#FDFFF5] to-[#F5F7E8]` (cream white) for the fill
-- Keep the red overfill indicator as a separate overlay element rather than changing the milk color itself
+**File: `src/game/FillTheTank.tsx`**
+- Pass `leaderboardEntries={entries}`, `onAddEntry={addEntry}`, and `config` to `ResultsScreenV2`
+- The player's score will be saved when the results screen mounts
 
-**File: `src/game/components/LoadMeter.tsx`**
-- No changes needed here -- the load meter bar is a UI indicator (not milk), so color feedback (green/amber/red) is appropriate
+### 2. Display leaderboard on the results screen
 
-### 2. Farm Tank = 260,000 lbs, Drains Per Round
+**File: `src/game/components/ResultsScreenV2.tsx`**
+- Add `leaderboardEntries` and `onAddEntry` props
+- On mount, call `onAddEntry` with the player's score data (using "Player" as default name since lead capture may have been skipped)
+- After the Piper CTA section, render a leaderboard table showing today's top scores (same style as the attract screen but integrated into the results layout)
+- Highlight the current player's entry in the leaderboard
 
-**File: `src/game/components/GameScreenV2.tsx`**
-- Change `farmTankCapacity` from `config.targetLoadLbs * 1.15` to a fixed `260000`
-- Change `farmTankLevel` calculation to account for all rounds: subtract milk loaded in previous rounds plus the current round's fill
-- Formula: `260000 - (sum of previous rounds' fillLbs) - session.currentFill`
+### 3. Pass player name through from lead capture (optional enhancement)
 
-### 3. Max Overfill = 4 lbs
-
-**File: `src/game/constantsV2.ts`**
-- Change `maxOverfillLbs` default from `12_000` to `4`
-- This flows through to `maxAllowedFill` (50,004 lbs) automatically via `settingsToConfig`
-
----
+**File: `src/game/FillTheTank.tsx`**
+- Store the player name from lead capture (if provided) in a ref
+- Pass it to the results screen so the leaderboard entry uses their actual name instead of "Player"
 
 ## Technical Details
 
-The farm tank drain across rounds requires access to `session.rounds` (completed rounds data) in `GameScreenV2`. This is already available on the `session` prop, so no new props are needed.
-
-The overfill change of 4 lbs means the load meter and tanker visuals will have a very tight window between target and max -- the target line and overfill cap will be nearly indistinguishable visually on the meter. The `LoadMeter` component uses `maxFill` (which will now be 50,004) as its display max, so the bar will essentially fill to ~100% at target with almost no visible overfill zone. This may need the meter's display range adjusted so the overfill zone is still visible, but that can be addressed as a follow-up if needed.
+- The leaderboard is localStorage-based and filtered to today's entries only
+- Scores are sorted by lowest cost (lower is better)
+- Max 10 entries stored
+- The `addEntry` function takes: `playerName`, `score`, `accuracy`, `tankersFilled`, and optionally `settings`
+- The score value to save is `score.totalVariableCost` from the scoring engine
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useGameStateV2 } from "./hooks/useGameStateV2";
 import { useLeaderboard } from "./hooks/useLeaderboard";
 import { useAdminSettings, AdminPanel } from "./components/AdminPanel";
@@ -22,6 +22,7 @@ export function FillTheTank() {
   } = useGameStateV2(config);
 
   const { entries, addEntry } = useLeaderboard();
+  const [playerName, setPlayerName] = useState<string>("Player");
   const idleTimeoutRef = useRef<number | null>(null);
 
   // Idle timer
@@ -116,7 +117,7 @@ export function FillTheTank() {
       {gameState === "leadCapture" && (
         <LeadCaptureScreen
           gameResults={handleLeadCaptureResults()}
-          onSubmit={showResults}
+          onSubmit={(name) => { if (name) setPlayerName(name); showResults(); }}
           onSkip={showResults}
         />
       )}
@@ -128,6 +129,9 @@ export function FillTheTank() {
           usedWeighbridge={session.useWeighbridge}
           onPlayAgain={startGame}
           config={config}
+          leaderboardEntries={entries}
+          onAddEntry={addEntry}
+          playerName={playerName}
         />
       )}
     </div>

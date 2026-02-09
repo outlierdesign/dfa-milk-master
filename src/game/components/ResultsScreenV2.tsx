@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { GameConfig, RoundResult } from "../constantsV2";
 import { calculateScore } from "../utils/scoringEngine";
 import { useSoundEffects } from "../hooks/useSoundEffects";
+import { LeaderboardEntry } from "../types";
 import piperLogo from "@/assets/piper-logo.png";
 
 interface ResultsScreenV2Props {
@@ -10,6 +11,9 @@ interface ResultsScreenV2Props {
   usedWeighbridge: boolean;
   onPlayAgain: () => void;
   config: GameConfig;
+  leaderboardEntries: LeaderboardEntry[];
+  onAddEntry: (playerName: string, score: number, accuracy: number, tankersFilled: number) => LeaderboardEntry;
+  playerName: string;
 }
 
 export function ResultsScreenV2({
@@ -18,12 +22,27 @@ export function ResultsScreenV2({
   usedWeighbridge,
   onPlayAgain,
   config,
+  leaderboardEntries,
+  onAddEntry,
+  playerName,
 }: ResultsScreenV2Props) {
   const [showAnnualized, setShowAnnualized] = useState(false);
   const { playSuccess, playFailure } = useSoundEffects();
+  const entryAddedRef = useRef(false);
+  const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
 
   const score = calculateScore(rounds, config, usedPiperSampling, usedWeighbridge);
   const currency = config.currency;
+
+  // Save score to leaderboard on mount
+  useEffect(() => {
+    if (!entryAddedRef.current) {
+      entryAddedRef.current = true;
+      const accuracy = score.avgCredited / config.targetLoadLbs * 100;
+      const entry = onAddEntry(playerName, score.totalVariableCost, accuracy, rounds.length);
+      setCurrentEntryId(entry.id);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (score.totalScore < 1000) playSuccess();
@@ -162,6 +181,43 @@ export function ResultsScreenV2({
           <p className="text-emerald-200 text-sm">Precision metering • No agitation delays • No weighbridge</p>
         </div>
       </div>
+
+      {/* Leaderboard */}
+      {leaderboardEntries.length > 0 && (
+        <div className="bg-slate-800/80 p-6 rounded-xl border border-slate-600 max-w-lg w-full mb-6">
+          <h3 className="text-lg font-bold text-slate-300 mb-4 text-center border-b border-slate-600 pb-2">
+            🏆 TODAY'S LEADERBOARD
+          </h3>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-slate-400">
+                <th className="text-left py-2">#</th>
+                <th className="text-left py-2">Player</th>
+                <th className="text-right py-2">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboardEntries.map((entry, i) => {
+                const isCurrentPlayer = entry.id === currentEntryId;
+                return (
+                  <tr
+                    key={entry.id}
+                    className={`border-t border-slate-700 ${isCurrentPlayer ? "bg-emerald-900/30" : ""}`}
+                  >
+                    <td className="py-2 text-white font-bold">{i + 1}</td>
+                    <td className={`py-2 ${isCurrentPlayer ? "text-emerald-400 font-bold" : "text-white"}`}>
+                      {entry.playerName} {isCurrentPlayer && "← You"}
+                    </td>
+                    <td className="text-right text-red-400 font-mono">
+                      {currency}{entry.score.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Play Again */}
       <div className="mt-4 mb-8 w-full max-w-lg">

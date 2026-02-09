@@ -12,7 +12,7 @@ interface LeadCaptureScreenProps {
     volumeLoaded: number;
     totalCost: number;
   };
-  onSubmit: () => void;
+  onSubmit: (playerName?: string) => void;
   onSkip: () => void;
 }
 
@@ -49,10 +49,10 @@ export function LeadCaptureScreen({ gameResults, onSubmit, onSkip }: LeadCapture
         volume_loaded: gameResults.volumeLoaded,
         total_cost: gameResults.totalCost,
       });
-      onSubmit();
+      onSubmit(name.trim());
     } catch (err) {
       console.error("Error submitting lead:", err);
-      onSubmit();
+      onSubmit(name.trim());
     } finally {
       setIsSubmitting(false);
     }

@@ -301,9 +301,9 @@ export function useGameStateV2(config: GameConfig) {
         // All rounds done — check fired
         const overfillCount = prev.rounds.filter((r) => r.isOverfill).length;
         if (cfg.fireOnThreeOverfills && overfillCount >= 3) {
-          return { ...prev, isFired: true };
+          return { ...prev, currentRound: nextRoundNum, isFired: true };
         }
-        return prev;
+        return { ...prev, currentRound: nextRoundNum };
       }
 
       // Reset for next round

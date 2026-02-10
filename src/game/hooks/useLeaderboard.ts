@@ -12,6 +12,11 @@ function hashSettings(settings: GameSettings): string {
   return hash.toString(36);
 }
 
+export interface LeaderboardDisplay {
+  top: LeaderboardEntry[];
+  playerEntry: { entry: LeaderboardEntry; rank: number } | null;
+}
+
 export function useLeaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
 
@@ -20,9 +25,7 @@ export function useLeaderboard() {
       const stored = localStorage.getItem(LEADERBOARD_CONFIG.STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as LeaderboardEntry[];
-        const today = new Date().toDateString();
-        const todayEntries = parsed.filter((e) => new Date(e.date).toDateString() === today);
-        setEntries(todayEntries);
+        setEntries(parsed.sort((a, b) => a.score - b.score));
       }
     } catch (error) {
       console.error("Failed to load leaderboard:", error);
@@ -51,7 +54,7 @@ export function useLeaderboard() {
 
       setEntries((prev) => {
         const updated = [...prev, newEntry]
-          .sort((a, b) => a.score - b.score) // Lower cost = better
+          .sort((a, b) => a.score - b.score)
           .slice(0, LEADERBOARD_CONFIG.MAX_ENTRIES);
         saveEntries(updated);
         return updated;
@@ -69,9 +72,32 @@ export function useLeaderboard() {
 
   const isHighScore = useCallback(
     (score: number) => {
-      if (entries.length < LEADERBOARD_CONFIG.MAX_ENTRIES) return true;
-      const highestScore = entries[entries.length - 1]?.score || Infinity;
-      return score < highestScore; // Lower is better
+      if (entries.length < LEADERBOARD_CONFIG.DISPLAY_TOP) return true;
+      const worstTopScore = entries[LEADERBOARD_CONFIG.DISPLAY_TOP - 1]?.score || Infinity;
+      return score < worstTopScore;
+    },
+    [entries]
+  );
+
+  const getDisplayEntries = useCallback(
+    (currentEntryId: string | null): LeaderboardDisplay => {
+      const top = entries.slice(0, LEADERBOARD_CONFIG.DISPLAY_TOP);
+      
+      if (!currentEntryId) return { top, playerEntry: null };
+
+      const playerIndex = entries.findIndex((e) => e.id === currentEntryId);
+      if (playerIndex === -1) return { top, playerEntry: null };
+
+      // Player is in top N — no separate entry needed
+      if (playerIndex < LEADERBOARD_CONFIG.DISPLAY_TOP) {
+        return { top, playerEntry: null };
+      }
+
+      // Player is outside top N — return their rank separately
+      return {
+        top,
+        playerEntry: { entry: entries[playerIndex], rank: playerIndex + 1 },
+      };
     },
     [entries]
   );
@@ -87,5 +113,5 @@ export function useLeaderboard() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [resetLeaderboard]);
 
-  return { entries, addEntry, resetLeaderboard, isHighScore };
+  return { entries, addEntry, resetLeaderboard, isHighScore, getDisplayEntries };
 }

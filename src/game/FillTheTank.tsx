@@ -21,7 +21,7 @@ export function FillTheTank() {
     completeLoad, nextRound, showLeadCapture, showResults, resetToAttract, acknowledgeSpill,
   } = useGameStateV2(config);
 
-  const { entries, addEntry } = useLeaderboard();
+  const { entries, addEntry, getDisplayEntries } = useLeaderboard();
   const [playerName, setPlayerName] = useState<string>("Player");
   const idleTimeoutRef = useRef<number | null>(null);
 
@@ -80,7 +80,7 @@ export function FillTheTank() {
       <AdminPanel settings={settings} isOpen={isAdminOpen} onClose={() => setAdminOpen(false)} onUpdate={updateSetting} onReset={resetToDefaults} />
 
       {gameState === "attract" && (
-        <AttractModeV2 onStartGame={startGame} leaderboardEntries={entries} config={config} />
+        <AttractModeV2 onStartGame={startGame} leaderboardEntries={entries} config={config} getDisplayEntries={getDisplayEntries} />
       )}
 
       {gameState === "playing" && (
@@ -131,6 +131,7 @@ export function FillTheTank() {
           config={config}
           leaderboardEntries={entries}
           onAddEntry={addEntry}
+          getDisplayEntries={getDisplayEntries}
           playerName={playerName}
         />
       )}

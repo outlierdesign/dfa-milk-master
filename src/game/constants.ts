@@ -84,7 +84,8 @@ export const GAME_CONFIG = {
 
 // Leaderboard settings
 export const LEADERBOARD_CONFIG = {
-  MAX_ENTRIES: 10,
+  MAX_ENTRIES: 1000,
+  DISPLAY_TOP: 20,
   STORAGE_KEY: "fillTheTank_leaderboard",
   ADMIN_RESET_COMBO: "Ctrl+Shift+R",
 } as const;

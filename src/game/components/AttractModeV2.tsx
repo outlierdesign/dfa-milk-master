@@ -2,17 +2,20 @@ import { useEffect, useState, useRef } from "react";
 import { TankerV2 } from "./TankerV2";
 import { LeaderboardEntry } from "../types";
 import { GameConfig } from "../constantsV2";
+import { LeaderboardDisplay } from "../hooks/useLeaderboard";
 import { useSoundEffects } from "../hooks/useSoundEffects";
 import { SoundToggle } from "./SoundToggle";
+import { ArcadeLeaderboard } from "./ArcadeLeaderboard";
 import piperLogo from "@/assets/piper-logo.png";
 
 interface AttractModeV2Props {
   onStartGame: () => void;
   leaderboardEntries: LeaderboardEntry[];
   config: GameConfig;
+  getDisplayEntries: (currentEntryId: string | null) => LeaderboardDisplay;
 }
 
-export function AttractModeV2({ onStartGame, leaderboardEntries, config }: AttractModeV2Props) {
+export function AttractModeV2({ onStartGame, leaderboardEntries, config, getDisplayEntries }: AttractModeV2Props) {
   const [demoFillLevel, setDemoFillLevel] = useState(0);
   const animationRef = useRef<number | null>(null);
   const demoTarget = config.targetLoadLbs;
@@ -82,21 +85,13 @@ export function AttractModeV2({ onStartGame, leaderboardEntries, config }: Attra
       <div className="absolute bottom-4 right-4 text-slate-600 text-xs">Ctrl+Shift+A for settings</div>
 
       {leaderboardEntries.length > 0 && (
-        <div className="bg-slate-800/80 p-6 rounded-xl border border-slate-600 max-w-md w-full">
-          <h3 className="text-lg font-bold text-amber-400 mb-4 text-center">🏆 TOP SCORES TODAY</h3>
-          <div className="space-y-2">
-            {leaderboardEntries.slice(0, 5).map((entry, index) => (
-              <div key={entry.id} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300">{index + 1}</span>
-                  <span className="text-white">{entry.playerName}</span>
-                </div>
-                <span className="text-emerald-400 font-mono">
-                  {config.currency}{entry.score.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </span>
-              </div>
-            ))}
-          </div>
+        <div className="w-full max-w-md">
+          <ArcadeLeaderboard
+            display={getDisplayEntries(null)}
+            currentEntryId={null}
+            currency={config.currency}
+            compact
+          />
         </div>
       )}
     </div>

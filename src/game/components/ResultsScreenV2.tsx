@@ -219,6 +219,16 @@ export function ResultsScreenV2({
           <div className="text-slate-500 text-xs mt-3">lower is better</div>
         </div>
 
+        {/* ── PIPER CTA ─────────────────────────────────────────────────────── */}
+        <div className="bg-emerald-900/50 p-5 rounded-xl border border-emerald-600 mb-6 text-center">
+          <div className="text-xl md:text-2xl font-bold text-emerald-400 mb-1">
+            Piper removes this cost.
+          </div>
+          <p className="text-emerald-200 text-sm">
+            Precision metering • No agitation delays • No weighbridge
+          </p>
+        </div>
+
         {/* ── TWO-COLUMN GRID ───────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
@@ -335,18 +345,6 @@ export function ResultsScreenV2({
                 <span className={!usedWeighbridge ? "text-emerald-400" : "text-red-400"}>
                   {usedWeighbridge ? "✗ YES" : "✓ NO (Piper)"}
                 </span>
-              </div>
-            </div>
-
-            {/* Piper CTA */}
-            <div className="bg-emerald-900/50 p-5 rounded-xl border border-emerald-600">
-              <div className="text-center">
-                <div className="text-xl md:text-2xl font-bold text-emerald-400 mb-1">
-                  Piper removes this cost.
-                </div>
-                <p className="text-emerald-200 text-sm">
-                  Precision metering • No agitation delays • No weighbridge
-                </p>
               </div>
             </div>
 

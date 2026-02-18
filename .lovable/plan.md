@@ -1,48 +1,29 @@
 
-## Problem: Timer Shows Real Seconds Instead of Simulated 12-Minute Time
+## Problem Summary
 
-### Root Cause Identified
+The in-game timer still shows real seconds (e.g. `00:06.4`) instead of simulated minutes (e.g. `06:24`) because the `v5` localStorage key was written with the wrong speed multiplier value **before** the fix was applied — so the stale `v5` entry is being read back on load and overriding the `48×` default.
 
-The `AdminPanel.tsx` `SpeedSelector` component only offers four preset buttons: **1×, 2×, 5×, 10×**. The game default is **48×**, but this option does not exist in the UI.
+Additionally, the Admin Panel has a slider for "Max Overfill" with a minimum of 1,000 lbs, but the default was recently changed to 200 lbs — meaning the slider can never actually be set to 200 lbs, and any save from the Admin Panel will snap it up to 1,000 and overwrite the correct default.
 
-Every time a user opens the Admin Panel and clicks "Save & Apply", the `SpeedSelector` highlights the closest matching button (likely `10×`), and `localStorage` writes `10` as the `gameSpeedMultiplier`. This overrides the `48` default permanently.
+## Root Causes
 
-With a multiplier of `10`, a 15-second real fill shows `02:30` instead of `12:00`.
+**1. Stale v5 cache**
+`STORAGE_KEY` is `v5`. When the v5 fix was deployed, if the user's browser had already loaded the page and saved settings with a wrong multiplier, that bad `v5` value persists. Bumping to `v6` and adding `v5` to `OLD_KEYS` will wipe it.
 
-The timer logic itself is correct — it multiplies elapsed seconds by `speedMultiplier`:
-```
-setElapsedTime(((performance.now() - fillStartTime) / 1000) * speedMultiplier)
-```
-The flow loop in `useGameStateV2.ts` also correctly applies `speedMultiplier` to the fill delta. So the only issue is the cached wrong value.
+**2. Max Overfill slider min is wrong**
+The `NumberSetting` for `maxOverfillLbs` has `min={1000}`, but the default is `200`. Every time the Admin Panel is saved, the slider clamps to 1,000 lbs — breaking the 200 lb spill threshold entirely. This needs `min={50} step={50}`.
 
----
+## Changes — One File Only
 
-### Fix — Two Changes
+**`src/game/components/AdminPanel.tsx`**
 
-**1. Add 48× to the Speed Selector options**
+1. Bump `STORAGE_KEY` → `"fill-tank-admin-settings-v6"`
+2. Add `"fill-tank-admin-settings-v5"` to `OLD_KEYS` array
+3. Fix `maxOverfillLbs` slider: change `min={1000} max={30000} step={500}` → `min={50} max={2000} step={50}`
 
-Update `SPEED_OPTIONS` in `AdminPanel.tsx` to include the 48× trade show option:
+## What This Achieves
 
-```
-{ value: 1,  label: "1×",  description: "Real-time" },
-{ value: 10, label: "10×", description: "~1.5 min" },
-{ value: 24, label: "24×", description: "~6 min" },
-{ value: 48, label: "48×", description: "~12 min" },
-```
-
-This makes 48× selectable and clearly labelled, so saving the panel will correctly persist `48`.
-
-**2. Bump storage key to v5 and clear v4 cache**
-
-Update `STORAGE_KEY` from `v4` → `v5` and add `v4` to the `OLD_KEYS` cleanup list. This wipes any previously cached wrong multiplier value (e.g. `10`) from localStorage and forces a fresh load from `GAME_DEFAULTS` (which has `gameSpeedMultiplier: 48`).
-
----
-
-### Files to Change
-
-- `src/game/components/AdminPanel.tsx`
-  - `STORAGE_KEY` → `"fill-tank-admin-settings-v5"`
-  - Add `"fill-tank-admin-settings-v4"` to `OLD_KEYS`
-  - Replace `SPEED_OPTIONS` array with 1×, 10×, 24×, 48× options
-
-No other files need to change. The timer logic, flow loop, and defaults are all correct — only the Admin Panel UI was missing the 48× preset, causing the wrong value to be cached.
+- Stale cached speed multiplier is wiped; game loads fresh with `gameSpeedMultiplier: 48` from `GAME_DEFAULTS`
+- A 15-second real fill will display as ~`12:00` on the load timer
+- The 200 lb spill threshold (which triggers the "milk everywhere" animation) is preserved correctly when the Admin Panel is saved
+- All penalty/results calculations continue to use the simulated 12-minute figure as intended

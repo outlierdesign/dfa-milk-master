@@ -1,29 +1,72 @@
 
-## Problem Summary
+## Two Bugs — Root Causes Found
 
-The in-game timer still shows real seconds (e.g. `00:06.4`) instead of simulated minutes (e.g. `06:24`) because the `v5` localStorage key was written with the wrong speed multiplier value **before** the fix was applied — so the stale `v5` entry is being read back on load and overriding the `48×` default.
+### Bug 1: Fill completes in ~0.25 real seconds instead of ~15 seconds (timer issue)
 
-Additionally, the Admin Panel has a slider for "Max Overfill" with a minimum of 1,000 lbs, but the default was recently changed to 200 lbs — meaning the slider can never actually be set to 200 lbs, and any save from the Admin Panel will snap it up to 1,000 and overwrite the correct default.
+The fill rate formula in `useGameStateV2.ts` has a **unit mismatch**. The flow rate is in **lbs per minute**, but `deltaTime` is in **seconds**. There is no `/60` conversion to turn seconds into minutes before multiplying:
 
-## Root Causes
+```
+// CURRENT (wrong):
+const fillDelta = effectiveFlowRate * deltaTime * speedMultiplier;
+// e.g. 4167 lbs/min * 0.016 seconds * 48 = 3,200 lbs per 16ms tick
 
-**1. Stale v5 cache**
-`STORAGE_KEY` is `v5`. When the v5 fix was deployed, if the user's browser had already loaded the page and saved settings with a wrong multiplier, that bad `v5` value persists. Bumping to `v6` and adding `v5` to `OLD_KEYS` will wipe it.
+// CORRECT:
+const fillDelta = effectiveFlowRate * (deltaTime / 60) * speedMultiplier;
+// e.g. 4167 lbs/min * (0.016/60) min * 48 = 53 lbs per 16ms tick
+```
 
-**2. Max Overfill slider min is wrong**
-The `NumberSetting` for `maxOverfillLbs` has `min={1000}`, but the default is `200`. Every time the Admin Panel is saved, the slider clamps to 1,000 lbs — breaking the 200 lb spill threshold entirely. This needs `min={50} step={50}`.
+**Impact of the bug:**
+- Each 16ms frame currently adds ~3,200 lbs
+- 50,000 lbs fills in ~0.25 real seconds (the "1 second" the user experiences)
+- The overfill cap (2,000 lbs) is blown past instantly, auto-stopping before the player can react
+- The timer shows ~26 simulated seconds because 0.56 real seconds × 48 = 26.7
 
-## Changes — One File Only
+**With the fix:**
+- Each 16ms frame adds ~53 lbs
+- 50,000 lbs fills in ~15 real seconds ✓
+- Timer counts up toward 12:00 over that 15 seconds ✓
+- Players have time to manually stop, choosing their fill amount
 
-**`src/game/components/AdminPanel.tsx`**
+---
 
-1. Bump `STORAGE_KEY` → `"fill-tank-admin-settings-v6"`
-2. Add `"fill-tank-admin-settings-v5"` to `OLD_KEYS` array
-3. Fix `maxOverfillLbs` slider: change `min={1000} max={30000} step={500}` → `min={50} max={2000} step={50}`
+### Bug 2: "MILK EVERYWHERE!" overlay blocks advancing after a spill
 
-## What This Achieves
+In `FillTheTank.tsx`, the `SpillAnimation` component receives `isActive={session.spillTriggered}`. Once a spill triggers, `spillTriggered` is set to `true` and **never resets** within the round. So even after the 3-second auto-dismiss fires `acknowledgeSpill` (which sets `spillAcknowledged: true`), the `isActive` prop remains `true` and the overlay stays on screen, visually obscuring the "NEXT ROUND →" button.
 
-- Stale cached speed multiplier is wiped; game loads fresh with `gameSpeedMultiplier: 48` from `GAME_DEFAULTS`
-- A 15-second real fill will display as ~`12:00` on the load timer
-- The 200 lb spill threshold (which triggers the "milk everywhere" animation) is preserved correctly when the Admin Panel is saved
-- All penalty/results calculations continue to use the simulated 12-minute figure as intended
+**Fix:** Change the `isActive` prop to `session.spillTriggered && !session.spillAcknowledged` so the overlay correctly hides once the player has acknowledged the spill.
+
+---
+
+## Changes Required
+
+### File 1: `src/game/hooks/useGameStateV2.ts`
+- Line 134: Change `effectiveFlowRate * deltaTime * speedMultiplier` to `effectiveFlowRate * (deltaTime / 60) * speedMultiplier`
+
+### File 2: `src/game/FillTheTank.tsx`
+- Change `isActive={session.spillTriggered}` to `isActive={session.spillTriggered && !session.spillAcknowledged}` on the `SpillAnimation` component inside `GameScreenV2`
+
+Wait — `SpillAnimation` is rendered inside `GameScreenV2`, not `FillTheTank`. Looking at `GameScreenV2.tsx` line 79-84:
+```jsx
+<SpillAnimation
+  spillAmount={session.spillAmount}
+  isActive={session.spillTriggered}
+  config={config}
+  onContinue={onAcknowledgeSpill}
+/>
+```
+
+### File 2 (corrected): `src/game/components/GameScreenV2.tsx`
+- Change `isActive={session.spillTriggered}` to `isActive={session.spillTriggered && !session.spillAcknowledged}`
+
+---
+
+## Summary of Expected Behaviour After Fixes
+
+| Scenario | Before | After |
+|---|---|---|
+| Fill duration (real) | ~0.25 seconds | ~15 seconds |
+| Timer at end of fill | ~00:26 simulated | ~12:00 simulated |
+| Overfill experience | Instant auto-stop, no reaction time | Gradual — warning shown, player can choose to stop |
+| After spill animation | "MILK EVERYWHERE" stays forever | Overlay hides after 3 seconds, "NEXT ROUND →" is accessible |
+
+Both fixes are minimal and surgical — one line each.

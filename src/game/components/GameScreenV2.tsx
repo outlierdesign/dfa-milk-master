@@ -63,9 +63,8 @@ export function GameScreenV2({
   const getButtonState = () => {
     if (session.fillLocked) return { disabled: true, text: "STOPPED", style: "bg-slate-700 text-slate-500 cursor-not-allowed" };
     if (session.spillTriggered) return { disabled: true, text: "💥 OVERFILLED!", style: "bg-red-600 text-white cursor-not-allowed" };
-    if (isFilling) return { disabled: false, text: "FILLING...", style: "bg-sky-500 text-white scale-95" };
-    if (session.hasStartedFilling) return { disabled: true, text: "LOCKED", style: "bg-slate-700 text-slate-500 cursor-not-allowed" };
-    return { disabled: false, text: "HOLD TO FILL", style: "bg-sky-600 hover:bg-sky-500 text-white active:scale-95" };
+    if (isFilling) return { disabled: false, text: "⏹ TAP TO STOP", style: "bg-red-600 hover:bg-red-500 text-white animate-pulse" };
+    return { disabled: false, text: "▶ TAP TO FILL", style: "bg-sky-600 hover:bg-sky-500 text-white active:scale-95" };
   };
 
   const buttonState = getButtonState();
@@ -92,9 +91,6 @@ export function GameScreenV2({
         </div>
         <div className="text-[10px] md:text-xs text-slate-400">
           Fill the tanker to the target weight
-        </div>
-        <div className="text-[10px] md:text-xs text-amber-400 mt-1">
-          ⚠️ ONE SHOT ONLY — Release to stop permanently
         </div>
       </div>
 
@@ -186,11 +182,7 @@ export function GameScreenV2({
       {/* Controls */}
       <div className="flex flex-col items-center gap-2 md:gap-3 pb-2 md:pb-4">
         <button
-          onMouseDown={onStartFilling}
-          onMouseUp={onStopFilling}
-          onMouseLeave={() => { if (isFilling) onStopFilling(); }}
-          onTouchStart={(e) => { e.preventDefault(); onStartFilling(); }}
-          onTouchEnd={(e) => { e.preventDefault(); onStopFilling(); }}
+          onClick={isFilling ? onStopFilling : onStartFilling}
           disabled={buttonState.disabled}
           className={`px-8 md:px-16 py-5 md:py-8 rounded-xl md:rounded-2xl font-bold text-xl md:text-3xl transition-all shadow-2xl ${buttonState.style}`}
         >

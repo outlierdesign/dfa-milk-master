@@ -21,7 +21,7 @@ export function GameTimer({ fillStartTime, isFilling, usePiperSampling, useWeigh
 
   useEffect(() => {
     if (!fillStartTime) { setElapsedTime(0); return; }
-    const update = () => setElapsedTime((performance.now() - fillStartTime) / 1000);
+    const update = () => setElapsedTime(((performance.now() - fillStartTime) / 1000) * speedMultiplier);
     update();
     if (isFilling && !spillTriggered) {
       const interval = setInterval(update, 100);

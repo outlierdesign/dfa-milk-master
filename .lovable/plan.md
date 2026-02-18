@@ -1,65 +1,49 @@
 
+# Fix k=2 Scenario Weighting in the Scoring Engine
 
-# Persistent All-Time Leaderboard with 80s Arcade Styling
+## What's Wrong Today
 
-## Overview
+The scoring engine has a bug in the 2-overfill (k=2) case. Currently it splits the `overfillEventsPerYear` value across both overfill rounds, giving each only 6 loads (12 ÷ 2). This also leaves the single underfill round with 1812 loads (1824 − 12) instead of 1800.
 
-Three major changes:
-1. **All-time leaderboard** -- remove the "today only" filter, keep ALL entries forever
-2. **Top 20 benchmark + contextual placement** -- the top 20 are the permanent benchmark; if a player lands outside the top 20, show the top 20 plus their placing at the bottom
-3. **80s arcade pixel styling** -- restyle the leaderboard with retro 8-bit aesthetics (pixelated font, scanline effects, star decorations, arcade banner) while keeping the existing slate/emerald/red color scheme
+The correct logic — per your spec — is that **each** overfill scenario represents the same 12 annual overfill events independently, so each overfill round should carry 12 loads and the underfill round gets the remainder.
 
-## Changes
+## Correct Weighting (N = 1824, overfillEventsPerYear = 12)
 
-### 1. Update Leaderboard Hook -- All-Time Storage
+| Scenario | Round 1 | Round 2 | Round 3 | Total |
+|---|---|---|---|---|
+| k=0 (3 underfills) | 608 | 608 | 608 | 1824 ✅ |
+| k=1 (1 overfill, 2 underfills) | 12 (if overfill) | 906 | 906 | 1824 ✅ |
+| k=2 (2 overfills, 1 underfill) — **CURRENT** | 6 | 6 | 1812 | 1824 ❌ |
+| k=2 (2 overfills, 1 underfill) — **FIXED** | 12 | 12 | 1800 | 1824 ✅ |
 
-**File: `src/game/hooks/useLeaderboard.ts`**
-- Remove the "today only" filter on load (line 24) -- load ALL stored entries
-- Increase `MAX_ENTRIES` storage to a large number (e.g. 1000) so all scores persist
-- Add a new return value: `getDisplayEntries(currentEntryId)` that returns `{ top20: LeaderboardEntry[], playerEntry: { entry, rank } | null }` -- if the player is in the top 20, just return top 20; if not, return top 20 + their rank/entry separately
+Note: the total is now 1824 (12 + 12 + 1800 = 1824) which is consistent, because we treat 12 overfill events as the annual frequency for each overfill round type.
 
-**File: `src/game/constants.ts`**
-- Change `LEADERBOARD_CONFIG.MAX_ENTRIES` from `10` to `1000`
+## The Fix
 
-### 2. Update Results Screen Leaderboard Display
+**File: `src/game/utils/scoringEngine.ts`** — change 2 lines in the k=2 branch:
 
-**File: `src/game/components/ResultsScreenV2.tsx`**
-- Replace the current simple leaderboard table with an arcade-styled component
-- Use `getDisplayEntries` to determine what to show:
-  - Always show top 20
-  - If the current player is outside top 20, add a separator row ("...") then their rank and score at the bottom
-  - Highlight the current player's row with a glowing effect
+```
+// BEFORE (wrong):
+const overfillWeight = config.overfillEventsPerYear / 2;
+const underfillWeight = N - config.overfillEventsPerYear;
 
-### 3. Update Attract Screen Leaderboard
+// AFTER (correct):
+const overfillWeight = config.overfillEventsPerYear;
+const underfillWeight = N - (2 * config.overfillEventsPerYear);
+```
 
-**File: `src/game/components/AttractModeV2.tsx`**
-- Update to show all-time top 5 (remove "TODAY" label, show "TOP SCORES")
-- Apply matching arcade pixel styling
+That's it — a 2-line change in one file. Everything else (the results screen weight display, the spill cost calculation, the underfill cost calculation) reads from these weights automatically and will reflect the corrected values with no further changes needed.
 
-### 4. 80s Arcade Pixel Styling
+## Default Settings to Confirm
 
-**File: `src/index.css`**
-- Import a pixel font (e.g. "Press Start 2P" from Google Fonts or use a CSS pixel-font fallback)
-- Add a `.arcade-leaderboard` utility class with pixelated border styling
+To make sure the defaults reflect the spec precisely, the admin settings should be:
 
-**File: `index.html`**
-- Add Google Fonts link for "Press Start 2P"
+- `annualLoadsOverride: 1824` (or `loadsPerDay: 5, daysPerYear: 365` gives 1825 — **we should set an override of 1824**)
+- `overfillEventsPerYear: 12`
 
-**Visual design (matching reference image + existing color scheme):**
-- Pixelated banner header reading "LEADERBOARD" in uppercase with star decorations
-- Red/crimson banner ribbon behind the title (using existing red-400/red-500)
-- Black background panel with a stepped/pixelated border (using slate-700/slate-800)
-- Each row: rank number, player name in pixel font, score right-aligned
-- Top 3 get gold/silver/bronze star indicators
-- Current player row gets a pulsing emerald glow border
-- Separator row with pixelated dots for the "..." gap between top 20 and player's rank
-- All text uses the pixel font at a small size for authentic retro feel
+Currently `loadsPerDay: 5 × daysPerYear: 365 = 1825`, not 1824. To get exactly 1824, we'll set `annualLoadsOverride: 1824` as the default in `constantsV2.ts`. This ensures the weighting rows always add up exactly to 1824.
 
-## Technical Details
+## Files to Change
 
-- The `LeaderboardEntry` type stays the same -- no schema changes needed
-- Storage key remains the same, existing localStorage data will be loaded (old today-only entries will now persist)
-- The `addEntry` function still sorts by lowest score and appends; the display logic in `getDisplayEntries` handles the top-20 + player-rank split
-- The attract screen continues to show a compact top-5 view
-- No database migration needed -- this remains localStorage-based
-
+1. `src/game/utils/scoringEngine.ts` — fix the k=2 weight calculation (2 lines)
+2. `src/game/constantsV2.ts` — set `annualLoadsOverride: 1824` as the default so N is always exactly 1824 (not 1825)

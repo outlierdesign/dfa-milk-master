@@ -3,13 +3,14 @@ import { GAME_DEFAULTS, GameSettings, GameConfig, settingsToConfig } from "../co
 
 export type CurrencySymbol = "$" | "€";
 
-const STORAGE_KEY = "fill-tank-admin-settings-v5";
+const STORAGE_KEY = "fill-tank-admin-settings-v6";
 const OLD_KEYS = [
   "fill-tank-admin-settings",
   "fill-tank-admin-settings-v1",
   "fill-tank-admin-settings-v2",
   "fill-tank-admin-settings-v3",
   "fill-tank-admin-settings-v4",
+  "fill-tank-admin-settings-v5",
 ];
 
 export function useAdminSettings() {
@@ -88,7 +89,7 @@ export function AdminPanel({ settings, isOpen, onClose, onUpdate, onReset }: Adm
           {/* Load & Production */}
           <SettingGroup title="Load & Production">
             <NumberSetting label="Target Load" value={settings.targetLoadLbs} min={10000} max={100000} step={1000} unit="lbs" onChange={(v) => onUpdate("targetLoadLbs", v)} />
-            <NumberSetting label="Max Overfill" value={settings.maxOverfillLbs} min={1000} max={30000} step={500} unit="lbs" onChange={(v) => onUpdate("maxOverfillLbs", v)} />
+            <NumberSetting label="Max Overfill" value={settings.maxOverfillLbs} min={50} max={2000} step={50} unit="lbs" onChange={(v) => onUpdate("maxOverfillLbs", v)} />
             <NumberSetting label="Loads per Day" value={settings.loadsPerDay} min={1} max={20} step={1} unit="loads" onChange={(v) => onUpdate("loadsPerDay", v)} />
             <NumberSetting label="Days per Year" value={settings.daysPerYear} min={1} max={366} step={1} unit="days" onChange={(v) => onUpdate("daysPerYear", v)} />
             <div className="text-xs text-slate-400 mt-1">

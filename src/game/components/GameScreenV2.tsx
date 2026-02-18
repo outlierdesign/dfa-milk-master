@@ -4,7 +4,6 @@ import { TankerV2 } from "./TankerV2";
 import { ConnectionPipe } from "./ConnectionPipe";
 import { SpillAnimation } from "./SpillAnimation";
 import { GameTimer } from "./GameTimer";
-import { LoadMeter } from "./LoadMeter";
 import { SoundToggle } from "./SoundToggle";
 import { GameSessionV2 } from "../hooks/useGameStateV2";
 import { GameConfig } from "../constantsV2";
@@ -117,17 +116,6 @@ export function GameScreenV2({
             {targetLbs.toLocaleString()} lbs
           </div>
         </div>
-      </div>
-
-      {/* Load Meter */}
-      <div className="mb-2 md:mb-3 max-w-2xl mx-auto w-full">
-        <LoadMeter
-          currentFill={session.currentFill}
-          targetFill={targetLbs}
-          maxFill={config.maxAllowedFill}
-          spillTriggered={session.spillTriggered}
-          spillWarningActive={session.spillWarningActive}
-        />
       </div>
 
       {/* Main Game Area */}

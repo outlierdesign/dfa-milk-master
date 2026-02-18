@@ -78,7 +78,7 @@ export function GameScreenV2({
     <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col p-2 md:p-4 select-none relative overflow-hidden">
       <SpillAnimation
         spillAmount={session.spillAmount}
-        isActive={session.spillTriggered}
+        isActive={session.spillTriggered && !session.spillAcknowledged}
         config={config}
         onContinue={onAcknowledgeSpill}
       />

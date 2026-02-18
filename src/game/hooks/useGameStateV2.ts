@@ -129,9 +129,8 @@ export function useGameStateV2(config: GameConfig) {
 
           const effectiveFlowRate = prev.currentFlowRate;
 
-          // Flow rate is lbs/min, deltaTime is seconds
-          // 1 real second = 1 simulated minute
-          const fillDelta = effectiveFlowRate * deltaTime * speedMultiplier;
+          // Flow rate is lbs/min, deltaTime is seconds — divide by 60 to convert
+          const fillDelta = effectiveFlowRate * (deltaTime / 60) * speedMultiplier;
           let newFill = prev.currentFill + fillDelta;
 
           let spillAmount = prev.spillAmount;

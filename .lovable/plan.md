@@ -1,49 +1,111 @@
 
-# Fix k=2 Scenario Weighting in the Scoring Engine
+# Results Screen Redesign: Worked Maths, Red Cost Hero, Two-Column Layout
 
-## What's Wrong Today
+## What's Changing
 
-The scoring engine has a bug in the 2-overfill (k=2) case. Currently it splits the `overfillEventsPerYear` value across both overfill rounds, giving each only 6 loads (12 ÷ 2). This also leaves the single underfill round with 1812 loads (1824 − 12) instead of 1800.
+Three distinct improvements to the results screen (`ResultsScreenV2.tsx`):
 
-The correct logic — per your spec — is that **each** overfill scenario represents the same 12 annual overfill events independently, so each overfill round should carry 12 loads and the underfill round gets the remainder.
+1. **Red cost hero at the top** — Variable cost and Total cost displayed prominently in red at the very top, replacing the current muted "Your Score" header
+2. **Worked example panel** — Step-by-step maths showing exactly how the underfill cost was calculated, using real numbers from the player's game
+3. **Two-column layout** — Results/breakdown on the left, leaderboard on the right (side-by-side on desktop, stacked on mobile)
 
-## Correct Weighting (N = 1824, overfillEventsPerYear = 12)
+---
 
-| Scenario | Round 1 | Round 2 | Round 3 | Total |
-|---|---|---|---|---|
-| k=0 (3 underfills) | 608 | 608 | 608 | 1824 ✅ |
-| k=1 (1 overfill, 2 underfills) | 12 (if overfill) | 906 | 906 | 1824 ✅ |
-| k=2 (2 overfills, 1 underfill) — **CURRENT** | 6 | 6 | 1812 | 1824 ❌ |
-| k=2 (2 overfills, 1 underfill) — **FIXED** | 12 | 12 | 1800 | 1824 ✅ |
+## 1. Red Cost Hero Header
 
-Note: the total is now 1824 (12 + 12 + 1800 = 1824) which is consistent, because we treat 12 overfill events as the annual frequency for each overfill round type.
-
-## The Fix
-
-**File: `src/game/utils/scoringEngine.ts`** — change 2 lines in the k=2 branch:
+Replace the current "Your Score" block with a more impactful two-figure display:
 
 ```
-// BEFORE (wrong):
-const overfillWeight = config.overfillEventsPerYear / 2;
-const underfillWeight = N - config.overfillEventsPerYear;
-
-// AFTER (correct):
-const overfillWeight = config.overfillEventsPerYear;
-const underfillWeight = N - (2 * config.overfillEventsPerYear);
+┌────────────────────────────────────────────────┐
+│        ANNUAL VARIABLE COST                    │
+│              $12,543          ← large red      │
+│        ─────────────────                       │
+│  Underfill + Spill    $8,200  ← red            │
+│  Time Penalties       $4,343  ← amber          │
+│               (lower is better)                │
+└────────────────────────────────────────────────┘
 ```
 
-That's it — a 2-line change in one file. Everything else (the results screen weight display, the spill cost calculation, the underfill cost calculation) reads from these weights automatically and will reflect the corrected values with no further changes needed.
+- Total variable cost in large red (`text-red-400`, `text-6xl font-black`)
+- Sub-line shows the core cost (underfill + spill) and time penalties separately in smaller red/amber text
+- Clear label: "ANNUAL VARIABLE COST — lower is better"
 
-## Default Settings to Confirm
+---
 
-To make sure the defaults reflect the spec precisely, the admin settings should be:
+## 2. Worked Example Panel
 
-- `annualLoadsOverride: 1824` (or `loadsPerDay: 5, daysPerYear: 365` gives 1825 — **we should set an override of 1824**)
-- `overfillEventsPerYear: 12`
+A new panel inserted between the round breakdown and the annualised cost breakdown. It walks through the underfill cost maths step by step. The panel only shows for underfill scenarios (extraLoads > 0).
 
-Currently `loadsPerDay: 5 × daysPerYear: 365 = 1825`, not 1824. To get exactly 1824, we'll set `annualLoadsOverride: 1824` as the default in `constantsV2.ts`. This ensures the weighting rows always add up exactly to 1824.
+**Structure** (using real numbers from `score` and `config`):
+
+```
+HOW YOUR UNDERFILL COST WAS CALCULATED
+
+Step 1 — Avg credited per load
+  You filled: [avgCredited] lbs  (weighted avg across rounds)
+
+Step 2 — Annual milk target
+  [targetLoadLbs] lbs × [N] loads = [annualMilkBaseline] lbs/year
+  (e.g. 50,000 × 1,824 = 91,200,000)
+
+Step 3 — Extra loads needed
+  91,200,000 ÷ [avgCredited] = [actualLoads] loads needed
+  [actualLoads] − [N] = [extraLoads] extra trips
+
+Step 4 — Underfill cost
+  [extraLoads] trips × $500/trip = $[underfillCost]
+```
+
+Each step is a separate styled row with a step number chip on the left, a plain-English label, and the computed value right-aligned in amber/white.
+
+For spill cost, a separate compact worked line:
+```
+Spill: [totalSpillLbs annualised] lbs × $0.19/lb = $[spillCost]
+```
+
+This panel is wrapped in `animate-fade-in` triggered by the same `showAnnualized` timer (1.5s delay).
+
+---
+
+## 3. Two-Column Desktop Layout
+
+On desktop (md+), the page switches from a single centred column to a side-by-side grid:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     COST HERO (full width)              │
+├────────────────────────┬────────────────────────────────┤
+│   LEFT COLUMN          │   RIGHT COLUMN                 │
+│                        │                                │
+│   Round Breakdown      │   LEADERBOARD                  │
+│   Worked Example       │   (arcade styled, sticky top)  │
+│   Annualised Costs     │                                │
+│   Piper/Weighbridge    │                                │
+│   Piper CTA            │                                │
+│                        │                                │
+├────────────────────────┴────────────────────────────────┤
+│                  PLAY AGAIN (full width)                │
+└─────────────────────────────────────────────────────────┘
+```
+
+- Outer container: `max-w-5xl mx-auto` (wider than the current `max-w-lg`)
+- Cost hero: full-width across the top
+- Content area: `grid grid-cols-1 md:grid-cols-2 gap-6`
+- Left col: all the breakdown panels
+- Right col: `ArcadeLeaderboard` with `md:sticky md:top-6` so it stays visible while the user scrolls through the breakdown
+- Play Again button: full width below the grid
+- On mobile: single column, leaderboard appears below all panels (same as today)
+
+---
 
 ## Files to Change
 
-1. `src/game/utils/scoringEngine.ts` — fix the k=2 weight calculation (2 lines)
-2. `src/game/constantsV2.ts` — set `annualLoadsOverride: 1824` as the default so N is always exactly 1824 (not 1825)
+### `src/game/components/ResultsScreenV2.tsx`
+
+- Replace the `<div className="min-h-screen ... flex flex-col items-center">` root with a wider `max-w-5xl` container using a CSS grid layout
+- Rewrite the score header as the red cost hero (two figures: total variable cost + core cost split)
+- Add a new inline `WorkedExample` sub-component (or JSX block) between round breakdown and annualised costs — no new file needed
+- Move `<ArcadeLeaderboard>` into the right column of the grid
+- Play Again button stays full-width at the bottom
+
+No other files need changing — all required data (`score`, `config`, `rounds`) is already available in this component.

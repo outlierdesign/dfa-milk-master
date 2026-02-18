@@ -3,12 +3,13 @@ import { GAME_DEFAULTS, GameSettings, GameConfig, settingsToConfig } from "../co
 
 export type CurrencySymbol = "$" | "€";
 
-const STORAGE_KEY = "fill-tank-admin-settings-v4";
+const STORAGE_KEY = "fill-tank-admin-settings-v5";
 const OLD_KEYS = [
   "fill-tank-admin-settings",
   "fill-tank-admin-settings-v1",
   "fill-tank-admin-settings-v2",
   "fill-tank-admin-settings-v3",
+  "fill-tank-admin-settings-v4",
 ];
 
 export function useAdminSettings() {
@@ -209,10 +210,10 @@ function ToggleSetting({ label, value, onChange }: { label: string; value: boole
 }
 
 const SPEED_OPTIONS = [
-  { value: 1, label: "1×", description: "Real-time" },
-  { value: 2, label: "2×", description: "~6s" },
-  { value: 5, label: "5×", description: "~2.5s" },
-  { value: 10, label: "10×", description: "~1.2s" },
+  { value: 1,  label: "1×",  description: "Real-time" },
+  { value: 10, label: "10×", description: "~1.5 min" },
+  { value: 24, label: "24×", description: "~6 min" },
+  { value: 48, label: "48×", description: "~12 min" },
 ];
 
 function SpeedSelector({ value, onChange }: { value: number; onChange: (v: number) => void }) {

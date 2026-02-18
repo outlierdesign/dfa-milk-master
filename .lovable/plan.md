@@ -1,89 +1,123 @@
 
-# Calibrate Load Time: 15-Second Gameplay = 12-Minute Displayed Timer, With Matching Cost Basis
+# Three Game Mechanic Fixes
 
-## The Problem
+## 1. Timer Shows Real Wall-Clock Time
 
-Two things need fixing together:
+### Current Behaviour
+The `GameTimer` multiplies elapsed real seconds by `speedMultiplier` (48), so 15 real seconds of filling shows as "12:00". This was intended to represent real-world load time but makes the in-game experience confusing.
 
-1. **Speed and display are miscalibrated**: The current `gameSpeedMultiplier` is `1`, meaning the timer shows real wall-clock seconds (e.g. a 25-second fill shows as "00:25"). The target is ~15 real seconds of button-holding displaying as approximately "12:00" — representing a real tanker load in the field.
+### Requested Behaviour
+Show the actual real seconds elapsed during the fill (e.g. 15 seconds of button-holding shows as "00:15"). The 20-minute agitation and 15-minute weighbridge penalties remain shown as fixed additions beside the fill time — they represent the real-world costs of those activities and don't change.
 
-2. **Cost time basis must match the displayed time**: Agitation (+20:00) and weighbridge (+15:00) penalty minutes are already shown on the timer and are already the source for cost calculations — this is correct behaviour. Once the speed multiplier is set, the displayed time will represent true real-world minutes, making the cost basis genuinely reflect "12 minutes of driver time per load".
-
-## How the System Works
-
-The game has two coupled values in `constantsV2.ts`:
-
-- `flowRateLbsPerMin` — how many lbs of milk fill per simulated minute
-- `gameSpeedMultiplier` — compresses real time into simulated time for display
-
-The fill loop calculates:
-```
-fillDelta = flowRate (lbs/min) × deltaTime (real seconds) × speedMultiplier
-```
-
-The timer shows:
-```
-displayedTime = wallClockSeconds × speedMultiplier
-```
-
-## The Maths
-
-**Target:** 15 real seconds fills 50,000 lbs and displays as 12:00
-
-**Step 1 — Speed multiplier** (converts real seconds to displayed seconds):
-```
-12 minutes × 60 seconds ÷ 15 real seconds = 48
-```
-So `gameSpeedMultiplier = 48`
-
-**Step 2 — Flow rate** (must fill 50,000 lbs in 12 simulated minutes):
-```
-flowRateLbsPerMin = 50,000 lbs ÷ 12 minutes = 4,167 lbs/min
-```
-
-Verification: `4,167 lbs/min × 15 real seconds × (48/60) = 50,004 lbs` ✓
-
-## Cost Basis — Already Correct, Now Meaningful
-
-The scoring engine calculates agitation and weighbridge costs like this:
-```ts
-agitationCost = (agitationMinutes / 60) × driverRatePerHour × annualLoads
-weighbridgeCost = (weighScaleMinutes / 60) × driverRatePerHour × annualLoads
-```
-
-These `agitationMinutes` (20) and `weighScaleMinutes` (15) are the **same values** shown on the game timer as pending penalties. Once the speed multiplier is set to 48, the displayed fill timer will show ~12:00 for a full load — making the whole time display consistent and grounded in real-world minutes. A driver's load really does take ~12 minutes; agitation really does add 20 minutes; the weighbridge really does add 15 minutes. The costs will now clearly correspond to what players see on screen.
-
-## Piper Slowdown Behaviour
-
-With Piper enabled, the flow slows to 30% at 90% fill (45,000 lbs):
-- Phase 1 (0 → 45,000 lbs): ~13.5 real seconds, shows ~10:48
-- Phase 2 (45,000 → 50,000 lbs): ~2.4 real seconds, shows ~01:55
-- **Total with Piper: ~15.9 seconds, displayed as ~12:43** — adds realistic tension as the meter creeps toward target
-
-## Files to Change
-
-### `src/game/constantsV2.ts` — 2 value changes only
+### Fix
+In `GameTimer.tsx`, remove the `speedMultiplier` multiplication from the elapsed time calculation:
 
 ```ts
 // BEFORE
-flowRateLbsPerMin: 2_000,
-gameSpeedMultiplier: 1,
+const update = () => setElapsedTime(((performance.now() - fillStartTime) / 1000) * speedMultiplier);
 
 // AFTER
-flowRateLbsPerMin: 4_167,
-gameSpeedMultiplier: 48,
+const update = () => setElapsedTime((performance.now() - fillStartTime) / 1000);
 ```
 
-No logic changes needed. The fill loop, timer display, `fillDuration` recording, and cost calculations all already use these values correctly.
+The `speedMultiplier` badge in the timer header can also be removed since it no longer affects the displayed value.
 
-## Impact Summary
+The `fillDuration` stored in round results (used by scoring) also currently applies the multiplier in `completeLoad()`. This must stay as simulated minutes for the scoring engine to be accurate — so **no change** is needed there. The cost engine already uses `agitationMinutes` (20) and `weighScaleMinutes` (15) as fixed values, independent of fill duration display.
 
-| Area | Before | After |
+---
+
+## 2. Overfill Mechanic: 4,000 lbs Tolerance + Release-to-Stop Jeopardy
+
+### Current Behaviour
+`maxOverfillLbs` is set to **4 lbs** (essentially zero tolerance). The game auto-stops filling the instant 50,004 lbs is reached, showing the spill animation. This means there's almost no jeopardy window between target and hard stop.
+
+### Requested Behaviour
+- Players can overfill up to **4,000 lbs** beyond the 50,000 lb target (54,000 lbs total)
+- The spill animation and lock fires at 54,000 lbs (hard cap)
+- **OR** when the player releases the button at any point above 50,000 lbs — creating genuine jeopardy: "do I release now or risk going higher?"
+- The spill popup/animation should trigger on release-above-target, just as it does on hard-cap
+
+### Fix
+
+**`constantsV2.ts`** — Change `maxOverfillLbs`:
+```ts
+// BEFORE
+maxOverfillLbs: 4,
+
+// AFTER
+maxOverfillLbs: 4_000,
+```
+
+This changes `maxAllowedFill` to 54,000 lbs (computed as `targetLoadLbs + maxOverfillLbs`).
+
+**`useGameStateV2.ts`** — Update `stopFilling` so that when the player releases above target, `showSpillPopup` is set to `true` (currently it only sets it for `spillTriggered`, which only fires at the hard 4-lb cap):
+
+```ts
+// BEFORE
+const stopFilling = useCallback(() => {
+  if (!isFilling) return;
+  setIsFilling(false);
+  setSession((prev) => ({
+    ...prev,
+    fillLocked: true,
+    fillEndTime: performance.now(),
+    showSpillPopup: prev.spillTriggered && prev.spillAmount > 0,
+  }));
+}, [isFilling]);
+
+// AFTER
+const stopFilling = useCallback(() => {
+  if (!isFilling) return;
+  setIsFilling(false);
+  setSession((prev) => ({
+    ...prev,
+    fillLocked: true,
+    fillEndTime: performance.now(),
+    // Show spill popup if ANY overfill occurred (not just hard-cap trigger)
+    showSpillPopup: prev.spillAmount > 0,
+    // Mark spillTriggered visually if they released above target
+    spillTriggered: prev.spillTriggered || prev.spillAmount > 0,
+  }));
+}, [isFilling]);
+```
+
+**`SpillAnimation`** — Currently only renders when `isActive && spillAmount > 0`. This already covers the case where player releases above target since we'll set `spillTriggered = true` on release. No changes needed here.
+
+**`GameScreenV2.tsx`** — The "OVERFILLED!" button state text and the spill message box need to reflect the new larger tolerance. Currently shows:
+
+```tsx
+if (session.spillTriggered) return { disabled: true, text: "💥 OVERFILLED!", ... };
+```
+
+This is already correct — it only shows after the fill is locked. No change needed.
+
+The post-fill summary box already shows the spill amount in lbs:
+```tsx
+{session.fillLocked && session.spillAmount > 0 && (
+  <div>💥 {Math.round(session.spillAmount).toLocaleString()} lbs OVER</div>
+)}
+```
+This will now correctly show values up to 4,000 lbs.
+
+---
+
+## Files to Change
+
+| File | Change |
+|---|---|
+| `src/game/constantsV2.ts` | `maxOverfillLbs: 4` → `maxOverfillLbs: 4_000` |
+| `src/game/components/GameTimer.tsx` | Remove `× speedMultiplier` from elapsed time display |
+| `src/game/hooks/useGameStateV2.ts` | Update `stopFilling` to set `showSpillPopup` and `spillTriggered` when releasing above target |
+
+No logic changes to the scoring engine — `fillDuration` remains in simulated seconds, agitation/weighbridge costs remain fixed at 20/15 minutes. The timer display change is purely cosmetic.
+
+## Player Experience After Fix
+
+| Scenario | Timer shows | Overfill |
 |---|---|---|
-| Real fill time | ~25 seconds | ~15 seconds |
-| Displayed timer (full load) | ~00:25 | ~12:00 |
-| Agitation cost basis | 20 minutes (abstract) | 20 minutes (shown on timer) |
-| Weighbridge cost basis | 15 minutes (abstract) | 15 minutes (shown on timer) |
-| Flow rate display on HUD | 2,000 lbs/min | ~4,167 lbs/min |
-| Spill / overfill logic | Unchanged | Unchanged |
-| Admin speed multiplier slider | Still adjustable | Still adjustable from base of 48 |
+| Perfect 15-second fill | "00:15" | None |
+| Player releases at 51,000 lbs | "00:13" | Spill popup: 1,000 lbs over = $190 lost |
+| Player releases at 53,500 lbs | "00:14" | Spill popup: 3,500 lbs over = $665 lost |
+| Player hits hard cap (54,000 lbs) | "00:15+" | Full splat animation auto-fires |
+| Agitation penalty (no Piper) | shown as "+20:00" | Independent of fill time |
+| Weighbridge penalty | shown as "+15:00" | Independent of fill time |

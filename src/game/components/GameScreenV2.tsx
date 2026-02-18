@@ -29,7 +29,7 @@ export function GameScreenV2({
   onAcknowledgeSpill,
   config,
 }: GameScreenV2Props) {
-  const { startFillLoop, stopFillLoop, startAlarmLoop, stopAlarmLoop, playComplete, isMuted, toggleMute } = useSoundEffects();
+  const { startFillLoop, stopFillLoop, startAlarmLoop, stopAlarmLoop, playComplete, playOverfillWarning, isMuted, toggleMute } = useSoundEffects();
 
   useEffect(() => {
     const h = (e: Event) => e.preventDefault();
@@ -46,6 +46,15 @@ export function GameScreenV2({
     if (session.spillTriggered) startAlarmLoop();
     else stopAlarmLoop();
   }, [session.spillTriggered, startAlarmLoop, stopAlarmLoop]);
+
+  // Play warning beep the instant overfill starts
+  useEffect(() => {
+    if (session.spillWarningActive && !session.spillTriggered) {
+      playOverfillWarning();
+    }
+  // Only fire once when spillWarningActive first becomes true
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.spillWarningActive]);
 
   const targetLbs = config.targetLoadLbs;
 
@@ -118,6 +127,18 @@ export function GameScreenV2({
         </div>
       </div>
 
+      {/* Overfill Warning Popup — shown the instant fill exceeds target */}
+      {session.spillWarningActive && !session.spillTriggered && isFilling && (
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 z-40 pointer-events-none" style={{ animation: 'warningPop 0.25s ease-out forwards' }}>
+          <div className="bg-red-600 text-white px-5 py-3 rounded-xl border-2 border-red-300 shadow-2xl text-center" style={{ animation: 'warningPulse 0.4s ease-in-out infinite alternate' }}>
+            <div className="text-2xl font-black">⚠️ OVERFILLING!</div>
+            <div className="text-sm font-bold mt-0.5">
+              +{Math.round(session.spillAmount).toLocaleString()} lbs over target
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Game Area */}
       <div className="flex-1 flex items-center justify-center min-h-0">
         <div className="flex items-center gap-1 md:gap-2 scale-50 md:scale-75 lg:scale-90 origin-center">
@@ -187,6 +208,17 @@ export function GameScreenV2({
       </div>
 
       <SoundToggle isMuted={isMuted} onToggle={toggleMute} className="absolute top-2 right-2 md:top-4 md:right-4 z-10" />
+
+      <style>{`
+        @keyframes warningPop {
+          0% { transform: translate(-50%, -20px) scale(0.8); opacity: 0; }
+          100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+        }
+        @keyframes warningPulse {
+          0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+          100% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+        }
+      `}</style>
     </div>
   );
 }

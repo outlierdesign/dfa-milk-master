@@ -31,6 +31,7 @@ interface SoundEffects {
   playComplete: () => void;
   playSuccess: () => void;
   playFailure: () => void;
+  playOverfillWarning: () => void;
   setVolume: (volume: number) => void;
   isMuted: boolean;
   toggleMute: () => void;
@@ -332,6 +333,15 @@ export function useSoundEffects(): SoundEffects {
     setTimeout(() => playTone(300, 0.4, "sine", 0.15 * volume), 400);
   }, [isMuted, volume]);
 
+  // Sharp warning beep when overfill begins
+  const playOverfillWarning = useCallback(() => {
+    if (isMuted) return;
+    // Three sharp urgent beeps
+    playTone(1200, 0.08, "square", 0.25 * volume);
+    setTimeout(() => playTone(1200, 0.08, "square", 0.25 * volume), 120);
+    setTimeout(() => playTone(1500, 0.12, "square", 0.3 * volume), 240);
+  }, [isMuted, volume]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -359,6 +369,7 @@ export function useSoundEffects(): SoundEffects {
     playComplete,
     playSuccess,
     playFailure,
+    playOverfillWarning,
     setVolume,
     isMuted,
     toggleMute,

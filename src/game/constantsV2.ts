@@ -6,7 +6,7 @@ export const GAME_DEFAULTS = {
   maxOverfillLbs: 4,
   loadsPerDay: 5,
   daysPerYear: 365,
-  annualLoadsOverride: undefined as number | undefined,
+  annualLoadsOverride: 1824 as number | undefined,
 
   // Overfill Rules
   overfillEventsPerYear: 12,

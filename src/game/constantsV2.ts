@@ -22,12 +22,12 @@ export const GAME_DEFAULTS = {
   weighScaleMinutes: 15,
 
   // Flow Mechanics (lbs/min)
-  flowRateLbsPerMin: 2_000,
+  flowRateLbsPerMin: 4_167,
   flowJitterPercent: 3,
   stopAutomaticallyAtMaxOverfill: true,
 
   // Game speed
-  gameSpeedMultiplier: 1,
+  gameSpeedMultiplier: 48,
 
   // Piper Mode
   piperSlowdownThreshold: 90, // percent

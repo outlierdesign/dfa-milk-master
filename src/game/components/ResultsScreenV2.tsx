@@ -220,7 +220,7 @@ export function ResultsScreenV2({
         </div>
 
         {/* ── TWO-COLUMN GRID ───────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
           {/* LEFT COLUMN */}
           <div className="flex flex-col gap-6">
@@ -351,7 +351,7 @@ export function ResultsScreenV2({
             </div>
 
             {/* Mobile leaderboard (below panels on small screens) */}
-            <div className="md:hidden">
+            <div className="sm:hidden">
               <ArcadeLeaderboard
                 display={getDisplayEntries(currentEntryId)}
                 currentEntryId={currentEntryId}
@@ -361,8 +361,8 @@ export function ResultsScreenV2({
           </div>
 
           {/* RIGHT COLUMN — Leaderboard (desktop only, sticky) */}
-          <div className="hidden md:block">
-            <div className="md:sticky md:top-6">
+          <div className="hidden sm:block">
+            <div className="sm:sticky sm:top-6">
               <ArcadeLeaderboard
                 display={getDisplayEntries(currentEntryId)}
                 currentEntryId={currentEntryId}

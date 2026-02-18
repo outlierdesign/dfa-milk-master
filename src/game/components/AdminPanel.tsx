@@ -3,10 +3,18 @@ import { GAME_DEFAULTS, GameSettings, GameConfig, settingsToConfig } from "../co
 
 export type CurrencySymbol = "$" | "€";
 
-const STORAGE_KEY = "fill-tank-admin-settings-v3";
+const STORAGE_KEY = "fill-tank-admin-settings-v4";
+const OLD_KEYS = [
+  "fill-tank-admin-settings",
+  "fill-tank-admin-settings-v1",
+  "fill-tank-admin-settings-v2",
+  "fill-tank-admin-settings-v3",
+];
 
 export function useAdminSettings() {
   const [settings, setSettings] = useState<GameSettings>(() => {
+    // Clear all old storage keys
+    OLD_KEYS.forEach((key) => localStorage.removeItem(key));
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {

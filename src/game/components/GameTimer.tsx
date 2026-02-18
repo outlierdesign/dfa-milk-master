@@ -21,7 +21,7 @@ export function GameTimer({ fillStartTime, isFilling, usePiperSampling, useWeigh
 
   useEffect(() => {
     if (!fillStartTime) { setElapsedTime(0); return; }
-    const update = () => setElapsedTime(((performance.now() - fillStartTime) / 1000) * speedMultiplier);
+    const update = () => setElapsedTime((performance.now() - fillStartTime) / 1000);
     update();
     if (isFilling && !spillTriggered) {
       const interval = setInterval(update, 100);
@@ -57,7 +57,6 @@ export function GameTimer({ fillStartTime, isFilling, usePiperSampling, useWeigh
     <div className={`px-3 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl border-2 transition-all duration-300 ${stateStyles[timerState]}`}>
       <div className="text-[10px] md:text-xs text-slate-400 text-center mb-0.5 md:mb-1 flex items-center justify-center gap-1">
         <span>⏱️</span><span>LOAD TIME</span>
-        {speedMultiplier > 1 && <span className="ml-1 px-1 py-0.5 bg-emerald-600/50 text-emerald-300 rounded text-[8px] md:text-[10px] font-bold">{speedMultiplier}×</span>}
       </div>
       <div className={`text-xl md:text-3xl font-mono font-bold text-center ${timeStyles[timerState]}`}>
         {formatTime(elapsedTime)}

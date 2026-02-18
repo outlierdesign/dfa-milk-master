@@ -225,7 +225,8 @@ export function useGameStateV2(config: GameConfig) {
       ...prev,
       fillLocked: true,
       fillEndTime: performance.now(),
-      showSpillPopup: prev.spillTriggered && prev.spillAmount > 0,
+      showSpillPopup: prev.spillAmount > 0,
+      spillTriggered: prev.spillTriggered || prev.spillAmount > 0,
     }));
   }, [isFilling]);
 

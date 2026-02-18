@@ -1,57 +1,89 @@
 
-# Fix Two-Column Layout Not Appearing on Results Screen
+# Calibrate Load Time: 15-Second Gameplay = 12-Minute Displayed Timer, With Matching Cost Basis
 
-## Root Cause
+## The Problem
 
-The two-column layout code is correctly written in `ResultsScreenV2.tsx` using `grid-cols-1 md:grid-cols-2`. The issue is that Tailwind's `md:` breakpoint requires a viewport width of at least **768px** to activate.
+Two things need fixing together:
 
-The game is designed to run in full-screen kiosk mode (or near-full-screen), but in the Lovable preview panel the iframe is narrower than 768px, so the responsive grid always collapses to a single column.
+1. **Speed and display are miscalibrated**: The current `gameSpeedMultiplier` is `1`, meaning the timer shows real wall-clock seconds (e.g. a 25-second fill shows as "00:25"). The target is ~15 real seconds of button-holding displaying as approximately "12:00" — representing a real tanker load in the field.
 
-Even in production, if the game is displayed in an embedded or tablet-width window, `md:` will be too wide a threshold. The fix is to **lower the breakpoint** so the two-column layout kicks in at a narrower width — or use a fixed `grid-cols-2` that always applies, with the columns simply scaling down on small screens.
+2. **Cost time basis must match the displayed time**: Agitation (+20:00) and weighbridge (+15:00) penalty minutes are already shown on the timer and are already the source for cost calculations — this is correct behaviour. Once the speed multiplier is set, the displayed time will represent true real-world minutes, making the cost basis genuinely reflect "12 minutes of driver time per load".
 
-## The Fix
+## How the System Works
 
-Two changes in `ResultsScreenV2.tsx`:
+The game has two coupled values in `constantsV2.ts`:
 
-### 1. Change the grid breakpoint from `md:` to `sm:`
+- `flowRateLbsPerMin` — how many lbs of milk fill per simulated minute
+- `gameSpeedMultiplier` — compresses real time into simulated time for display
 
-Tailwind's `sm:` breakpoint is 640px — much more likely to be hit in the Lovable preview and on a standard tablet in landscape.
-
+The fill loop calculates:
 ```
+fillDelta = flowRate (lbs/min) × deltaTime (real seconds) × speedMultiplier
+```
+
+The timer shows:
+```
+displayedTime = wallClockSeconds × speedMultiplier
+```
+
+## The Maths
+
+**Target:** 15 real seconds fills 50,000 lbs and displays as 12:00
+
+**Step 1 — Speed multiplier** (converts real seconds to displayed seconds):
+```
+12 minutes × 60 seconds ÷ 15 real seconds = 48
+```
+So `gameSpeedMultiplier = 48`
+
+**Step 2 — Flow rate** (must fill 50,000 lbs in 12 simulated minutes):
+```
+flowRateLbsPerMin = 50,000 lbs ÷ 12 minutes = 4,167 lbs/min
+```
+
+Verification: `4,167 lbs/min × 15 real seconds × (48/60) = 50,004 lbs` ✓
+
+## Cost Basis — Already Correct, Now Meaningful
+
+The scoring engine calculates agitation and weighbridge costs like this:
+```ts
+agitationCost = (agitationMinutes / 60) × driverRatePerHour × annualLoads
+weighbridgeCost = (weighScaleMinutes / 60) × driverRatePerHour × annualLoads
+```
+
+These `agitationMinutes` (20) and `weighScaleMinutes` (15) are the **same values** shown on the game timer as pending penalties. Once the speed multiplier is set to 48, the displayed fill timer will show ~12:00 for a full load — making the whole time display consistent and grounded in real-world minutes. A driver's load really does take ~12 minutes; agitation really does add 20 minutes; the weighbridge really does add 15 minutes. The costs will now clearly correspond to what players see on screen.
+
+## Piper Slowdown Behaviour
+
+With Piper enabled, the flow slows to 30% at 90% fill (45,000 lbs):
+- Phase 1 (0 → 45,000 lbs): ~13.5 real seconds, shows ~10:48
+- Phase 2 (45,000 → 50,000 lbs): ~2.4 real seconds, shows ~01:55
+- **Total with Piper: ~15.9 seconds, displayed as ~12:43** — adds realistic tension as the meter creeps toward target
+
+## Files to Change
+
+### `src/game/constantsV2.ts` — 2 value changes only
+
+```ts
 // BEFORE
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-...
-<div className="hidden md:block">  ← right column
-<div className="md:hidden">        ← mobile leaderboard
+flowRateLbsPerMin: 2_000,
+gameSpeedMultiplier: 1,
 
 // AFTER
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-...
-<div className="hidden sm:block">  ← right column
-<div className="sm:hidden">        ← mobile leaderboard
+flowRateLbsPerMin: 4_167,
+gameSpeedMultiplier: 48,
 ```
 
-### 2. Match the sticky breakpoint
+No logic changes needed. The fill loop, timer display, `fillDuration` recording, and cost calculations all already use these values correctly.
 
-```
-// BEFORE
-<div className="md:sticky md:top-6">
+## Impact Summary
 
-// AFTER  
-<div className="sm:sticky sm:top-6">
-```
-
-That's all — 4 occurrences of `md:` changed to `sm:` within the grid section of `ResultsScreenV2.tsx`. No logic changes, no data changes, no new files.
-
-## Why `sm:` Is the Right Choice
-
-| Breakpoint | Min width | Typical device |
+| Area | Before | After |
 |---|---|---|
-| `sm:` | 640px | Large phone landscape, small tablet, preview panel |
-| `md:` | 768px | iPad portrait — often still too wide for the preview |
-
-The results screen is already `max-w-5xl` wide so there is plenty of room once the breakpoint triggers. At 640px, each column gets ~310px which is enough for both the breakdown panels and the leaderboard.
-
-## File to Change
-
-`src/game/components/ResultsScreenV2.tsx` — 4 class name replacements, no logic changes.
+| Real fill time | ~25 seconds | ~15 seconds |
+| Displayed timer (full load) | ~00:25 | ~12:00 |
+| Agitation cost basis | 20 minutes (abstract) | 20 minutes (shown on timer) |
+| Weighbridge cost basis | 15 minutes (abstract) | 15 minutes (shown on timer) |
+| Flow rate display on HUD | 2,000 lbs/min | ~4,167 lbs/min |
+| Spill / overfill logic | Unchanged | Unchanged |
+| Admin speed multiplier slider | Still adjustable | Still adjustable from base of 48 |

@@ -35,8 +35,8 @@ export function calculateScore(
       );
     });
   } else if (k === 2) {
-    const overfillWeight = config.overfillEventsPerYear / 2;
-    const underfillWeight = N - config.overfillEventsPerYear;
+    const overfillWeight = config.overfillEventsPerYear;
+    const underfillWeight = N - (2 * config.overfillEventsPerYear);
     rounds.forEach((r) => {
       weights.set(
         r.roundNumber,

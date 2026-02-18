@@ -1,111 +1,57 @@
 
-# Results Screen Redesign: Worked Maths, Red Cost Hero, Two-Column Layout
+# Fix Two-Column Layout Not Appearing on Results Screen
 
-## What's Changing
+## Root Cause
 
-Three distinct improvements to the results screen (`ResultsScreenV2.tsx`):
+The two-column layout code is correctly written in `ResultsScreenV2.tsx` using `grid-cols-1 md:grid-cols-2`. The issue is that Tailwind's `md:` breakpoint requires a viewport width of at least **768px** to activate.
 
-1. **Red cost hero at the top** — Variable cost and Total cost displayed prominently in red at the very top, replacing the current muted "Your Score" header
-2. **Worked example panel** — Step-by-step maths showing exactly how the underfill cost was calculated, using real numbers from the player's game
-3. **Two-column layout** — Results/breakdown on the left, leaderboard on the right (side-by-side on desktop, stacked on mobile)
+The game is designed to run in full-screen kiosk mode (or near-full-screen), but in the Lovable preview panel the iframe is narrower than 768px, so the responsive grid always collapses to a single column.
 
----
+Even in production, if the game is displayed in an embedded or tablet-width window, `md:` will be too wide a threshold. The fix is to **lower the breakpoint** so the two-column layout kicks in at a narrower width — or use a fixed `grid-cols-2` that always applies, with the columns simply scaling down on small screens.
 
-## 1. Red Cost Hero Header
+## The Fix
 
-Replace the current "Your Score" block with a more impactful two-figure display:
+Two changes in `ResultsScreenV2.tsx`:
 
-```
-┌────────────────────────────────────────────────┐
-│        ANNUAL VARIABLE COST                    │
-│              $12,543          ← large red      │
-│        ─────────────────                       │
-│  Underfill + Spill    $8,200  ← red            │
-│  Time Penalties       $4,343  ← amber          │
-│               (lower is better)                │
-└────────────────────────────────────────────────┘
-```
+### 1. Change the grid breakpoint from `md:` to `sm:`
 
-- Total variable cost in large red (`text-red-400`, `text-6xl font-black`)
-- Sub-line shows the core cost (underfill + spill) and time penalties separately in smaller red/amber text
-- Clear label: "ANNUAL VARIABLE COST — lower is better"
-
----
-
-## 2. Worked Example Panel
-
-A new panel inserted between the round breakdown and the annualised cost breakdown. It walks through the underfill cost maths step by step. The panel only shows for underfill scenarios (extraLoads > 0).
-
-**Structure** (using real numbers from `score` and `config`):
+Tailwind's `sm:` breakpoint is 640px — much more likely to be hit in the Lovable preview and on a standard tablet in landscape.
 
 ```
-HOW YOUR UNDERFILL COST WAS CALCULATED
+// BEFORE
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+...
+<div className="hidden md:block">  ← right column
+<div className="md:hidden">        ← mobile leaderboard
 
-Step 1 — Avg credited per load
-  You filled: [avgCredited] lbs  (weighted avg across rounds)
-
-Step 2 — Annual milk target
-  [targetLoadLbs] lbs × [N] loads = [annualMilkBaseline] lbs/year
-  (e.g. 50,000 × 1,824 = 91,200,000)
-
-Step 3 — Extra loads needed
-  91,200,000 ÷ [avgCredited] = [actualLoads] loads needed
-  [actualLoads] − [N] = [extraLoads] extra trips
-
-Step 4 — Underfill cost
-  [extraLoads] trips × $500/trip = $[underfillCost]
+// AFTER
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+...
+<div className="hidden sm:block">  ← right column
+<div className="sm:hidden">        ← mobile leaderboard
 ```
 
-Each step is a separate styled row with a step number chip on the left, a plain-English label, and the computed value right-aligned in amber/white.
-
-For spill cost, a separate compact worked line:
-```
-Spill: [totalSpillLbs annualised] lbs × $0.19/lb = $[spillCost]
-```
-
-This panel is wrapped in `animate-fade-in` triggered by the same `showAnnualized` timer (1.5s delay).
-
----
-
-## 3. Two-Column Desktop Layout
-
-On desktop (md+), the page switches from a single centred column to a side-by-side grid:
+### 2. Match the sticky breakpoint
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     COST HERO (full width)              │
-├────────────────────────┬────────────────────────────────┤
-│   LEFT COLUMN          │   RIGHT COLUMN                 │
-│                        │                                │
-│   Round Breakdown      │   LEADERBOARD                  │
-│   Worked Example       │   (arcade styled, sticky top)  │
-│   Annualised Costs     │                                │
-│   Piper/Weighbridge    │                                │
-│   Piper CTA            │                                │
-│                        │                                │
-├────────────────────────┴────────────────────────────────┤
-│                  PLAY AGAIN (full width)                │
-└─────────────────────────────────────────────────────────┘
+// BEFORE
+<div className="md:sticky md:top-6">
+
+// AFTER  
+<div className="sm:sticky sm:top-6">
 ```
 
-- Outer container: `max-w-5xl mx-auto` (wider than the current `max-w-lg`)
-- Cost hero: full-width across the top
-- Content area: `grid grid-cols-1 md:grid-cols-2 gap-6`
-- Left col: all the breakdown panels
-- Right col: `ArcadeLeaderboard` with `md:sticky md:top-6` so it stays visible while the user scrolls through the breakdown
-- Play Again button: full width below the grid
-- On mobile: single column, leaderboard appears below all panels (same as today)
+That's all — 4 occurrences of `md:` changed to `sm:` within the grid section of `ResultsScreenV2.tsx`. No logic changes, no data changes, no new files.
 
----
+## Why `sm:` Is the Right Choice
 
-## Files to Change
+| Breakpoint | Min width | Typical device |
+|---|---|---|
+| `sm:` | 640px | Large phone landscape, small tablet, preview panel |
+| `md:` | 768px | iPad portrait — often still too wide for the preview |
 
-### `src/game/components/ResultsScreenV2.tsx`
+The results screen is already `max-w-5xl` wide so there is plenty of room once the breakpoint triggers. At 640px, each column gets ~310px which is enough for both the breakdown panels and the leaderboard.
 
-- Replace the `<div className="min-h-screen ... flex flex-col items-center">` root with a wider `max-w-5xl` container using a CSS grid layout
-- Rewrite the score header as the red cost hero (two figures: total variable cost + core cost split)
-- Add a new inline `WorkedExample` sub-component (or JSX block) between round breakdown and annualised costs — no new file needed
-- Move `<ArcadeLeaderboard>` into the right column of the grid
-- Play Again button stays full-width at the bottom
+## File to Change
 
-No other files need changing — all required data (`score`, `config`, `rounds`) is already available in this component.
+`src/game/components/ResultsScreenV2.tsx` — 4 class name replacements, no logic changes.

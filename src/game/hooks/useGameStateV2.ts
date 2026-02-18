@@ -142,13 +142,14 @@ export function useGameStateV2(config: GameConfig) {
           const maxAllowed = cfg.maxAllowedFill;
 
           if (newFill > target) {
-            spillAmount = newFill - target;
             spillWarningActive = true;
 
             if (newFill > maxAllowed) {
               spillTriggered = true;
-              newFill = maxAllowed;
+              newFill = maxAllowed; // cap FIRST
             }
+
+            spillAmount = newFill - target; // compute AFTER capping
           }
 
           // Auto-stop at max overfill

@@ -40,10 +40,10 @@ const SVG_H = 200;
 // Barrel opening bounds (pixels at SVG_W × SVG_H render size)
 // Tweak these if the fill doesn't align perfectly
 const BARREL = {
-  left: 46,
-  top: 18,
-  right: 124,   // distance from right edge
-  bottom: 52,   // distance from bottom edge
+  left: 62,     // was 46 — barrel outline starts further right
+  top: 32,      // was 18 — barrel top edge is lower
+  right: 140,   // was 124 — barrel ends further from right edge
+  bottom: 62,   // was 52 — barrel bottom edge is higher
 };
 
 export function TankerV2({

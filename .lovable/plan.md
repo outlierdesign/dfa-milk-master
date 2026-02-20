@@ -1,36 +1,35 @@
 
 
-## Fix: Recalibrate Barrel Fill Bounds in TankerV2
+## Fine-tune Barrel Fill Bounds in TankerV2
 
-### The Problem
+### What's Wrong
 
-The milk fill area (dark background + rising milk) extends outside the transparent barrel window of the SVG tanker graphic on all four sides. The `BARREL` constants that define the fill region don't match the actual transparent area in the new SVG.
-
-From the live screenshot during filling, the dark fill rectangle is visible:
-- Above the barrel outline (top inset too small)
-- Below the barrel outline (bottom inset too small)  
-- To the left of the barrel start (left inset too small)
-- Past the barrel end on the right (right inset too small)
+From the live screenshots, the dark interior background and milk fill extend outside the barrel window of the SVG on multiple sides:
+- **Bottom**: Fill bleeds below the barrel outline into the chassis/wheel area
+- **Left**: Fill extends past the left edge of the barrel curve
+- **Top**: Slight bleed above the barrel top line
+- **Right**: Minor bleed past the barrel end
 
 ### The Fix
 
 **File:** `src/game/components/TankerV2.tsx`
 
-Update the `BARREL` constants to tighten the fill region so it sits precisely inside the SVG's transparent window:
+Increase all four `BARREL` inset values to pull the fill area tighter inside the transparent window:
 
 ```typescript
 const BARREL = {
-  left: 62,     // was 46 — barrel outline starts further right
-  top: 32,      // was 18 — barrel top edge is lower
-  right: 140,   // was 124 — barrel ends further from right edge
-  bottom: 62,   // was 52 — barrel bottom edge is higher
+  left: 42,     // was 30 -- barrel curve starts further right
+  top: 46,      // was 40 -- barrel top edge sits lower
+  right: 186,   // was 178 -- barrel ends further from the cab
+  bottom: 96,   // was 84 -- barrel bottom is well above the chassis
 };
 ```
 
-These values are based on visual inspection of the rendered tanker at 512x200 pixels. They may need one more small tweak after seeing the result, but this should get the fill much closer to the transparent window bounds.
+### Technical Details
 
-### What Stays the Same
+- These are pixel offsets at the 512x200 render size
+- `left` / `right` reduce the width of the fill rectangle; `top` / `bottom` reduce the height
+- The resulting fill area will be: width = 512 - 42 - 186 = 284px, height = 200 - 46 - 96 = 58px (was 304x76)
+- No other code changes needed -- all fill, target line, overfill flash, and compartment ribs use these same bounds
+- May still need one more small tweak after visual verification
 
-- All game logic, fill calculations, target line, overfill effects — unchanged
-- The SVG graphic itself — unchanged
-- The milk colour (already matched to FarmTank) — unchanged

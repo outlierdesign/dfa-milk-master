@@ -38,9 +38,9 @@ export function AttractModeV2({ onStartGame, config }: AttractModeV2Props) {
         style={{ imageRendering: "pixelated" }}>
         <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
           {/* Background scene */}
-          <img src={roadScene} alt="Desert highway"
+          <img src={roadScene} alt="Farmland highway"
             className="absolute inset-0 w-full h-full object-cover z-0"
-            style={{ imageRendering: "pixelated" }} />
+            style={{ imageRendering: "pixelated", animation: "driveZoom 8s ease-in-out infinite", transformOrigin: "50% 40%" }} />
 
           {/* Animated centre line overlay */}
           <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
@@ -104,6 +104,11 @@ export function AttractModeV2({ onStartGame, config }: AttractModeV2Props) {
         @keyframes cardPulse {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.02); }
+        }
+        @keyframes driveZoom {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.08); }
+          100% { transform: scale(1); }
         }
       `}</style>
     </div>

@@ -1,50 +1,32 @@
 
 
-## Redesign the Attract / Opening Screen
+# Infinite 8-Bit Road Animation
 
-### Overview
-Replace the current attract screen with a cinematic "driving to the farm" scene featuring an infinite road animation, then a farm stats info box below it.
+Replace the static `road_scene_pixel.png` background with a fully procedural SVG scene that animates like a classic 8-bit driving game (Outrun / Rad Racer style). The entire road, sky, and fields will be drawn and animated in SVG, giving the illusion of driving forward down an endless road.
 
-### Layout (top to bottom)
-1. **Piper logo** (keep existing)
-2. **"FILL THE TANK" title + subtitle** (keep, restyle slightly)
-3. **Road animation viewport** -- a horizontal strip showing a perspective road with dashed white centre line scrolling toward the viewer, and the milk tanker SVG driving along it
-4. **"This is your farm" info card** -- styled box listing the 5 farm stats, with a subtle scale-in/out pulse animation
-5. **"TAP TO PLAY" button** (keep)
-6. Sound toggle + admin shortcut (keep)
-7. **Leaderboard removed entirely**
+## What You'll See
 
-### Road Animation Details
-- Pure CSS/SVG animation, no canvas or external libs
-- Dark grey road surface with white dashed centre line using CSS `perspective` and `translateZ` to create the "driving forward" illusion
-- The tanker SVG sits centred on the road, bobbing very slightly
-- Road lines animate infinitely downward (toward camera) using a `@keyframes` translateY loop
-- Green roadside strips on left/right for depth
+- A sky gradient (light blue to warm horizon glow)
+- Alternating green field bands (light green / dark green) that scroll toward the viewer from the vanishing point, creating the classic "infinite road" stripe effect
+- A grey road with white edge lines converging to a vanishing point
+- Animated yellow centre dashes rushing toward the camera
+- Simple 8-bit tree silhouettes on the horizon
+- The `driver_view.svg` windshield overlay on top (unchanged)
+- CRT scanline overlay (unchanged)
 
-### Farm Stats Card
-A dark card with an emerald accent border, containing:
-- Header: "This is your farm:"
-- Bullet list (with icons):
-  - 5 loads a day
-  - 50,000 lb loads
-  - 23,000 gallon silo
-  - Scaling in and out
-  - Sampling manually
-- The card gently pulses (scale 1.0 to 1.02) to draw attention
+## Technical Details
 
-### Technical Changes
+**File changed:** `src/game/components/AttractModeV2.tsx`
 
-**File: `src/game/components/AttractModeV2.tsx`**
-- Remove all `ArcadeLeaderboard` imports and usage
-- Remove the demo fill level animation (no longer showing fill)
-- Replace the 3 feature cards ("SAVE TIME", "OPTIMIZE FILL", "AVOID LOSS") with the road animation viewport and farm stats card
-- Add the road animation as an inline CSS animation with `@keyframes roadScroll`
-- Use the existing `milk_tanker_full.svg` (the non-transparent version) for the truck on the road
-- The farm stats values will be derived from `config` where possible (loadsPerDay, targetLoadLbs) and hardcoded for silo size / sampling method
+1. **Remove the static PNG background** -- the `roadScene` import and `<img>` tag will be replaced by an inline SVG that fills the viewport.
 
-**File: `src/game/components/AttractModeV2.tsx` (props)**
-- Remove `leaderboardEntries` and `getDisplayEntries` from props since leaderboard is gone from this screen
+2. **Procedural SVG scene** built with these layers:
+   - **Sky**: A `<linearGradient>` rectangle from pale blue (#87CEEB) at top to warm peach (#FFD4A0) at the horizon line (~40% down).
+   - **Field bands**: ~20 horizontal trapezoid strips from the vanishing point downward, alternating between two greens (#3A7D2C and #4CA83A). These will be wrapped in a `<g>` with an `<animateTransform>` that translates them downward in a loop, making them appear to scroll toward the viewer.
+   - **Road**: A dark grey trapezoid (#555) narrowing from the bottom edge to the vanishing point, with white edge lines.
+   - **Centre dashes**: The existing animated yellow dash overlay (already working) stays as-is.
+   - **Horizon trees**: A few simple triangular tree shapes at the horizon line for depth.
 
-**File: `src/game/FillTheTank.tsx`**
-- Update the `AttractModeV2` call to stop passing leaderboard props
+3. **Animation approach**: The field bands use `<animateTransform type="translate">` looping every ~0.6s, shifting bands downward by one band-height so they appear to stream toward the camera seamlessly. Each band is sized based on perspective (narrow at vanishing point, wide at bottom).
 
+4. **Cleanup**: Remove the `driveZoom` keyframe animation and `roadScene` image import since they're no longer needed. Keep `cardPulse` for the stats card.

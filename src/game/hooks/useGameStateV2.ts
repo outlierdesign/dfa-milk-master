@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { GameStateV2, GameConfig, RoundResult } from "../constantsV2";
 
+export type RoundPhase = "agitation" | "loading" | "weighbridge" | "complete";
+
 export interface GameSessionV2 {
   // Pre-load decisions (apply to all 3 rounds)
   usePiperSampling: boolean;
@@ -11,6 +13,9 @@ export interface GameSessionV2 {
   totalRounds: number; // always 3
   rounds: RoundResult[]; // completed round data
   isFired: boolean;
+
+  // Round sub-phase
+  roundPhase: RoundPhase;
 
   // Current round fill state (lbs)
   currentFill: number;
@@ -26,6 +31,7 @@ export interface GameSessionV2 {
   showSpillPopup: boolean;
 
   // Time tracking
+  // fillStartTime: set at agitation start — accumulates full round time
   fillStartTime: number | null;
   fillEndTime: number | null;
   totalFillDuration: number;
@@ -40,6 +46,7 @@ const createInitialSession = (): GameSessionV2 => ({
   totalRounds: 3,
   rounds: [],
   isFired: false,
+  roundPhase: "agitation",
   currentFill: 0,
   currentFlowRate: 0,
   hasStartedFilling: false,
@@ -58,6 +65,7 @@ const createInitialSession = (): GameSessionV2 => ({
 
 const resetRoundState = (session: GameSessionV2, flowRate: number): GameSessionV2 => ({
   ...session,
+  roundPhase: "agitation",
   currentFill: 0,
   currentFlowRate: flowRate,
   hasStartedFilling: false,
@@ -82,9 +90,21 @@ export function useGameStateV2(config: GameConfig) {
   const configRef = useRef(config);
   configRef.current = config;
 
+  // Keep a ref to the agitation timeout so we can cancel it on reset
+  const agitationTimerRef = useRef<number | null>(null);
   const flowRateIntervalRef = useRef<number | null>(null);
   const fillIntervalRef = useRef<number | null>(null);
   const lastTickRef = useRef<number>(0);
+
+  // Helper: start the agitation countdown for the current config
+  const startAgitationTimer = useCallback((onComplete: () => void) => {
+    if (agitationTimerRef.current) clearTimeout(agitationTimerRef.current);
+    const cfg = configRef.current;
+    const speedMultiplier = cfg.gameSpeedMultiplier || 1;
+    // agitationMinutes of simulated time → real ms = (agitationMinutes / speedMultiplier) * 60 * 1000
+    const realMs = (cfg.agitationMinutes / speedMultiplier) * 60 * 1000;
+    agitationTimerRef.current = window.setTimeout(onComplete, realMs);
+  }, []);
 
   // Random flow rate with jitter
   const getRandomFlowRate = useCallback(() => {
@@ -183,14 +203,25 @@ export function useGameStateV2(config: GameConfig) {
     }
   }, [isFilling, session.fillLocked]);
 
+  // Advance from agitation → loading
+  const advanceFromAgitation = useCallback(() => {
+    setSession((prev) => ({ ...prev, roundPhase: "loading" }));
+  }, []);
+
   // Start game from attract
   const startGame = useCallback(() => {
     const initial = createInitialSession();
     initial.useWeighbridge = true;
     initial.currentFlowRate = getRandomFlowRate();
+    // Timer starts NOW (agitation start time)
+    initial.fillStartTime = performance.now();
+    initial.roundPhase = "agitation";
     setSession(initial);
     setGameState("playing");
-  }, [getRandomFlowRate]);
+
+    // Kick off the agitation countdown
+    startAgitationTimer(advanceFromAgitation);
+  }, [getRandomFlowRate, startAgitationTimer, advanceFromAgitation]);
 
   // Complete pre-load questions
   const completeQuestions = useCallback(
@@ -200,22 +231,25 @@ export function useGameStateV2(config: GameConfig) {
         usePiperSampling,
         useWeighbridge,
         currentFlowRate: getRandomFlowRate(),
+        fillStartTime: performance.now(),
+        roundPhase: "agitation",
       }));
       setGameState("playing");
+      startAgitationTimer(advanceFromAgitation);
     },
-    [getRandomFlowRate]
+    [getRandomFlowRate, startAgitationTimer, advanceFromAgitation]
   );
 
-  // Start filling — only works once per round
+  // Start filling — only works during loading phase
   const startFilling = useCallback(() => {
     if (session.hasStartedFilling || session.fillLocked) return;
+    if (session.roundPhase !== "loading") return;
     setIsFilling(true);
     setSession((prev) => ({
       ...prev,
       hasStartedFilling: true,
-      fillStartTime: performance.now(),
     }));
-  }, [session.hasStartedFilling, session.fillLocked]);
+  }, [session.hasStartedFilling, session.fillLocked, session.roundPhase]);
 
   // Stop filling — locks permanently for this round
   const stopFilling = useCallback(() => {
@@ -239,8 +273,14 @@ export function useGameStateV2(config: GameConfig) {
     }));
   }, []);
 
-  // Complete current round — calculate results and move to roundResult
+  // Complete current round — enter weighbridge phase
   const completeLoad = useCallback(() => {
+    setIsFilling(false);
+    setSession((prev) => ({ ...prev, roundPhase: "weighbridge" }));
+  }, []);
+
+  // Called by WeighbridgeDepartureOverlay after animation — calculate results & go to roundResult
+  const advanceFromWeighbridge = useCallback(() => {
     setIsFilling(false);
 
     setSession((prev) => {
@@ -274,6 +314,7 @@ export function useGameStateV2(config: GameConfig) {
 
       return {
         ...prev,
+        roundPhase: "complete",
         totalFillDuration,
         averageFlowRate,
         rounds,
@@ -285,6 +326,8 @@ export function useGameStateV2(config: GameConfig) {
 
   // Advance to next round or to scoring
   const nextRound = useCallback(() => {
+    if (agitationTimerRef.current) clearTimeout(agitationTimerRef.current);
+
     setSession((prev) => {
       const cfg = configRef.current;
       const nextRoundNum = prev.currentRound + 1;
@@ -305,15 +348,6 @@ export function useGameStateV2(config: GameConfig) {
       );
     });
 
-    // Check if we should transition state
-    setSession((prev) => {
-      if (prev.currentRound > prev.totalRounds || prev.isFired) {
-        // Will transition in next tick
-        return prev;
-      }
-      return prev;
-    });
-
     // Use setTimeout to read updated session
     setTimeout(() => {
       setSession((prev) => {
@@ -325,11 +359,15 @@ export function useGameStateV2(config: GameConfig) {
           setGameState("penaltyReveal");
           return prev;
         }
+
+        // Start the new round's agitation timer and set fillStartTime
+        const now = performance.now();
         setGameState("playing");
-        return prev;
+        startAgitationTimer(advanceFromAgitation);
+        return { ...prev, fillStartTime: now };
       });
     }, 0);
-  }, [getRandomFlowRate]);
+  }, [getRandomFlowRate, startAgitationTimer, advanceFromAgitation]);
 
   // Transition from penalty reveal to lead capture
   const showLeadCapture = useCallback(() => {
@@ -343,6 +381,7 @@ export function useGameStateV2(config: GameConfig) {
 
   // Reset to attract mode
   const resetToAttract = useCallback(() => {
+    if (agitationTimerRef.current) clearTimeout(agitationTimerRef.current);
     setSession(createInitialSession());
     setIsFilling(false);
     setGameState("attract");
@@ -357,6 +396,7 @@ export function useGameStateV2(config: GameConfig) {
     startFilling,
     stopFilling,
     completeLoad,
+    advanceFromWeighbridge,
     nextRound,
     showLeadCapture,
     showResults,

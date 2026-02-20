@@ -5,6 +5,8 @@ import { ConnectionPipe } from "./ConnectionPipe";
 import { SpillAnimation } from "./SpillAnimation";
 import { GameTimer } from "./GameTimer";
 import { SoundToggle } from "./SoundToggle";
+import { AgitationOverlay } from "./AgitationOverlay";
+import { WeighbridgeDepartureOverlay } from "./WeighbridgeDepartureOverlay";
 import { GameSessionV2 } from "../hooks/useGameStateV2";
 import { GameConfig } from "../constantsV2";
 import { useSoundEffects } from "../hooks/useSoundEffects";
@@ -17,6 +19,7 @@ interface GameScreenV2Props {
   onStopFilling: () => void;
   onComplete: () => void;
   onAcknowledgeSpill: () => void;
+  onAdvanceFromWeighbridge: () => void;
   config: GameConfig;
 }
 
@@ -27,6 +30,7 @@ export function GameScreenV2({
   onStopFilling,
   onComplete,
   onAcknowledgeSpill,
+  onAdvanceFromWeighbridge,
   config,
 }: GameScreenV2Props) {
   const { startFillLoop, stopFillLoop, startAlarmLoop, stopAlarmLoop, playComplete, playOverfillWarning, isMuted, toggleMute } = useSoundEffects();
@@ -60,7 +64,11 @@ export function GameScreenV2({
 
   const handleComplete = () => { playComplete(); onComplete(); };
 
+  const isAgitation = session.roundPhase === "agitation";
+  const isWeighbridge = session.roundPhase === "weighbridge";
+
   const getButtonState = () => {
+    if (isAgitation) return { disabled: true, text: "⚙️ AGITATING…", style: "bg-amber-800 text-amber-400 cursor-not-allowed opacity-70" };
     if (session.fillLocked) return { disabled: true, text: "STOPPED", style: "bg-slate-700 text-slate-500 cursor-not-allowed" };
     if (session.spillTriggered) return { disabled: true, text: "💥 OVERFILLED!", style: "bg-red-600 text-white cursor-not-allowed" };
     if (isFilling) return { disabled: false, text: "⏹ TAP TO STOP", style: "bg-red-600 hover:bg-red-500 text-white animate-pulse" };
@@ -82,6 +90,21 @@ export function GameScreenV2({
         config={config}
         onContinue={onAcknowledgeSpill}
       />
+
+      {/* Agitation overlay — blocks fill button, shows spinner + countdown */}
+      {isAgitation && (
+        <AgitationOverlay
+          config={config}
+          startTime={session.fillStartTime}
+        />
+      )}
+
+      {/* Weighbridge departure overlay — truck drives off, then advances to round result */}
+      {isWeighbridge && (
+        <WeighbridgeDepartureOverlay
+          onComplete={onAdvanceFromWeighbridge}
+        />
+      )}
 
       {/* Header */}
       <div className="text-center mb-2 md:mb-3">
@@ -109,6 +132,7 @@ export function GameScreenV2({
           useWeighbridge={session.useWeighbridge}
           nudgeCount={0}
           spillTriggered={session.spillTriggered}
+          roundPhase={session.roundPhase}
           config={config}
         />
       </div>
@@ -189,7 +213,7 @@ export function GameScreenV2({
           {buttonState.text}
         </button>
 
-        {session.fillLocked && (
+        {session.fillLocked && !isWeighbridge && (
           <button
             onClick={handleComplete}
             className="px-8 md:px-12 py-4 md:py-5 rounded-xl font-bold text-lg md:text-2xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-xl hover:scale-105 animate-pulse"

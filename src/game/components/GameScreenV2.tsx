@@ -103,6 +103,7 @@ export function GameScreenV2({
       {isWeighbridge && (
         <WeighbridgeDepartureOverlay
           onComplete={onAdvanceFromWeighbridge}
+          fillLbs={session.currentFill}
         />
       )}
 

@@ -1,134 +1,78 @@
 
-## Upgrade: 16-Bit Pixel Art Tanker + Weighbridge Station with Veeder-Root Meter
+## Two Fixes + Tanker Visual Discussion
 
-### What's Being Built
+### Fix 1 — Weighbridge Shows Spilled Milk Weight (Logic Bug)
 
-Three visual upgrades across two components:
+**The problem:** The Veeder-Root meter currently displays `session.currentFill` passed as `fillLbs`. If the tanker overflows to 52,000 lbs, the meter shows `52,000 lbs`. But 2,000 of those pounds spilled on the ground — the tanker only physically contains 50,000 lbs. The weighbridge should only weigh what is inside the tanker.
 
-1. **TankerV2 — 16-bit pixel art style, facing right** (cab on the right, trailer on the left — so milk flows left-to-right from farm tank into the cab-side of the truck, which is the correct driving direction)
-2. **WeighbridgeDepartureOverlay — full weigh station scene** with the truck arriving/driving onto a large platform scale, then a Veeder-Root-style electromechanical digit display revealing the load weight
-3. **The uploaded GLB voxel model** will be copied into the project assets for potential future use, but the primary rendering remains CSS/SVG pixel art (no Three.js dependency required — more reliable for a trade show kiosk, no WebGL fallback risks)
+**The correct value to display is `creditedLbs`** — which is already calculated correctly in `advanceFromWeighbridge()` as `Math.min(fillLbs, cfg.targetLoadLbs)`. However, at the time the overlay is shown, the round result hasn't been calculated yet (it's calculated *after* the overlay completes). So we need to pass the capped value directly.
 
----
+**Fix:** In `GameScreenV2.tsx`, change the `fillLbs` prop passed to `WeighbridgeDepartureOverlay` from `session.currentFill` to `Math.min(session.currentFill, config.targetLoadLbs)`. This is a one-line change.
 
-### Visual Design Direction
+The spill cost (`spillLbs * milkCostPerLb`) already flows through the scoring engine correctly — this fix only corrects what is *displayed on the weighbridge scale*, which is the physical weight of milk inside the tanker.
 
-#### 1. 16-Bit Tanker (TankerV2)
-
-Replace the current smooth-gradient CSS truck with a chunky, hard-edged pixel art aesthetic:
-
-- **No border-radius** — all sharp corners to simulate pixel blocks
-- **Dithered shading** — alternating pixel-row colours to simulate 16-bit depth
-- **Limited colour palette** — flat blocks of colour with 2-tone shadow/highlight (no CSS gradients, or 2-stop max at hard stops)
-- **Direction reversed** — cab moves to the **right side**, trailer extends to the **left** (so the truck faces right, ready to drive off to the weighbridge)
-- **Pixel-style wheels** — square/octagonal rather than circular
-- **"MILK" lettering** — bold, pixel-font style on the tank body
-- **Fill level** visible through a chunky "window" cut-out on the trailer side
-
-Layout (left → right):
-```text
-[════════════════TANK TRAILER════════════════][■CAB■]
-       ◉          ◉          ◉           ◉ ◉
-```
-
-#### 2. Farm Tank
-
-Updated to face the correct direction (pipe exits from the right side toward the tanker trailer's intake valve).
-
-#### 3. WeighbridgeDepartureOverlay — Full Redesign
-
-**Phase 1: Truck arrival (0–2s)**
-- Dark background with a road/tarmac strip
-- Weigh station platform: a large flat rectangular pad with "WEIGHBRIDGE" stencilled across it, bolts/sensors visible at each corner
-- The 16-bit truck CSS graphic slides in **from the left** and comes to rest centred on the platform (drives onto scale)
-- Platform visually "sinks" slightly (scale compression animation) as the truck lands
-
-**Phase 2: Veeder-Root Meter display (2–4.5s)**
-- A large instrument panel appears above the scale
-- Styled after a **Veeder-Root mechanical counter** — dark housing, individual digit rollers, amber/green backlight
-- Each digit "rolls up" sequentially (slot-machine style animation) from `00000` to the actual weight in lbs
-- Format: `50,000 lbs` displayed in 5 individual digit drums
-- Digits animate with a fast upward scroll then settle, one column at a time left-to-right
-- The unit label `LBS` is shown in a separate fixed display to the right
-- A status line below reads `TARE: 28,460 lbs` and `GROSS: XX,XXX lbs` (flavour text, not real values)
-
-**Phase 3: Result banner (4.5–6s)**
-- "Gone to Weighbridge" text fades in beneath the meter
-- 3 animated dots indicate calculation in progress
-- Auto-advances to Round Result screen
+Additionally, the GROSS weight on the status line below the meter (`rounded + 28,460`) should also use this capped value, which is automatically fixed by fixing the prop.
 
 ---
 
-### Technical Implementation
+### Fix 2 — Make the Tanker Transparent (See-Through Barrel)
 
-#### Files to Modify
+**The problem:** The tanker body currently uses an opaque stainless steel background (`#cbd5e1` / `#94a3b8` gradient). The milk fill is only visible through a small 40px-wide "window" cutout on the left of the trailer. The user wants the entire barrel to be see-through so the milk level fills the full width of the tank.
 
-**`src/game/components/TankerV2.tsx`**
-- Complete rewrite of the JSX using pixel-art CSS design
-- Layout flipped: trailer on left, cab on right
-- Props interface unchanged — all existing game logic continues to work
-- Fill level indicator, target line, overfill state all preserved
+**The fix:** Replace the opaque tank body background with a transparent/semi-transparent shell approach:
+- The barrel becomes a **dark interior** (deep blue-black, like the inside of a steel tank) so that the milk shows against a dark background rather than being a small window.
+- The milk fill rises from the bottom of the full barrel area.
+- The tank "walls" are rendered as a **border/frame overlay** (pixel-art style) on top of the liquid, rather than an opaque background behind it. This gives the impression of looking at the tank cross-section.
+- The vertical segment dividers (pixel ribs at 25%, 50%, 75%) remain on top of the liquid layer, showing the compartment structure.
+- The "MILK" label and target line remain visible as overlays.
+- The stainless steel effect is moved to just the **top rim, end caps, and domes** — the barrel interior is transparent to the milk.
 
-**`src/game/components/WeighbridgeDepartureOverlay.tsx`**
-- Phase state expanded: `"arriving" | "weighing" | "displaying" | "banner"`
-- New `WeighStation` sub-component: road + platform + bolts
-- New `VeederRootMeter` sub-component: digit drums with roll-up animation
-- The digit roll animation uses CSS `@keyframes` with `overflow: hidden` + `translateY` on a stacked column of 0–9 digits
-- `onComplete` callback timing extended to ~6 seconds total to accommodate the longer animation sequence
-- The actual fill weight (in lbs) needs to be passed down as a prop so the meter can display it — this requires a small prop addition
+This requires restructuring the z-layering in `TankerV2.tsx`:
+1. **Layer 0 (bottom):** Dark barrel interior background (`#0f172a`)
+2. **Layer 1:** Milk fill div rising from bottom — full width of the barrel
+3. **Layer 2:** Segment rib dividers (semi-transparent dark bars)
+4. **Layer 3:** Top-surface highlight strip (2px of white at very top for metallic rim effect)
+5. **Layer 4:** "MILK" text, target line, overfill flash — all on top
 
-**`src/game/components/GameScreenV2.tsx`**
-- Pass `session.currentFill` (or the locked fill amount) to `WeighbridgeDepartureOverlay` as a new `fillLbs` prop
-
-**`public/models/` (asset copy)**
-- The uploaded GLB `Meshy_AI_Blue_Voxel_Tanker_Tru_0220194605_texture.glb` will be copied to `public/models/voxel-tanker.glb` for future use
+The fill window cutout (`left: 12, width: 40`) is removed entirely, replaced by the full-width fill approach.
 
 ---
 
-### Timing Sequence for WeighbridgeDepartureOverlay
+### On Improving the Truck/Tanker Graphic
 
-| Time | Event |
-|------|-------|
-| 0ms | Truck slides in from left, drives onto weighbridge platform |
-| 1200ms | Truck stops on platform, platform "compresses" |
-| 1800ms | Veeder-Root meter panel slides down from top |
-| 2200ms | Digit drums begin rolling (left digit first) |
-| 3800ms | All digits settled — final weight displayed |
-| 4200ms | "Gone to Weighbridge" banner fades in |
-| 5500ms | `onComplete()` called → advances to Round Result |
+Regarding what can be uploaded or used to improve the visual quality beyond CSS pixel art:
 
----
+**What can be uploaded and used directly:**
+- **SVG files** — The highest-quality option. A detailed SVG of a milk tanker (side elevation, 16-bit art style) can be dropped into `src/assets/` and rendered at any size with zero blur. If you have a vector illustration or can export one from Adobe Illustrator, Figma, or Inkscape, this would give the best result.
+- **PNG/WebP sprites** — A pixel-art PNG (e.g. 512×200 or 1024×400 pixels, drawn at exact pixel resolution) renders crisply with `image-rendering: pixelated`. If you have access to a pixel-art tool (Aseprite, LibreSprite, Photoshop) you could export a tanker sprite at 2x resolution.
+- **The uploaded GLB model** — The voxel tanker GLB already in the project (`public/models/voxel-tanker.glb`) could be rendered using a lightweight 3D viewer (`<model-viewer>` web component or Three.js). This would give true 3D rotation and lighting. However it adds a JavaScript dependency and WebGL requirement — riskier for a trade show kiosk.
 
-### Prop Change Required
+**Recommended path (no extra tools needed):**
+The CSS pixel-art approach can be significantly improved within the current stack. The main visual improvements that would make the biggest difference are:
+1. Making the barrel transparent (Fix 2 above) so you see milk filling the tank
+2. Adding more detail to the cab — a larger windscreen, door handle, fuel tank, side mirror pixel blocks
+3. Adding a chrome/silver shine strip along the top of the barrel (2-3px white line)
+4. Using a more detailed wheel with lug nut dots around the hub
 
-`WeighbridgeDepartureOverlay` needs one new prop:
-
-```ts
-interface WeighbridgeDepartureOverlayProps {
-  onComplete: () => void;
-  fillLbs: number; // the actual weight loaded this round — shown on the meter
-}
-```
-
-In `GameScreenV2.tsx`, this will be passed as `fillLbs={session.currentFill}`.
+**If you have access to a design tool:** Export a 512×200 PNG of a side-on milk tanker in pixel art style (facing right, transparent background), upload it here, and the tanker component can switch to rendering that image with the milk fill overlaid using CSS `clip-path` and `mix-blend-mode`. That would give the crispest result.
 
 ---
 
-### What Stays the Same
-
-- All game logic, state machine, and scoring — untouched
-- `AgitationOverlay` — untouched
-- `FarmTank`, `ConnectionPipe`, `GameTimer` — untouched
-- All existing props on `TankerV2` — interface unchanged
-
-### Files to Create
-
-- `public/models/voxel-tanker.glb` (copied from upload, for future use)
-
-### Files to Modify
+### Files to Change
 
 | File | Change |
-|------|--------|
-| `src/game/components/TankerV2.tsx` | Full 16-bit pixel art redesign, facing right |
-| `src/game/components/WeighbridgeDepartureOverlay.tsx` | Full redesign: weighbridge scene + Veeder-Root meter |
-| `src/game/components/GameScreenV2.tsx` | Pass `fillLbs` prop to `WeighbridgeDepartureOverlay` |
+|---|---|
+| `src/game/components/GameScreenV2.tsx` | Change `fillLbs={session.currentFill}` → `fillLbs={Math.min(session.currentFill, config.targetLoadLbs)}` |
+| `src/game/components/TankerV2.tsx` | Replace small fill window with full-width transparent barrel showing milk filling the entire tank cross-section |
+
+---
+
+### Summary of Weighbridge Weight Logic
+
+| Scenario | Tank contains | Spilled | Weighbridge reads |
+|---|---|---|---|
+| Perfect fill (50,000 lbs) | 50,000 | 0 | 50,000 lbs ✓ |
+| Underfill (47,500 lbs) | 47,500 | 0 | 47,500 lbs ✓ |
+| Overfill (52,000 lbs capped) | 50,000 | 2,000 (on ground) | 50,000 lbs ✓ (currently shows 52,000 — bug) |
+
+The spill cost (`2,000 lbs × $0.19 = $380`) still flows through the scoring engine correctly via `spillLbs` — only the *displayed* weighbridge reading is wrong and will be corrected.

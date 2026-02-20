@@ -3,7 +3,7 @@ import { GAME_DEFAULTS, GameSettings, GameConfig, settingsToConfig } from "../co
 
 export type CurrencySymbol = "$" | "€";
 
-const STORAGE_KEY = "fill-tank-admin-settings-v7";
+const STORAGE_KEY = "fill-tank-admin-settings-v8";
 const OLD_KEYS = [
   "fill-tank-admin-settings",
   "fill-tank-admin-settings-v1",
@@ -12,6 +12,7 @@ const OLD_KEYS = [
   "fill-tank-admin-settings-v4",
   "fill-tank-admin-settings-v5",
   "fill-tank-admin-settings-v6",
+  "fill-tank-admin-settings-v7",
 ];
 
 export function useAdminSettings() {

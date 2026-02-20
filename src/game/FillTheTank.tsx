@@ -80,7 +80,7 @@ export function FillTheTank() {
       <AdminPanel settings={settings} isOpen={isAdminOpen} onClose={() => setAdminOpen(false)} onUpdate={updateSetting} onReset={resetToDefaults} />
 
       {gameState === "attract" && (
-        <AttractModeV2 onStartGame={startGame} leaderboardEntries={entries} config={config} getDisplayEntries={getDisplayEntries} />
+        <AttractModeV2 onStartGame={startGame} config={config} />
       )}
 
       {gameState === "playing" && (

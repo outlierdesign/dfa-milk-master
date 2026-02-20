@@ -3,11 +3,85 @@ import { SoundToggle } from "./SoundToggle";
 import { GameConfig } from "../constantsV2";
 import piperLogo from "@/assets/piper-logo.png";
 import driverView from "@/assets/driver_view.svg";
-import roadScene from "@/assets/road_scene_pixel.png";
 
 interface AttractModeV2Props {
   onStartGame: () => void;
   config: GameConfig;
+}
+
+/* ── Procedural 8-bit road scene ─────────────────────────────── */
+const VP_X = 512;          // vanishing-point X (centre)
+const VP_Y = 230;          // vanishing-point Y (~40 % down)
+const W = 1024;
+const H = 576;
+const BAND_COUNT = 24;     // number of field strips
+const GREENS = ["#3A7D2C", "#4CA83A"];
+const ROAD_W_TOP = 6;      // road half-width at VP
+const ROAD_W_BOT = 420;    // road half-width at bottom
+
+function InfiniteRoadSVG() {
+  const bandH = (H - VP_Y) / BAND_COUNT;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" preserveAspectRatio="none"
+      style={{ imageRendering: "pixelated" }}>
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#87CEEB" />
+          <stop offset="100%" stopColor="#FFD4A0" />
+        </linearGradient>
+      </defs>
+
+      {/* Sky */}
+      <rect x="0" y="0" width={W} height={VP_Y} fill="url(#sky)" />
+
+      {/* Horizon trees */}
+      {[-320, -200, -120, 80, 160, 280, 350].map((dx, i) => (
+        <polygon key={`tree-${i}`}
+          points={`${VP_X + dx - 12},${VP_Y} ${VP_X + dx + 12},${VP_Y} ${VP_X + dx},${VP_Y - 28 - (i % 3) * 10}`}
+          fill="#2D6B22" />
+      ))}
+
+      {/* Animated field bands – two copies for seamless loop */}
+      <g>
+        <animateTransform attributeName="transform" type="translate"
+          from="0 0" to={`0 ${bandH * 2}`} dur="0.6s" repeatCount="indefinite" />
+
+        {Array.from({ length: BAND_COUNT + 4 }).map((_, i) => {
+          const y = VP_Y + (i - 2) * bandH;
+          return (
+            <rect key={`band-${i}`} x="0" y={y} width={W} height={bandH + 0.5}
+              fill={GREENS[i % 2]} />
+          );
+        })}
+      </g>
+
+      {/* Road surface */}
+      <polygon
+        points={`${VP_X - ROAD_W_TOP},${VP_Y} ${VP_X + ROAD_W_TOP},${VP_Y} ${VP_X + ROAD_W_BOT},${H} ${VP_X - ROAD_W_BOT},${H}`}
+        fill="#555555" />
+
+      {/* Road edge lines */}
+      <line x1={VP_X - ROAD_W_TOP} y1={VP_Y} x2={VP_X - ROAD_W_BOT} y2={H} stroke="#ffffff" strokeWidth="4" />
+      <line x1={VP_X + ROAD_W_TOP} y1={VP_Y} x2={VP_X + ROAD_W_BOT} y2={H} stroke="#ffffff" strokeWidth="4" />
+
+      {/* Centre dashes */}
+      <g>
+        <animateTransform attributeName="transform" type="translate"
+          from="0 0" to={`0 ${(H - VP_Y) / 18}`} dur="0.35s" repeatCount="indefinite" />
+        {Array.from({ length: 22 }).map((_, i) => {
+          const t = (i - 2) / 18;
+          const y = VP_Y + t * (H - VP_Y);
+          const dashH = ((H - VP_Y) / 18) * 0.4;
+          const w = 2 + t * 8;
+          return (
+            <rect key={`dash-${i}`} x={VP_X - w / 2} y={y} width={w} height={dashH}
+              fill="#ffaa22" opacity={Math.min(1, 0.3 + t * 0.7)} />
+          );
+        })}
+      </g>
+    </svg>
+  );
 }
 
 export function AttractModeV2({ onStartGame, config }: AttractModeV2Props) {
@@ -37,32 +111,8 @@ export function AttractModeV2({ onStartGame, config }: AttractModeV2Props) {
       <div className="w-full max-w-xl mb-4 rounded-lg overflow-hidden border-2 border-slate-600 shadow-2xl relative"
         style={{ imageRendering: "pixelated" }}>
         <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
-          {/* Background scene */}
-          <img src={roadScene} alt="Farmland highway"
-            className="absolute inset-0 w-full h-full object-cover z-0"
-            style={{ imageRendering: "pixelated", animation: "driveZoom 8s ease-in-out infinite", transformOrigin: "50% 40%" }} />
-
-          {/* Animated centre line overlay */}
-          <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
-            <svg viewBox="0 0 1024 576" className="w-full h-full" preserveAspectRatio="none">
-              {/* Vanishing point ~(512, 230) based on the image */}
-              <g>
-                <animateTransform attributeName="transform" type="translate"
-                  from="0 0" to="0 21.6" dur="0.5s" repeatCount="indefinite" />
-                {Array.from({ length: 18 }).map((_, i) => {
-                  const t = i / 18;
-                  const vpY = 230;
-                  const y = vpY + t * (576 - vpY);
-                  const h = ((576 - vpY) / 18) * 0.4;
-                  const w = 2 + t * 8;
-                  return (
-                    <rect key={i} x={512 - w / 2} y={y} width={w} height={h}
-                      fill="#ffaa22" opacity={0.3 + t * 0.7} />
-                  );
-                })}
-              </g>
-            </svg>
-          </div>
+          {/* Procedural 8-bit road */}
+          <InfiniteRoadSVG />
 
           {/* Driver view SVG overlay */}
           <img src={driverView} alt=""
@@ -104,11 +154,6 @@ export function AttractModeV2({ onStartGame, config }: AttractModeV2Props) {
         @keyframes cardPulse {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.02); }
-        }
-        @keyframes driveZoom {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.08); }
-          100% { transform: scale(1); }
         }
       `}</style>
     </div>

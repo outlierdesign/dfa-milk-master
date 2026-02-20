@@ -2,7 +2,7 @@ import { useSoundEffects } from "../hooks/useSoundEffects";
 import { SoundToggle } from "./SoundToggle";
 import { GameConfig } from "../constantsV2";
 import piperLogo from "@/assets/piper-logo.png";
-import driverView from "@/assets/driver_view.svg";
+import roadScene from "@/assets/road_scene_pixel.png";
 
 interface AttractModeV2Props {
   onStartGame: () => void;
@@ -22,79 +22,78 @@ export function AttractModeV2({ onStartGame, config }: AttractModeV2Props) {
 
       {/* Title */}
       <div className="text-center mb-3 animate-fade-in">
-        <h1 className="text-3xl md:text-6xl font-bold text-white mb-1">FILL THE TANK</h1>
-        <p className="text-base md:text-xl text-emerald-400 font-medium">3 rounds. Real consequences.</p>
+        <h1 className="text-3xl md:text-6xl font-bold text-white mb-1"
+          style={{ fontFamily: "'Press Start 2P', monospace", imageRendering: "pixelated" }}>
+          FILL THE TANK
+        </h1>
+        <p className="text-sm md:text-lg text-emerald-400 font-medium"
+          style={{ fontFamily: "'Press Start 2P', monospace" }}>
+          3 rounds. Real consequences.
+        </p>
       </div>
 
-      {/* First-person windshield road view */}
-      <div className="w-full max-w-xl mb-4 rounded-xl overflow-hidden border border-slate-600 shadow-2xl relative">
-        {/* Driver view SVG as the cab/windshield frame */}
+      {/* First-person pixel art road scene */}
+      <div className="w-full max-w-xl mb-4 rounded-lg overflow-hidden border-2 border-slate-600 shadow-2xl relative"
+        style={{ imageRendering: "pixelated" }}>
         <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
-          {/* Sky / background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-sky-700 via-sky-600 to-emerald-800 z-0" />
-
-          {/* Road with perspective vanishing point */}
-          <div className="absolute inset-0 z-[1] overflow-hidden">
-            <svg viewBox="0 0 800 450" className="w-full h-full" preserveAspectRatio="none">
-              {/* Green fields */}
-              <polygon points="0,200 400,170 0,450" fill="#2d5a27" />
-              <polygon points="800,200 400,170 800,450" fill="#2d5a27" />
-
-              {/* Road surface - trapezoid converging to vanishing point */}
-              <polygon points="390,170 410,170 650,450 150,450" fill="#4a4a4a" />
-
-              {/* Road edge lines */}
-              <line x1="390" y1="170" x2="150" y2="450" stroke="white" strokeWidth="2" opacity="0.5" />
-              <line x1="410" y1="170" x2="650" y2="450" stroke="white" strokeWidth="2" opacity="0.5" />
-
-              {/* Centre dashed line - animated */}
-              <g style={{ animation: "dashScroll 1s linear infinite" }}>
-                {Array.from({ length: 20 }).map((_, i) => {
-                  const t = i / 20;
-                  const y = 170 + t * 280;
-                  const nextT = (i + 0.4) / 20;
-                  const nextY = 170 + nextT * 280;
-                  // Width grows with perspective
-                  const w = 1 + t * 3;
+          <img
+            src={roadScene}
+            alt="Driving to the farm"
+            className="w-full h-full object-cover"
+            style={{ imageRendering: "pixelated" }}
+          />
+          {/* Animated centre line overlay */}
+          <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
+            <svg viewBox="0 0 1024 576" className="w-full h-full" preserveAspectRatio="none">
+              <g style={{ animation: "dashScroll 0.6s linear infinite" }}>
+                {Array.from({ length: 24 }).map((_, i) => {
+                  const t = i / 24;
+                  // Vanishing point approximately at (512, 200)
+                  const vpY = 200;
+                  const startY = vpY + t * (576 - vpY);
+                  const endT = (i + 0.45) / 24;
+                  const endY = vpY + endT * (576 - vpY);
+                  const w = 1 + t * 5;
                   return (
                     <line
                       key={i}
-                      x1="400" y1={y}
-                      x2="400" y2={nextY}
+                      x1="512" y1={startY}
+                      x2="512" y2={endY}
                       stroke="white" strokeWidth={w}
-                      opacity={0.4 + t * 0.6}
+                      opacity={0.3 + t * 0.7}
                     />
                   );
                 })}
               </g>
             </svg>
           </div>
-
-          {/* Driver view overlay (windshield/cab frame) */}
-          <img
-            src={driverView}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover z-[2] pointer-events-none"
+          {/* Scanline overlay for retro effect */}
+          <div className="absolute inset-0 z-[2] pointer-events-none opacity-10"
+            style={{
+              background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.4) 2px, rgba(0,0,0,0.4) 4px)",
+            }}
           />
         </div>
       </div>
 
       {/* Farm stats card */}
-      <div className="w-full max-w-md mb-4 bg-slate-800/80 border border-emerald-500/50 rounded-xl p-4 md:p-5 shadow-lg"
-        style={{ animation: "cardPulse 3s ease-in-out infinite" }}>
-        <h2 className="text-emerald-400 font-bold text-lg md:text-xl mb-3 text-center">This is your farm:</h2>
-        <ul className="space-y-2 text-slate-200 text-sm md:text-base">
-          <li className="flex items-center gap-2"><span className="text-lg">🚛</span>{config.loadsPerDay} loads a day</li>
-          <li className="flex items-center gap-2"><span className="text-lg">⚖️</span>{(config.targetLoadLbs / 1000).toFixed(0)},000 lb loads</li>
-          <li className="flex items-center gap-2"><span className="text-lg">🏗️</span>23,000 gallon silo</li>
-          <li className="flex items-center gap-2"><span className="text-lg">📏</span>Scaling in and out</li>
-          <li className="flex items-center gap-2"><span className="text-lg">🧪</span>Sampling manually</li>
+      <div className="w-full max-w-md mb-4 bg-slate-800/90 border-2 border-emerald-500/60 rounded-lg p-4 md:p-5 shadow-lg"
+        style={{ animation: "cardPulse 3s ease-in-out infinite", fontFamily: "'Press Start 2P', monospace" }}>
+        <h2 className="text-emerald-400 text-xs md:text-sm mb-3 text-center">This is your farm:</h2>
+        <ul className="space-y-2 text-slate-200 text-[10px] md:text-xs">
+          <li className="flex items-center gap-2"><span>🚛</span>{config.loadsPerDay} loads a day</li>
+          <li className="flex items-center gap-2"><span>⚖️</span>{(config.targetLoadLbs / 1000).toFixed(0)},000 lb loads</li>
+          <li className="flex items-center gap-2"><span>🏗️</span>23,000 gallon silo</li>
+          <li className="flex items-center gap-2"><span>📏</span>Scaling in and out</li>
+          <li className="flex items-center gap-2"><span>🧪</span>Sampling manually</li>
         </ul>
       </div>
 
       {/* TAP TO PLAY */}
       <div className="text-center mb-2">
-        <button onClick={handleStartGame} className="bg-emerald-500 hover:bg-emerald-400 text-white text-2xl md:text-3xl font-bold px-10 py-5 md:px-12 md:py-6 rounded-2xl shadow-2xl animate-pulse transition-all hover:scale-105">
+        <button onClick={handleStartGame}
+          className="bg-emerald-500 hover:bg-emerald-400 text-white text-sm md:text-lg font-bold px-8 py-4 md:px-12 md:py-5 rounded-lg shadow-2xl animate-pulse transition-all hover:scale-105 border-2 border-emerald-300/30"
+          style={{ fontFamily: "'Press Start 2P', monospace" }}>
           TAP TO PLAY
         </button>
       </div>
@@ -105,7 +104,7 @@ export function AttractModeV2({ onStartGame, config }: AttractModeV2Props) {
       <style>{`
         @keyframes dashScroll {
           0% { transform: translateY(0); }
-          100% { transform: translateY(14px); }
+          100% { transform: translateY(15.6px); }
         }
         @keyframes cardPulse {
           0%, 100% { transform: scale(1); }

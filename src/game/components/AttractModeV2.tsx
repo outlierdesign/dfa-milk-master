@@ -3,6 +3,7 @@ import { SoundToggle } from "./SoundToggle";
 import { GameConfig } from "../constantsV2";
 import piperLogo from "@/assets/piper-logo.png";
 import driverView from "@/assets/driver_view.svg";
+import roadScene from "@/assets/road_scene_pixel.png";
 
 interface AttractModeV2Props {
   onStartGame: () => void;
@@ -12,15 +13,6 @@ interface AttractModeV2Props {
 export function AttractModeV2({ onStartGame, config }: AttractModeV2Props) {
   const { playGameStart, isMuted, toggleMute } = useSoundEffects();
   const handleStartGame = () => { playGameStart(); onStartGame(); };
-
-  // Simple 8-bit tree as SVG group at a given x, y (base), size
-  const tree = (x: number, y: number, s: number, key: number) => (
-    <g key={key}>
-      <rect x={x - s * 0.15} y={y - s * 0.5} width={s * 0.3} height={s * 0.5} fill="#5a3a1a" />
-      <polygon points={`${x},${y - s * 1.6} ${x - s * 0.6},${y - s * 0.4} ${x + s * 0.6},${y - s * 0.4}`} fill="#1a7a2a" />
-      <polygon points={`${x},${y - s * 2} ${x - s * 0.45},${y - s * 1} ${x + s * 0.45},${y - s * 1}`} fill="#22992e" />
-    </g>
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center p-4 md:p-8 overflow-hidden relative">
@@ -41,109 +33,43 @@ export function AttractModeV2({ onStartGame, config }: AttractModeV2Props) {
         </p>
       </div>
 
-      {/* Outrun-style road viewport */}
+      {/* Road scene viewport */}
       <div className="w-full max-w-xl mb-4 rounded-lg overflow-hidden border-2 border-slate-600 shadow-2xl relative"
         style={{ imageRendering: "pixelated" }}>
         <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
-          <svg viewBox="0 0 800 450" className="w-full h-full" preserveAspectRatio="none"
-            style={{ imageRendering: "pixelated" }}>
-            {/* Sky gradient */}
-            <defs>
-              <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#1a0a3e" />
-                <stop offset="60%" stopColor="#ff6b35" />
-                <stop offset="100%" stopColor="#ffaa44" />
-              </linearGradient>
-            </defs>
-            <rect x="0" y="0" width="800" height="220" fill="url(#sky)" />
+          {/* Background scene */}
+          <img src={roadScene} alt="Desert highway"
+            className="absolute inset-0 w-full h-full object-cover z-0"
+            style={{ imageRendering: "pixelated" }} />
 
-            {/* Sun */}
-            <circle cx="400" cy="160" r="40" fill="#ff4466" />
-            <rect x="0" y="155" width="800" height="3" fill="#1a0a3e" opacity="0.5" />
-            <rect x="0" y="162" width="800" height="2" fill="#1a0a3e" opacity="0.4" />
-            <rect x="0" y="168" width="800" height="2" fill="#1a0a3e" opacity="0.3" />
-            <rect x="0" y="173" width="800" height="3" fill="#1a0a3e" opacity="0.2" />
-
-            {/* Ground / grass — alternating strips for depth */}
-            {Array.from({ length: 24 }).map((_, i) => {
-              const y = 220 + i * (230 / 24);
-              const h = 230 / 24 + 1;
-              return (
-                <rect key={`grass-${i}`} x="0" y={y} width="800" height={h}
-                  fill={i % 2 === 0 ? "#1a7a2a" : "#22992e"} />
-              );
-            })}
-
-            {/* Road surface — trapezoid from vanishing point */}
-            <polygon points="395,220 405,220 680,450 120,450" fill="#333333" />
-
-            {/* Road stripes — alternating dark/light bands */}
-            {Array.from({ length: 12 }).map((_, i) => {
-              const t = i / 12;
-              const nextT = (i + 1) / 12;
-              const y1 = 220 + t * 230;
-              const y2 = 220 + nextT * 230;
-              const lerpL = (a: number, b: number, p: number) => a + (b - a) * p;
-              const x1L = lerpL(395, 120, t);
-              const x1R = lerpL(405, 680, t);
-              const x2L = lerpL(395, 120, nextT);
-              const x2R = lerpL(405, 680, nextT);
-              if (i % 2 === 0) return null;
-              return (
-                <polygon key={`road-${i}`}
-                  points={`${x1L},${y1} ${x1R},${y1} ${x2R},${y2} ${x2L},${y2}`}
-                  fill="#444444" />
-              );
-            })}
-
-            {/* Road edge lines */}
-            <line x1="395" y1="220" x2="120" y2="450" stroke="white" strokeWidth="3" />
-            <line x1="405" y1="220" x2="680" y2="450" stroke="white" strokeWidth="3" />
-
-            {/* Centre dashes — animated */}
-            <g>
-              <animateTransform attributeName="transform" type="translate" from="0 0" to="0 19.2" dur="0.4s" repeatCount="indefinite" />
-              {Array.from({ length: 16 }).map((_, i) => {
-                const t = i / 16;
-                const y = 220 + t * 230;
-                const h = (230 / 16) * 0.4;
-                const w = 2 + t * 6;
-                return (
-                  <rect key={`dash-${i}`} x={400 - w / 2} y={y} width={w} height={h}
-                    fill="white" opacity={0.4 + t * 0.6} />
-                );
-              })}
-            </g>
-
-            {/* Trees — left side */}
-            {tree(60, 280, 18, 100)}
-            {tree(30, 320, 24, 101)}
-            {tree(80, 360, 30, 102)}
-            {tree(15, 400, 38, 103)}
-            {tree(90, 430, 42, 104)}
-
-            {/* Trees — right side */}
-            {tree(740, 280, 18, 200)}
-            {tree(760, 320, 24, 201)}
-            {tree(720, 360, 30, 202)}
-            {tree(780, 400, 38, 203)}
-            {tree(710, 430, 42, 204)}
-
-            {/* Distant trees (horizon) */}
-            {tree(150, 235, 8, 300)}
-            {tree(200, 232, 7, 301)}
-            {tree(280, 230, 6, 302)}
-            {tree(520, 230, 6, 303)}
-            {tree(600, 232, 7, 304)}
-            {tree(660, 235, 8, 305)}
-          </svg>
+          {/* Animated centre line overlay */}
+          <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
+            <svg viewBox="0 0 1024 576" className="w-full h-full" preserveAspectRatio="none">
+              {/* Vanishing point ~(512, 230) based on the image */}
+              <g>
+                <animateTransform attributeName="transform" type="translate"
+                  from="0 0" to="0 21.6" dur="0.5s" repeatCount="indefinite" />
+                {Array.from({ length: 18 }).map((_, i) => {
+                  const t = i / 18;
+                  const vpY = 230;
+                  const y = vpY + t * (576 - vpY);
+                  const h = ((576 - vpY) / 18) * 0.4;
+                  const w = 2 + t * 8;
+                  return (
+                    <rect key={i} x={512 - w / 2} y={y} width={w} height={h}
+                      fill="#ffaa22" opacity={0.3 + t * 0.7} />
+                  );
+                })}
+              </g>
+            </svg>
+          </div>
 
           {/* Driver view SVG overlay */}
           <img src={driverView} alt=""
             className="absolute inset-0 w-full h-full object-cover z-[2] pointer-events-none" />
 
           {/* Scanline overlay */}
-          <div className="absolute inset-0 z-[3] pointer-events-none opacity-[0.07]"
+          <div className="absolute inset-0 z-[3] pointer-events-none opacity-[0.06]"
             style={{ background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.5) 2px, rgba(0,0,0,0.5) 4px)" }}
           />
         </div>

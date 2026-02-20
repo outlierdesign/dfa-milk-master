@@ -40,10 +40,10 @@ const SVG_H = 200;
 // Barrel opening bounds (pixels at SVG_W × SVG_H render size)
 // Tweak these if the fill doesn't align perfectly
 const BARREL = {
-  left: 52,
-  top: 22,
-  right: 118,   // distance from right edge
-  bottom: 46,   // distance from bottom edge
+  left: 46,
+  top: 18,
+  right: 124,   // distance from right edge
+  bottom: 52,   // distance from bottom edge
 };
 
 export function TankerV2({
@@ -91,7 +91,7 @@ export function TankerV2({
             style={{
               height: milkH,
               background:
-                "linear-gradient(180deg, #e0f7ff 0%, #bae6fd 30%, #7dd3fc 70%, #38bdf8 100%)",
+                "linear-gradient(180deg, #FDFFF5 0%, #F5F7E8 50%, #EDF0DC 100%)",
             }}
           >
             {/* surface shimmer while filling */}

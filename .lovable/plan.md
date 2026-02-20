@@ -1,35 +1,50 @@
 
 
-## Fine-tune Barrel Fill Bounds in TankerV2
+## Redesign the Attract / Opening Screen
 
-### What's Wrong
+### Overview
+Replace the current attract screen with a cinematic "driving to the farm" scene featuring an infinite road animation, then a farm stats info box below it.
 
-From the live screenshots, the dark interior background and milk fill extend outside the barrel window of the SVG on multiple sides:
-- **Bottom**: Fill bleeds below the barrel outline into the chassis/wheel area
-- **Left**: Fill extends past the left edge of the barrel curve
-- **Top**: Slight bleed above the barrel top line
-- **Right**: Minor bleed past the barrel end
+### Layout (top to bottom)
+1. **Piper logo** (keep existing)
+2. **"FILL THE TANK" title + subtitle** (keep, restyle slightly)
+3. **Road animation viewport** -- a horizontal strip showing a perspective road with dashed white centre line scrolling toward the viewer, and the milk tanker SVG driving along it
+4. **"This is your farm" info card** -- styled box listing the 5 farm stats, with a subtle scale-in/out pulse animation
+5. **"TAP TO PLAY" button** (keep)
+6. Sound toggle + admin shortcut (keep)
+7. **Leaderboard removed entirely**
 
-### The Fix
+### Road Animation Details
+- Pure CSS/SVG animation, no canvas or external libs
+- Dark grey road surface with white dashed centre line using CSS `perspective` and `translateZ` to create the "driving forward" illusion
+- The tanker SVG sits centred on the road, bobbing very slightly
+- Road lines animate infinitely downward (toward camera) using a `@keyframes` translateY loop
+- Green roadside strips on left/right for depth
 
-**File:** `src/game/components/TankerV2.tsx`
+### Farm Stats Card
+A dark card with an emerald accent border, containing:
+- Header: "This is your farm:"
+- Bullet list (with icons):
+  - 5 loads a day
+  - 50,000 lb loads
+  - 23,000 gallon silo
+  - Scaling in and out
+  - Sampling manually
+- The card gently pulses (scale 1.0 to 1.02) to draw attention
 
-Increase all four `BARREL` inset values to pull the fill area tighter inside the transparent window:
+### Technical Changes
 
-```typescript
-const BARREL = {
-  left: 42,     // was 30 -- barrel curve starts further right
-  top: 46,      // was 40 -- barrel top edge sits lower
-  right: 186,   // was 178 -- barrel ends further from the cab
-  bottom: 96,   // was 84 -- barrel bottom is well above the chassis
-};
-```
+**File: `src/game/components/AttractModeV2.tsx`**
+- Remove all `ArcadeLeaderboard` imports and usage
+- Remove the demo fill level animation (no longer showing fill)
+- Replace the 3 feature cards ("SAVE TIME", "OPTIMIZE FILL", "AVOID LOSS") with the road animation viewport and farm stats card
+- Add the road animation as an inline CSS animation with `@keyframes roadScroll`
+- Use the existing `milk_tanker_full.svg` (the non-transparent version) for the truck on the road
+- The farm stats values will be derived from `config` where possible (loadsPerDay, targetLoadLbs) and hardcoded for silo size / sampling method
 
-### Technical Details
+**File: `src/game/components/AttractModeV2.tsx` (props)**
+- Remove `leaderboardEntries` and `getDisplayEntries` from props since leaderboard is gone from this screen
 
-- These are pixel offsets at the 512x200 render size
-- `left` / `right` reduce the width of the fill rectangle; `top` / `bottom` reduce the height
-- The resulting fill area will be: width = 512 - 42 - 186 = 284px, height = 200 - 46 - 96 = 58px (was 304x76)
-- No other code changes needed -- all fill, target line, overfill flash, and compartment ribs use these same bounds
-- May still need one more small tweak after visual verification
+**File: `src/game/FillTheTank.tsx`**
+- Update the `AttractModeV2` call to stop passing leaderboard props
 

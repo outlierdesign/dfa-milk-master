@@ -138,8 +138,11 @@ function InfiniteRoadSVG() {
 
         {scanlines.map((sl, i) => {
           const shoulderW = Math.floor(sl.roadW * SHOULDER_K);
-          const stripeGroup = Math.floor(i / STRIPE_H);
-          const isEven = stripeGroup % 2 === 0;
+          // Perspective-scaled stripe: use cumulative distance for banding
+          const t = (sl.y - HORIZON) / ROAD_LINES; // 0 at horizon, 1 at bottom
+          const stripeScale = 1 + t * t * 12; // grows quadratically toward foreground
+          const stripePhase = Math.floor(sl.y / stripeScale);
+          const isEven = stripePhase % 2 === 0;
           const cx = CX + sl.xOff;
 
           return (

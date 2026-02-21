@@ -9,81 +9,120 @@ interface AttractModeV2Props {
   config: GameConfig;
 }
 
-/* ── Procedural 8-bit road scene ─────────────────────────────── */
-const VP_X = 512;          // vanishing-point X (centre)
-const VP_Y = 230;          // vanishing-point Y (~40 % down)
-const W = 1024;
-const H = 576;
-const BAND_COUNT = 24;     // number of field strips
-const GREENS = ["#3A7D2C", "#4CA83A"];
-const ROAD_W_TOP = 6;      // road half-width at VP
-const ROAD_W_BOT = 420;    // road half-width at bottom
-const SHOULDER_W_TOP = 9;  // shoulder half-width at VP
-const SHOULDER_W_BOT = 460; // shoulder half-width at bottom
+/* ── Authentic NES-style 8-bit road scene ───────────────────── */
+const W = 320;             // arcade resolution width
+const H = 240;             // arcade resolution height
+const HORIZON = 100;       // horizon Y (~42% down)
+const CX = W / 2;          // center X
+
+// Strict 8-color palette
+const SKY_DEEP   = "#1a1c4a";
+const SKY_MID    = "#3a2f7a";
+const SKY_PINK   = "#c24ca3";
+const SUN_ORANGE = "#ff8a3c";
+const GREEN_A    = "#3cff3c";
+const GREEN_B    = "#0f8f0f";
+const ASPHALT    = "#2a2a2a";
+const ASPHALT_B  = "#222222";
+const HORIZON_C  = "#0a0a12";
+const DASH_COLOR = "#ffaa22";
+
+// Road half-width scaling constant
+const ROAD_K = 0.95;
+// Shoulder extends beyond road
+const SHOULDER_EXTRA = 0.35;
+
+// Scanline counts
+const ROAD_LINES = H - HORIZON;        // ~140 scanlines
+const STRIPE_BASE_H = 6;               // stripe height at horizon (pixels)
+const SCANLINE_STEP = 2;               // update width every 2px for stair-stepping
 
 function InfiniteRoadSVG() {
-  const bandH = (H - VP_Y) / BAND_COUNT;
+  // Build sky bands (hard color bands, no gradients)
+  const skyBands = [
+    { y: 0,  h: 50, color: SKY_DEEP },
+    { y: 50, h: 30, color: SKY_MID },
+    { y: 80, h: 20, color: SKY_PINK },
+  ];
+
+  // Build road scanlines with perspective
+  // Each scanline: road rect + shoulder rects + stripe color
+  const scanlines: { y: number; roadW: number; stripeIdx: number }[] = [];
+  let accY = 0;
+  for (let y = HORIZON + 1; y < H; y += SCANLINE_STEP) {
+    const dist = y - HORIZON;
+    const roadHW = Math.floor(ROAD_K * dist);
+    scanlines.push({ y, roadW: roadHW, stripeIdx: accY });
+    accY++;
+  }
+
+  // Stripe height scales with perspective — use base stripe grouping
+  const stripeCount = Math.ceil(scanlines.length / STRIPE_BASE_H);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" preserveAspectRatio="none"
       style={{ imageRendering: "pixelated" }}>
-      <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#87CEEB" />
-          <stop offset="100%" stopColor="#FFD4A0" />
-        </linearGradient>
-      </defs>
 
-      {/* Sky */}
-      <rect x="0" y="0" width={W} height={VP_Y} fill="url(#sky)" />
-
-      {/* Horizon trees */}
-      {[-320, -200, -120, 80, 160, 280, 350].map((dx, i) => (
-        <polygon key={`tree-${i}`}
-          points={`${VP_X + dx - 12},${VP_Y} ${VP_X + dx + 12},${VP_Y} ${VP_X + dx},${VP_Y - 28 - (i % 3) * 10}`}
-          fill="#2D6B22" />
+      {/* Sky — hard color bands */}
+      {skyBands.map((b, i) => (
+        <rect key={`sky-${i}`} x="0" y={b.y} width={W} height={b.h} fill={b.color} />
       ))}
 
-      {/* Animated field bands – two copies for seamless loop */}
+      {/* Pixel sun — 16×16 circle, centered on horizon */}
+      <rect x={CX - 8} y={HORIZON - 14} width={16} height={12} fill={SUN_ORANGE} rx="0" />
+      <rect x={CX - 6} y={HORIZON - 16} width={12} height={2} fill="#ffc06e" />
+
+      {/* Horizon line — 1px dark divider */}
+      <rect x="0" y={HORIZON} width={W} height={1} fill={HORIZON_C} />
+
+      {/* Animated shoulder stripes + road — wrapped in scrolling group */}
       <g>
         <animateTransform attributeName="transform" type="translate"
-          from="0 0" to={`0 ${bandH * 2}`} dur="0.6s" repeatCount="indefinite" />
+          from="0 0" to={`0 ${SCANLINE_STEP * 2}`}
+          dur="0.12s" repeatCount="indefinite" />
 
-        {Array.from({ length: BAND_COUNT + 4 }).map((_, i) => {
-          const y = VP_Y + (i - 2) * bandH;
+        {/* Extra rows above for seamless scroll */}
+        {scanlines.map((sl, i) => {
+          const shoulderW = Math.floor(sl.roadW * (1 + SHOULDER_EXTRA));
+          const stripeGroup = Math.floor((i) / STRIPE_BASE_H);
+          const isEven = stripeGroup % 2 === 0;
+          const greenColor = isEven ? GREEN_A : GREEN_B;
+
           return (
-            <rect key={`band-${i}`} x="0" y={y} width={W} height={bandH + 0.5}
-              fill={GREENS[i % 2]} />
+            <g key={`sl-${i}`}>
+              {/* Full-width green background for this scanline */}
+              <rect x="0" y={sl.y} width={W} height={SCANLINE_STEP} fill={greenColor} />
+              {/* Shoulder (slightly wider than road) */}
+              <rect x={CX - shoulderW} y={sl.y} width={shoulderW * 2} height={SCANLINE_STEP}
+                fill={isEven ? GREEN_B : GREEN_A} />
+              {/* Road surface */}
+              <rect x={CX - sl.roadW} y={sl.y} width={sl.roadW * 2} height={SCANLINE_STEP}
+                fill={i % 8 < 4 ? ASPHALT : ASPHALT_B} />
+            </g>
           );
         })}
       </g>
 
-      {/* Grass shoulders */}
-      <polygon
-        points={`${VP_X - SHOULDER_W_TOP},${VP_Y} ${VP_X + SHOULDER_W_TOP},${VP_Y} ${VP_X + SHOULDER_W_BOT},${H} ${VP_X - SHOULDER_W_BOT},${H}`}
-        fill="#5A9E4B" />
+      {/* Road edge lines (white) — static trapezoid lines */}
+      <line x1={CX} y1={HORIZON} x2={CX - Math.floor(ROAD_K * ROAD_LINES)} y2={H}
+        stroke="#ffffff" strokeWidth="1" />
+      <line x1={CX} y1={HORIZON} x2={CX + Math.floor(ROAD_K * ROAD_LINES)} y2={H}
+        stroke="#ffffff" strokeWidth="1" />
 
-      {/* Road surface */}
-      <polygon
-        points={`${VP_X - ROAD_W_TOP},${VP_Y} ${VP_X + ROAD_W_TOP},${VP_Y} ${VP_X + ROAD_W_BOT},${H} ${VP_X - ROAD_W_BOT},${H}`}
-        fill="#888888" />
-
-      {/* Road edge lines */}
-      <line x1={VP_X - ROAD_W_TOP} y1={VP_Y} x2={VP_X - ROAD_W_BOT} y2={H} stroke="#ffffff" strokeWidth="4" />
-      <line x1={VP_X + ROAD_W_TOP} y1={VP_Y} x2={VP_X + ROAD_W_BOT} y2={H} stroke="#ffffff" strokeWidth="4" />
-
-      {/* Centre dashes */}
+      {/* Centre dashes — animated */}
       <g>
         <animateTransform attributeName="transform" type="translate"
-          from="0 0" to={`0 ${(H - VP_Y) / 18}`} dur="0.35s" repeatCount="indefinite" />
-        {Array.from({ length: 22 }).map((_, i) => {
-          const t = (i - 2) / 18;
-          const y = VP_Y + t * (H - VP_Y);
-          const dashH = ((H - VP_Y) / 18) * 0.4;
-          const w = 2 + t * 8;
+          from="0 0" to={`0 ${ROAD_LINES / 14}`}
+          dur="0.25s" repeatCount="indefinite" />
+        {Array.from({ length: 18 }).map((_, i) => {
+          const t = (i - 2) / 14;
+          const y = HORIZON + t * ROAD_LINES;
+          const dashH = (ROAD_LINES / 14) * 0.35;
+          const w = Math.max(1, Math.floor(1 + t * 4));
           return (
-            <rect key={`dash-${i}`} x={VP_X - w / 2} y={y} width={w} height={dashH}
-              fill="#ffaa22" opacity={Math.min(1, 0.3 + t * 0.7)} />
+            <rect key={`dash-${i}`} x={CX - Math.floor(w / 2)} y={y}
+              width={w} height={dashH}
+              fill={DASH_COLOR} opacity={Math.min(1, 0.4 + t * 0.6)} />
           );
         })}
       </g>

@@ -29,7 +29,7 @@ const ROAD_B      = "#484850";   // road colour B (subtle stripe)
 const EDGE_WHITE  = "#e0e0e0";   // white road edge marks
 const DASH_COL    = "#e8a020";   // yellow/orange center dashes
 
-const ROAD_K = 1.05;            // road half-width scaling
+const ROAD_K = 1.35;            // road half-width scaling (wider)
 const SHOULDER_K = 1.25;        // shoulder extends beyond road
 const SCANLINE_STEP = 2;
 const ROAD_LINES = H - HORIZON;
@@ -89,6 +89,27 @@ function InfiniteRoadSVG() {
       {/* Distant hills */}
       <polygon points={`0,${HORIZON} 30,${HORIZON - 18} 70,${HORIZON - 8} 110,${HORIZON - 22} 160,${HORIZON - 10} 190,${HORIZON}`} fill="#3a7828" />
       <polygon points={`150,${HORIZON} 200,${HORIZON - 15} 250,${HORIZON - 25} 300,${HORIZON - 12} 340,${HORIZON - 20} 380,${HORIZON - 8} ${W},${HORIZON}`} fill="#448830" />
+
+      {/* Farm buildings & silos */}
+      {/* Red barn — left side */}
+      <rect x={65} y={HORIZON - 20} width={18} height={16} fill="#8b2020" />
+      <rect x={65} y={HORIZON - 4} width={18} height={4} fill="#6a1818" />
+      <polygon points={`63,${HORIZON - 20} 83,${HORIZON - 20} 74,${HORIZON - 28}`} fill="#5a1010" />
+      <rect x={71} y={HORIZON - 10} width={6} height={10} fill="#4a0e0e" />
+
+      {/* Tall silo — left of center */}
+      <rect x={145} y={HORIZON - 30} width={8} height={26} fill="#c0c0c0" />
+      <rect x={144} y={HORIZON - 32} width={10} height={4} fill="#a0a0a0" />
+      <rect x={146} y={HORIZON - 34} width={6} height={3} fill="#888888" />
+
+      {/* Small shed — right side */}
+      <rect x={310} y={HORIZON - 14} width={14} height={10} fill="#8b6030" />
+      <polygon points={`308,${HORIZON - 14} 326,${HORIZON - 14} 317,${HORIZON - 22}`} fill="#6a4820" />
+
+      {/* Second silo — far right */}
+      <rect x={355} y={HORIZON - 26} width={7} height={22} fill="#b8b8b8" />
+      <rect x={354} y={HORIZON - 28} width={9} height={4} fill="#989898" />
+      <rect x={355} y={HORIZON - 30} width={5} height={3} fill="#808080" />
 
       {/* Horizon tree line */}
       {[15, 40, 58, 80, 100, 130, 155, 175, 200, 225, 248, 270, 295, 320, 345, 370, 395].map((tx, i) => {

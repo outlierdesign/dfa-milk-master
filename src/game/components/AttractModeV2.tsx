@@ -86,6 +86,26 @@ function InfiniteRoadSVG() {
         </g>
       ))}
 
+      {/* Distant hills */}
+      <polygon points={`0,${HORIZON} 30,${HORIZON - 18} 70,${HORIZON - 8} 110,${HORIZON - 22} 160,${HORIZON - 10} 190,${HORIZON}`} fill="#3a7828" />
+      <polygon points={`150,${HORIZON} 200,${HORIZON - 15} 250,${HORIZON - 25} 300,${HORIZON - 12} 340,${HORIZON - 20} 380,${HORIZON - 8} ${W},${HORIZON}`} fill="#448830" />
+
+      {/* Horizon tree line */}
+      {[15, 40, 58, 80, 100, 130, 155, 175, 200, 225, 248, 270, 295, 320, 345, 370, 395].map((tx, i) => {
+        const h = 10 + (i * 7) % 14;
+        const w = 6 + (i * 3) % 5;
+        const treeColor = i % 3 === 0 ? "#1a4a18" : i % 3 === 1 ? "#2a5a22" : "#1e5520";
+        return (
+          <g key={`htree-${i}`}>
+            {/* Trunk */}
+            <rect x={tx} y={HORIZON - h + 4} width={2} height={h - 3} fill="#2a1a0a" />
+            {/* Canopy — pointed triangle */}
+            <polygon points={`${tx - w / 2},${HORIZON - 1} ${tx + w / 2 + 1},${HORIZON - 1} ${tx + 1},${HORIZON - h}`}
+              fill={treeColor} />
+          </g>
+        );
+      })}
+
       {/* Horizon divider */}
       <rect x="0" y={HORIZON - 1} width={W} height={2} fill="#407020" />
 

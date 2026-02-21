@@ -18,6 +18,8 @@ const BAND_COUNT = 24;     // number of field strips
 const GREENS = ["#3A7D2C", "#4CA83A"];
 const ROAD_W_TOP = 6;      // road half-width at VP
 const ROAD_W_BOT = 420;    // road half-width at bottom
+const SHOULDER_W_TOP = 9;  // shoulder half-width at VP
+const SHOULDER_W_BOT = 460; // shoulder half-width at bottom
 
 function InfiniteRoadSVG() {
   const bandH = (H - VP_Y) / BAND_COUNT;
@@ -56,10 +58,15 @@ function InfiniteRoadSVG() {
         })}
       </g>
 
+      {/* Grass shoulders */}
+      <polygon
+        points={`${VP_X - SHOULDER_W_TOP},${VP_Y} ${VP_X + SHOULDER_W_TOP},${VP_Y} ${VP_X + SHOULDER_W_BOT},${H} ${VP_X - SHOULDER_W_BOT},${H}`}
+        fill="#5A9E4B" />
+
       {/* Road surface */}
       <polygon
         points={`${VP_X - ROAD_W_TOP},${VP_Y} ${VP_X + ROAD_W_TOP},${VP_Y} ${VP_X + ROAD_W_BOT},${H} ${VP_X - ROAD_W_BOT},${H}`}
-        fill="#555555" />
+        fill="#888888" />
 
       {/* Road edge lines */}
       <line x1={VP_X - ROAD_W_TOP} y1={VP_Y} x2={VP_X - ROAD_W_BOT} y2={H} stroke="#ffffff" strokeWidth="4" />

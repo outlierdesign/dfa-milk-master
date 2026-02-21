@@ -50,7 +50,7 @@ function InfiniteRoadSVG() {
 
   useEffect(() => {
     let start: number | null = null;
-    const SCROLL_SPEED = 300; // pixels per second
+    const SCROLL_SPEED = 60; // pixels per second
     const tick = (ts: number) => {
       if (start === null) { start = ts; lastTsRef.current = ts; }
       const dt = (ts - lastTsRef.current) / 1000;

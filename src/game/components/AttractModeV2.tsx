@@ -44,13 +44,19 @@ function curveOffset(y: number, curveFactor: number) {
 
 function InfiniteRoadSVG() {
   const [curvePhase, setCurvePhase] = useState(0);
+  const [scrollOffset, setScrollOffset] = useState(0);
   const rafRef = useRef<number>(0);
+  const lastTsRef = useRef<number>(0);
 
   useEffect(() => {
     let start: number | null = null;
+    const SCROLL_SPEED = 300; // pixels per second
     const tick = (ts: number) => {
-      if (start === null) start = ts;
+      if (start === null) { start = ts; lastTsRef.current = ts; }
+      const dt = (ts - lastTsRef.current) / 1000;
+      lastTsRef.current = ts;
       setCurvePhase(((ts - start) % CURVE_PERIOD) / CURVE_PERIOD);
+      setScrollOffset(prev => prev + SCROLL_SPEED * dt);
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -130,18 +136,16 @@ function InfiniteRoadSVG() {
       {/* Horizon divider */}
       <rect x="0" y={HORIZON - 1} width={W} height={2} fill="#407020" />
 
-      {/* Animated scanline road */}
+      {/* Scanline road — scroll driven by RAF */}
       <g>
-        <animateTransform attributeName="transform" type="translate"
-          from="0 0" to={`0 ${SCANLINE_STEP * 2}`}
-          dur="0.10s" repeatCount="indefinite" />
-
         {scanlines.map((sl, i) => {
           const shoulderW = Math.floor(sl.roadW * SHOULDER_K);
-          // Perspective-scaled stripe: use cumulative distance for banding
           const t = (sl.y - HORIZON) / ROAD_LINES; // 0 at horizon, 1 at bottom
-          const stripeScale = 1 + t * t * 12; // grows quadratically toward foreground
-          const stripePhase = Math.floor(sl.y / stripeScale);
+          // Perspective-scaled stripe height: thin at horizon, wide at bottom
+          const stripeScale = 2 + t * t * 16;
+          // Scroll offset scaled by perspective — closer = moves faster
+          const perspScroll = scrollOffset * (0.1 + t * t * 2);
+          const stripePhase = Math.floor((sl.y + perspScroll) / stripeScale);
           const isEven = stripePhase % 2 === 0;
           const cx = CX + sl.xOff;
 

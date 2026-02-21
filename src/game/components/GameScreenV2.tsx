@@ -72,6 +72,7 @@ export function GameScreenV2({
     if (session.fillLocked) return { disabled: true, text: "STOPPED", style: "bg-slate-700 text-slate-500 cursor-not-allowed" };
     if (session.spillTriggered) return { disabled: true, text: "💥 OVERFILLED!", style: "bg-red-600 text-white cursor-not-allowed" };
     if (isFilling) return { disabled: false, text: "⏹ TAP TO STOP", style: "bg-red-600 hover:bg-red-500 text-white animate-pulse" };
+    if (!session.agitationComplete) return { disabled: false, text: "▶ TAP TO FILL", style: "bg-sky-600 hover:bg-sky-500 text-white active:scale-95" };
     return { disabled: false, text: "▶ TAP TO FILL", style: "bg-sky-600 hover:bg-sky-500 text-white active:scale-95" };
   };
 

@@ -16,6 +16,7 @@ export interface GameSessionV2 {
 
   // Round sub-phase
   roundPhase: RoundPhase;
+  agitationComplete: boolean; // whether agitation has finished for this round
 
   // Current round fill state (lbs)
   currentFill: number;
@@ -46,7 +47,8 @@ const createInitialSession = (): GameSessionV2 => ({
   totalRounds: 3,
   rounds: [],
   isFired: false,
-  roundPhase: "agitation",
+  roundPhase: "loading",
+  agitationComplete: false,
   currentFill: 0,
   currentFlowRate: 0,
   hasStartedFilling: false,
@@ -65,7 +67,8 @@ const createInitialSession = (): GameSessionV2 => ({
 
 const resetRoundState = (session: GameSessionV2, flowRate: number): GameSessionV2 => ({
   ...session,
-  roundPhase: "agitation",
+  roundPhase: "loading",
+  agitationComplete: false,
   currentFill: 0,
   currentFlowRate: flowRate,
   hasStartedFilling: false,
@@ -203,9 +206,9 @@ export function useGameStateV2(config: GameConfig) {
     }
   }, [isFilling, session.fillLocked]);
 
-  // Advance from agitation → loading
+  // Advance from agitation → loading (agitation complete, player can now fill)
   const advanceFromAgitation = useCallback(() => {
-    setSession((prev) => ({ ...prev, roundPhase: "loading" }));
+    setSession((prev) => ({ ...prev, roundPhase: "loading", agitationComplete: true }));
   }, []);
 
   // Start game from attract
@@ -213,15 +216,12 @@ export function useGameStateV2(config: GameConfig) {
     const initial = createInitialSession();
     initial.useWeighbridge = true;
     initial.currentFlowRate = getRandomFlowRate();
-    // Timer starts NOW (agitation start time)
-    initial.fillStartTime = performance.now();
-    initial.roundPhase = "agitation";
+    // Round starts in "loading" — agitation triggers on first tap
+    initial.roundPhase = "loading";
+    initial.agitationComplete = false;
     setSession(initial);
     setGameState("playing");
-
-    // Kick off the agitation countdown
-    startAgitationTimer(advanceFromAgitation);
-  }, [getRandomFlowRate, startAgitationTimer, advanceFromAgitation]);
+  }, [getRandomFlowRate]);
 
   // Complete pre-load questions
   const completeQuestions = useCallback(
@@ -231,25 +231,38 @@ export function useGameStateV2(config: GameConfig) {
         usePiperSampling,
         useWeighbridge,
         currentFlowRate: getRandomFlowRate(),
-        fillStartTime: performance.now(),
-        roundPhase: "agitation",
+        roundPhase: "loading",
+        agitationComplete: false,
       }));
       setGameState("playing");
-      startAgitationTimer(advanceFromAgitation);
     },
-    [getRandomFlowRate, startAgitationTimer, advanceFromAgitation]
+    [getRandomFlowRate]
   );
 
-  // Start filling — only works during loading phase
+  // Start filling — first tap triggers agitation, second tap (after agitation) starts filling
   const startFilling = useCallback(() => {
-    if (session.hasStartedFilling || session.fillLocked) return;
+    if (session.fillLocked) return;
     if (session.roundPhase !== "loading") return;
+
+    // If agitation hasn't happened yet, trigger it now
+    if (!session.agitationComplete) {
+      setSession((prev) => ({
+        ...prev,
+        roundPhase: "agitation",
+        fillStartTime: performance.now(),
+      }));
+      startAgitationTimer(advanceFromAgitation);
+      return;
+    }
+
+    // Agitation done — actually start filling
+    if (session.hasStartedFilling) return;
     setIsFilling(true);
     setSession((prev) => ({
       ...prev,
       hasStartedFilling: true,
     }));
-  }, [session.hasStartedFilling, session.fillLocked, session.roundPhase]);
+  }, [session.hasStartedFilling, session.fillLocked, session.roundPhase, session.agitationComplete, startAgitationTimer, advanceFromAgitation]);
 
   // Stop filling — locks permanently for this round
   const stopFilling = useCallback(() => {
@@ -360,11 +373,9 @@ export function useGameStateV2(config: GameConfig) {
           return prev;
         }
 
-        // Start the new round's agitation timer and set fillStartTime
-        const now = performance.now();
+        // New round starts in loading — agitation triggers on first tap
         setGameState("playing");
-        startAgitationTimer(advanceFromAgitation);
-        return { ...prev, fillStartTime: now };
+        return prev;
       });
     }, 0);
   }, [getRandomFlowRate, startAgitationTimer, advanceFromAgitation]);

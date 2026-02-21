@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-
+import milkTankerFullSvg from "@/assets/milk_tanker_full_v2.svg";
 interface WeighbridgeDepartureOverlayProps {
   onComplete: () => void;
   fillLbs?: number;
@@ -320,65 +320,11 @@ function DigitDrum({ targetDigit, delayMs, active }: { targetDigit: number; dela
 // ─── Mini pixel-art truck for the weighbridge scene ──────────────────────────
 function MiniPixelTruck() {
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 0, imageRendering: "pixelated" }}>
-      {/* Trailer */}
-      <div style={{ position: "relative", width: 200, height: 70 }}>
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, bottom: 18,
-          background: "linear-gradient(180deg, #cbd5e1 0%, #94a3b8 50%, #64748b 100%)",
-          border: "2px solid #475569",
-        }}>
-          {/* MILK label */}
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: "0.2em", color: "#1e293b" }}>MILK</span>
-          </div>
-          {/* Ribs */}
-          {[33, 66].map(p => <div key={p} style={{ position: "absolute", top: 0, bottom: 0, left: `${p}%`, width: 2, background: "#475569" }} />)}
-        </div>
-        {/* Wheels */}
-        <MiniWheel style={{ position: "absolute", bottom: 0, left: 20 }} />
-        <MiniWheel style={{ position: "absolute", bottom: 0, left: 50 }} />
-        <MiniWheel style={{ position: "absolute", bottom: 0, left: 130 }} />
-        <MiniWheel style={{ position: "absolute", bottom: 0, left: 160 }} />
-      </div>
-
-      {/* Coupling */}
-      <div style={{ width: 10, height: 8, background: "#475569", marginBottom: 18, border: "1px solid #334155" }} />
-
-      {/* Cab */}
-      <div style={{ position: "relative", width: 70, height: 70 }}>
-        <div style={{
-          position: "absolute", top: 5, left: 0, right: 0, bottom: 18,
-          background: "linear-gradient(180deg, #1e40af 0%, #1e3a8a 60%, #172554 100%)",
-          border: "2px solid #1e3a8a",
-        }}>
-          {/* Windscreen */}
-          <div style={{ position: "absolute", top: 4, left: 6, right: 10, height: 20, background: "#7dd3fc", border: "2px solid #0f172a" }} />
-          {/* Grille */}
-          <div style={{ position: "absolute", right: 0, top: 14, bottom: 4, width: 10, background: "#0f172a" }}>
-            {[0,1,2].map(i => <div key={i} style={{ height: 2, background: "#374151", marginBottom: 3, marginTop: 2 }} />)}
-          </div>
-          {/* Exhaust */}
-          <div style={{ position: "absolute", left: 4, top: -14, width: 5, height: 16, background: "#374151", border: "1px solid #475569" }} />
-        </div>
-        <MiniWheel style={{ position: "absolute", bottom: 0, left: 6 }} />
-        <MiniWheel style={{ position: "absolute", bottom: 0, left: 36 }} />
-      </div>
-    </div>
-  );
-}
-
-function MiniWheel({ style }: { style?: React.CSSProperties }) {
-  return (
-    <div style={{
-      ...style,
-      width: 20, height: 20,
-      background: "#0f172a",
-      border: "2px solid #334155",
-      clipPath: "polygon(25% 0%,75% 0%,100% 25%,100% 75%,75% 100%,25% 100%,0% 75%,0% 25%)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <div style={{ width: 7, height: 7, background: "#f97316", border: "1px solid #7c2d12", clipPath: "polygon(25% 0%,75% 0%,100% 25%,100% 75%,75% 100%,25% 100%,0% 75%,0% 25%)" }} />
-    </div>
+    <img
+      src={milkTankerFullSvg}
+      alt="Milk tanker"
+      style={{ width: 420, height: "auto", imageRendering: "auto" }}
+      draggable={false}
+    />
   );
 }

@@ -9,92 +9,161 @@ interface AttractModeV2Props {
   config: GameConfig;
 }
 
-/* ── Authentic NES-style 8-bit road scene ───────────────────── */
-const W = 320;             // arcade resolution width
-const H = 240;             // arcade resolution height
-const HORIZON = 100;       // horizon Y (~42% down)
-const CX = W / 2;          // center X
+/* ── 8-bit countryside road scene ────────────────────────────── */
+const W = 320;
+const H = 240;
+const HORIZON = 95;
+const CX = W / 2;
 
-// Strict 8-color palette
-const SKY_DEEP   = "#1a1c4a";
-const SKY_MID    = "#3a2f7a";
-const SKY_PINK   = "#c24ca3";
-const SUN_ORANGE = "#ff8a3c";
-const GREEN_A    = "#3cff3c";
-const GREEN_B    = "#0f8f0f";
-const ASPHALT    = "#2a2a2a";
-const ASPHALT_B  = "#222222";
-const HORIZON_C  = "#0a0a12";
-const DASH_COLOR = "#ffaa22";
+// Palette
+const SKY        = "#2a9d8f";
+const SKY_LIGHT  = "#40b5a6";
+const CLOUD_A    = "#e8c170";
+const CLOUD_B    = "#f0d090";
+const MTN_FAR    = "#3a8a7a";
+const MTN_MID    = "#2d7a6a";
+const MTN_NEAR   = "#1a5c4a";
+const TREE_DARK  = "#1a3a1a";
+const TREE_MID   = "#2d5a2a";
+const TREE_LIGHT = "#4a7a3a";
+const BUSH_A     = "#c89030";
+const BUSH_B     = "#a07020";
+const GRASS_A    = "#5a8a3a";
+const GRASS_B    = "#4a7a2a";
+const ASPHALT    = "#3a3a40";
+const ASPHALT_B  = "#333338";
+const ROAD_EDGE  = "#555560";
+const DASH_COL   = "#e0e0d0";
+const POST_COL   = "#6a5a4a";
 
-// Road half-width scaling constant
-const ROAD_K = 0.95;
-// Shoulder extends beyond road
-const SHOULDER_EXTRA = 0.35;
-
-// Scanline counts
-const ROAD_LINES = H - HORIZON;        // ~140 scanlines
-const STRIPE_BASE_H = 6;               // stripe height at horizon (pixels)
-const SCANLINE_STEP = 2;               // update width every 2px for stair-stepping
+const ROAD_K = 0.85;
+const SCANLINE_STEP = 2;
+const ROAD_LINES = H - HORIZON;
+const STRIPE_H = 5;
 
 function InfiniteRoadSVG() {
-  // Build sky bands (hard color bands, no gradients)
-  const skyBands = [
-    { y: 0,  h: 50, color: SKY_DEEP },
-    { y: 50, h: 30, color: SKY_MID },
-    { y: 80, h: 20, color: SKY_PINK },
-  ];
-
-  // Build road scanlines with perspective
-  // Each scanline: road rect + shoulder rects + stripe color
-  const scanlines: { y: number; roadW: number; stripeIdx: number }[] = [];
-  let accY = 0;
+  const scanlines: { y: number; roadW: number }[] = [];
   for (let y = HORIZON + 1; y < H; y += SCANLINE_STEP) {
     const dist = y - HORIZON;
-    const roadHW = Math.floor(ROAD_K * dist);
-    scanlines.push({ y, roadW: roadHW, stripeIdx: accY });
-    accY++;
+    scanlines.push({ y, roadW: Math.floor(ROAD_K * dist) });
   }
 
-  // Stripe height scales with perspective — use base stripe grouping
-  const stripeCount = Math.ceil(scanlines.length / STRIPE_BASE_H);
+  // Tree positions (x offsets from center, height multiplier)
+  const treesLeft = [
+    { x: -125, h: 80, w: 18 }, { x: -108, h: 95, w: 22 },
+    { x: -92, h: 70, w: 16 }, { x: -78, h: 85, w: 20 },
+    { x: -65, h: 60, w: 14 }, { x: -55, h: 50, w: 12 },
+  ];
+  const treesRight = [
+    { x: 125, h: 80, w: 18 }, { x: 108, h: 95, w: 22 },
+    { x: 92, h: 70, w: 16 }, { x: 78, h: 85, w: 20 },
+    { x: 65, h: 60, w: 14 }, { x: 55, h: 50, w: 12 },
+  ];
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" preserveAspectRatio="none"
       style={{ imageRendering: "pixelated" }}>
 
-      {/* Sky — hard color bands */}
-      {skyBands.map((b, i) => (
-        <rect key={`sky-${i}`} x="0" y={b.y} width={W} height={b.h} fill={b.color} />
+      {/* Sky */}
+      <rect x="0" y="0" width={W} height={HORIZON + 20} fill={SKY} />
+      <rect x="0" y="0" width={W} height={40} fill={SKY_LIGHT} />
+
+      {/* Pixel clouds */}
+      {[
+        { x: 40, y: 12, w: 35, h: 8 },
+        { x: 90, y: 18, w: 25, h: 6 },
+        { x: 200, y: 8, w: 40, h: 10 },
+        { x: 250, y: 20, w: 30, h: 7 },
+        { x: 140, y: 25, w: 20, h: 5 },
+      ].map((c, i) => (
+        <g key={`cloud-${i}`}>
+          <rect x={c.x} y={c.y} width={c.w} height={c.h} fill={CLOUD_A} />
+          <rect x={c.x + 2} y={c.y + 1} width={c.w - 4} height={c.h - 3} fill={CLOUD_B} />
+        </g>
       ))}
 
-      {/* Pixel sun — 16×16 circle, centered on horizon */}
-      <rect x={CX - 8} y={HORIZON - 14} width={16} height={12} fill={SUN_ORANGE} rx="0" />
-      <rect x={CX - 6} y={HORIZON - 16} width={12} height={2} fill="#ffc06e" />
+      {/* Distant mountains */}
+      <polygon points={`0,${HORIZON + 15} 60,55 120,${HORIZON + 10} 0,${HORIZON + 15}`} fill={MTN_FAR} />
+      <polygon points={`80,${HORIZON + 15} 140,45 200,${HORIZON + 10} 80,${HORIZON + 15}`} fill={MTN_MID} />
+      <polygon points={`170,${HORIZON + 15} 230,50 290,${HORIZON + 12} 170,${HORIZON + 15}`} fill={MTN_FAR} />
+      <polygon points={`250,${HORIZON + 15} 300,60 ${W},${HORIZON + 10} 250,${HORIZON + 15}`} fill={MTN_MID} />
+      {/* Near hills */}
+      <polygon points={`0,${HORIZON + 15} 80,${HORIZON - 5} 160,${HORIZON + 15}`} fill={MTN_NEAR} />
+      <polygon points={`160,${HORIZON + 15} 240,${HORIZON - 8} ${W},${HORIZON + 15}`} fill={MTN_NEAR} />
 
-      {/* Horizon line — 1px dark divider */}
-      <rect x="0" y={HORIZON} width={W} height={1} fill={HORIZON_C} />
+      {/* Tall cypress/pine trees — LEFT side */}
+      {treesLeft.map((t, i) => {
+        const tx = CX + t.x;
+        const baseY = HORIZON + 15;
+        const colors = [TREE_DARK, TREE_MID, TREE_LIGHT];
+        return (
+          <g key={`tl-${i}`}>
+            {/* Trunk */}
+            <rect x={tx - 1} y={baseY - t.h + 10} width={3} height={t.h - 8} fill="#2a1a0a" />
+            {/* Canopy — layered triangles */}
+            <polygon points={`${tx - t.w / 2},${baseY - 5} ${tx + t.w / 2},${baseY - 5} ${tx},${baseY - t.h}`}
+              fill={colors[i % 3]} />
+            <polygon points={`${tx - t.w / 2 + 2},${baseY - t.h * 0.4} ${tx + t.w / 2 - 2},${baseY - t.h * 0.4} ${tx},${baseY - t.h + 5}`}
+              fill={colors[(i + 1) % 3]} />
+          </g>
+        );
+      })}
 
-      {/* Animated shoulder stripes + road — wrapped in scrolling group */}
+      {/* Tall cypress/pine trees — RIGHT side */}
+      {treesRight.map((t, i) => {
+        const tx = CX + t.x;
+        const baseY = HORIZON + 15;
+        const colors = [TREE_DARK, TREE_MID, TREE_LIGHT];
+        return (
+          <g key={`tr-${i}`}>
+            <rect x={tx - 1} y={baseY - t.h + 10} width={3} height={t.h - 8} fill="#2a1a0a" />
+            <polygon points={`${tx - t.w / 2},${baseY - 5} ${tx + t.w / 2},${baseY - 5} ${tx},${baseY - t.h}`}
+              fill={colors[i % 3]} />
+            <polygon points={`${tx - t.w / 2 + 2},${baseY - t.h * 0.4} ${tx + t.w / 2 - 2},${baseY - t.h * 0.4} ${tx},${baseY - t.h + 5}`}
+              fill={colors[(i + 1) % 3]} />
+          </g>
+        );
+      })}
+
+      {/* Golden bushes / autumn scrub along roadside */}
+      {[...Array(10)].map((_, i) => {
+        const side = i < 5 ? -1 : 1;
+        const idx = i % 5;
+        const yOff = HORIZON + 8 + idx * 8;
+        const dist = yOff - HORIZON;
+        const roadW = Math.floor(ROAD_K * dist);
+        const edgeX = CX + side * (roadW + 8 + idx * 6);
+        return (
+          <g key={`bush-${i}`}>
+            <rect x={edgeX - 8} y={yOff - 4} width={16} height={8}
+              fill={idx % 2 === 0 ? BUSH_A : BUSH_B} />
+            <rect x={edgeX - 6} y={yOff - 6} width={12} height={4}
+              fill={idx % 2 === 0 ? BUSH_B : BUSH_A} />
+          </g>
+        );
+      })}
+
+      {/* Animated green field bands + road */}
       <g>
         <animateTransform attributeName="transform" type="translate"
           from="0 0" to={`0 ${SCANLINE_STEP * 2}`}
-          dur="0.12s" repeatCount="indefinite" />
+          dur="0.14s" repeatCount="indefinite" />
 
-        {/* Extra rows above for seamless scroll */}
         {scanlines.map((sl, i) => {
-          const shoulderW = Math.floor(sl.roadW * (1 + SHOULDER_EXTRA));
-          const stripeGroup = Math.floor((i) / STRIPE_BASE_H);
+          const shoulderW = Math.floor(sl.roadW * 1.4);
+          const stripeGroup = Math.floor(i / STRIPE_H);
           const isEven = stripeGroup % 2 === 0;
-          const greenColor = isEven ? GREEN_A : GREEN_B;
 
           return (
             <g key={`sl-${i}`}>
-              {/* Full-width green background for this scanline */}
-              <rect x="0" y={sl.y} width={W} height={SCANLINE_STEP} fill={greenColor} />
-              {/* Shoulder (slightly wider than road) */}
+              {/* Green field background */}
+              <rect x="0" y={sl.y} width={W} height={SCANLINE_STEP} fill={isEven ? GRASS_A : GRASS_B} />
+              {/* Road shoulder (slightly different green) */}
               <rect x={CX - shoulderW} y={sl.y} width={shoulderW * 2} height={SCANLINE_STEP}
-                fill={isEven ? GREEN_B : GREEN_A} />
+                fill={isEven ? GRASS_B : GRASS_A} />
+              {/* Road edge stripe */}
+              <rect x={CX - sl.roadW - 2} y={sl.y} width={4} height={SCANLINE_STEP} fill={ROAD_EDGE} />
+              <rect x={CX + sl.roadW - 2} y={sl.y} width={4} height={SCANLINE_STEP} fill={ROAD_EDGE} />
               {/* Road surface */}
               <rect x={CX - sl.roadW} y={sl.y} width={sl.roadW * 2} height={SCANLINE_STEP}
                 fill={i % 8 < 4 ? ASPHALT : ASPHALT_B} />
@@ -103,11 +172,18 @@ function InfiniteRoadSVG() {
         })}
       </g>
 
-      {/* Road edge lines (white) — static trapezoid lines */}
-      <line x1={CX} y1={HORIZON} x2={CX - Math.floor(ROAD_K * ROAD_LINES)} y2={H}
-        stroke="#ffffff" strokeWidth="1" />
-      <line x1={CX} y1={HORIZON} x2={CX + Math.floor(ROAD_K * ROAD_LINES)} y2={H}
-        stroke="#ffffff" strokeWidth="1" />
+      {/* Road posts */}
+      {[3, 8, 15, 25].map((idx, i) => {
+        if (idx >= scanlines.length) return null;
+        const sl = scanlines[idx];
+        const postH = 4 + idx * 0.3;
+        return (
+          <g key={`post-${i}`}>
+            <rect x={CX - sl.roadW - 6} y={sl.y - postH} width={2} height={postH} fill={POST_COL} />
+            <rect x={CX + sl.roadW + 4} y={sl.y - postH} width={2} height={postH} fill={POST_COL} />
+          </g>
+        );
+      })}
 
       {/* Centre dashes — animated */}
       <g>
@@ -118,11 +194,11 @@ function InfiniteRoadSVG() {
           const t = (i - 2) / 14;
           const y = HORIZON + t * ROAD_LINES;
           const dashH = (ROAD_LINES / 14) * 0.35;
-          const w = Math.max(1, Math.floor(1 + t * 4));
+          const w = Math.max(1, Math.floor(1 + t * 3));
           return (
             <rect key={`dash-${i}`} x={CX - Math.floor(w / 2)} y={y}
               width={w} height={dashH}
-              fill={DASH_COLOR} opacity={Math.min(1, 0.4 + t * 0.6)} />
+              fill={DASH_COL} opacity={Math.min(1, 0.4 + t * 0.6)} />
           );
         })}
       </g>

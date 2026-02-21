@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useSoundEffects } from "../hooks/useSoundEffects";
 import { SoundToggle } from "./SoundToggle";
 import { GameConfig } from "../constantsV2";
@@ -40,12 +41,36 @@ const ROAD_K = 0.85;
 const SCANLINE_STEP = 2;
 const ROAD_LINES = H - HORIZON;
 const STRIPE_H = 5;
+const CURVE_AMP = 0.0012;     // max curve intensity
+const CURVE_PERIOD = 4000;    // ms per full left-right-left cycle
+
+function curveOffset(y: number, curveFactor: number) {
+  const dist = y - HORIZON;
+  return Math.floor(curveFactor * dist * dist);
+}
 
 function InfiniteRoadSVG() {
-  const scanlines: { y: number; roadW: number }[] = [];
+  const [curvePhase, setCurvePhase] = useState(0);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    let start: number | null = null;
+    const tick = (ts: number) => {
+      if (start === null) start = ts;
+      setCurvePhase(((ts - start) % CURVE_PERIOD) / CURVE_PERIOD);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  // Sinusoidal curve factor: oscillates between -CURVE_AMP and +CURVE_AMP
+  const curveFactor = Math.sin(curvePhase * Math.PI * 2) * CURVE_AMP;
+
+  const scanlines: { y: number; roadW: number; xOff: number }[] = [];
   for (let y = HORIZON + 1; y < H; y += SCANLINE_STEP) {
     const dist = y - HORIZON;
-    scanlines.push({ y, roadW: Math.floor(ROAD_K * dist) });
+    scanlines.push({ y, roadW: Math.floor(ROAD_K * dist), xOff: curveOffset(y, curveFactor) });
   }
 
   // Tree positions (x offsets from center, height multiplier)
@@ -132,7 +157,8 @@ function InfiniteRoadSVG() {
         const yOff = HORIZON + 8 + idx * 8;
         const dist = yOff - HORIZON;
         const roadW = Math.floor(ROAD_K * dist);
-        const edgeX = CX + side * (roadW + 8 + idx * 6);
+        const bxOff = curveOffset(yOff, curveFactor);
+        const edgeX = CX + bxOff + side * (roadW + 8 + idx * 6);
         return (
           <g key={`bush-${i}`}>
             <rect x={edgeX - 8} y={yOff - 4} width={16} height={8}
@@ -159,13 +185,13 @@ function InfiniteRoadSVG() {
               {/* Green field background */}
               <rect x="0" y={sl.y} width={W} height={SCANLINE_STEP} fill={isEven ? GRASS_A : GRASS_B} />
               {/* Road shoulder (slightly different green) */}
-              <rect x={CX - shoulderW} y={sl.y} width={shoulderW * 2} height={SCANLINE_STEP}
+              <rect x={CX + sl.xOff - shoulderW} y={sl.y} width={shoulderW * 2} height={SCANLINE_STEP}
                 fill={isEven ? GRASS_B : GRASS_A} />
               {/* Road edge stripe */}
-              <rect x={CX - sl.roadW - 2} y={sl.y} width={4} height={SCANLINE_STEP} fill={ROAD_EDGE} />
-              <rect x={CX + sl.roadW - 2} y={sl.y} width={4} height={SCANLINE_STEP} fill={ROAD_EDGE} />
+              <rect x={CX + sl.xOff - sl.roadW - 2} y={sl.y} width={4} height={SCANLINE_STEP} fill={ROAD_EDGE} />
+              <rect x={CX + sl.xOff + sl.roadW - 2} y={sl.y} width={4} height={SCANLINE_STEP} fill={ROAD_EDGE} />
               {/* Road surface */}
-              <rect x={CX - sl.roadW} y={sl.y} width={sl.roadW * 2} height={SCANLINE_STEP}
+              <rect x={CX + sl.xOff - sl.roadW} y={sl.y} width={sl.roadW * 2} height={SCANLINE_STEP}
                 fill={i % 8 < 4 ? ASPHALT : ASPHALT_B} />
             </g>
           );
@@ -179,8 +205,8 @@ function InfiniteRoadSVG() {
         const postH = 4 + idx * 0.3;
         return (
           <g key={`post-${i}`}>
-            <rect x={CX - sl.roadW - 6} y={sl.y - postH} width={2} height={postH} fill={POST_COL} />
-            <rect x={CX + sl.roadW + 4} y={sl.y - postH} width={2} height={postH} fill={POST_COL} />
+            <rect x={CX + sl.xOff - sl.roadW - 6} y={sl.y - postH} width={2} height={postH} fill={POST_COL} />
+            <rect x={CX + sl.xOff + sl.roadW + 4} y={sl.y - postH} width={2} height={postH} fill={POST_COL} />
           </g>
         );
       })}
@@ -195,8 +221,9 @@ function InfiniteRoadSVG() {
           const y = HORIZON + t * ROAD_LINES;
           const dashH = (ROAD_LINES / 14) * 0.35;
           const w = Math.max(1, Math.floor(1 + t * 3));
+          const dashXOff = curveOffset(y, curveFactor);
           return (
-            <rect key={`dash-${i}`} x={CX - Math.floor(w / 2)} y={y}
+            <rect key={`dash-${i}`} x={CX + dashXOff - Math.floor(w / 2)} y={y}
               width={w} height={dashH}
               fill={DASH_COL} opacity={Math.min(1, 0.4 + t * 0.6)} />
           );

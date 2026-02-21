@@ -1,4 +1,4 @@
-import tankerSvg from "@/assets/milk_tanker.svg";
+import tankerSvg from "@/assets/milk_tanker_v2.svg";
 import { GameConfig } from "../constantsV2";
 
 interface TankerV2Props {
@@ -40,10 +40,10 @@ const SVG_H = 200;
 // Barrel opening bounds (pixels at SVG_W × SVG_H render size)
 // Tweak these if the fill doesn't align perfectly
 const BARREL = {
-  left: 42,
-  top: 46,
-  right: 186,
-  bottom: 96,
+  left: 10,
+  top: 30,
+  right: 170,
+  bottom: 70,
 };
 
 export function TankerV2({

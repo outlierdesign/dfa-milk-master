@@ -10,39 +10,32 @@ interface AttractModeV2Props {
   config: GameConfig;
 }
 
-/* ── 8-bit countryside road scene ────────────────────────────── */
-const W = 320;
+/* ── Top Gear / Outrun style road ────────────────────────────── */
+const W = 420;
 const H = 240;
-const HORIZON = 95;
+const HORIZON = 88;
 const CX = W / 2;
 
-// Palette
-const SKY        = "#2a9d8f";
-const SKY_LIGHT  = "#40b5a6";
-const CLOUD_A    = "#e8c170";
-const CLOUD_B    = "#f0d090";
-const MTN_FAR    = "#3a8a7a";
-const MTN_MID    = "#2d7a6a";
-const MTN_NEAR   = "#1a5c4a";
-const TREE_DARK  = "#1a3a1a";
-const TREE_MID   = "#2d5a2a";
-const TREE_LIGHT = "#4a7a3a";
-const BUSH_A     = "#c89030";
-const BUSH_B     = "#a07020";
-const GRASS_A    = "#5a8a3a";
-const GRASS_B    = "#4a7a2a";
-const ASPHALT    = "#3a3a40";
-const ASPHALT_B  = "#333338";
-const ROAD_EDGE  = "#555560";
-const DASH_COL   = "#e0e0d0";
-const POST_COL   = "#6a5a4a";
+// Palette — clean arcade style
+const SKY         = "#68c8f0";
+const SKY_TOP     = "#88d8ff";
+const CLOUD       = "#ffffff";
+const GRASS_A     = "#58a830";   // bright green
+const GRASS_B     = "#489020";   // dark green
+const SHOULDER_A  = "#a0a0a0";   // light grey shoulder
+const SHOULDER_B  = "#888888";   // dark grey shoulder
+const ROAD_A      = "#505058";   // road colour A
+const ROAD_B      = "#484850";   // road colour B (subtle stripe)
+const EDGE_WHITE  = "#e0e0e0";   // white road edge marks
+const DASH_COL    = "#e8a020";   // yellow/orange center dashes
 
-const ROAD_K = 0.85;
+const ROAD_K = 1.05;            // road half-width scaling
+const SHOULDER_K = 1.25;        // shoulder extends beyond road
 const SCANLINE_STEP = 2;
 const ROAD_LINES = H - HORIZON;
-const STRIPE_H = 5;
-const CURVE_AMP = 0.0012;     // max curve intensity
-const CURVE_PERIOD = 4000;    // ms per full left-right-left cycle
+const STRIPE_H = 4;             // scanlines per stripe band
+const CURVE_AMP = 0.0008;
+const CURVE_PERIOD = 5000;
 
 function curveOffset(y: number, curveFactor: number) {
   const dist = y - HORIZON;
@@ -64,7 +57,6 @@ function InfiniteRoadSVG() {
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
-  // Sinusoidal curve factor: oscillates between -CURVE_AMP and +CURVE_AMP
   const curveFactor = Math.sin(curvePhase * Math.PI * 2) * CURVE_AMP;
 
   const scanlines: { y: number; roadW: number; xOff: number }[] = [];
@@ -73,162 +65,106 @@ function InfiniteRoadSVG() {
     scanlines.push({ y, roadW: Math.floor(ROAD_K * dist), xOff: curveOffset(y, curveFactor) });
   }
 
-  // Tree positions (x offsets from center, height multiplier)
-  const treesLeft = [
-    { x: -125, h: 80, w: 18 }, { x: -108, h: 95, w: 22 },
-    { x: -92, h: 70, w: 16 }, { x: -78, h: 85, w: 20 },
-    { x: -65, h: 60, w: 14 }, { x: -55, h: 50, w: 12 },
-  ];
-  const treesRight = [
-    { x: 125, h: 80, w: 18 }, { x: 108, h: 95, w: 22 },
-    { x: 92, h: 70, w: 16 }, { x: 78, h: 85, w: 20 },
-    { x: 65, h: 60, w: 14 }, { x: 55, h: 50, w: 12 },
-  ];
-
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" preserveAspectRatio="none"
       style={{ imageRendering: "pixelated" }}>
 
-      {/* Sky */}
-      <rect x="0" y="0" width={W} height={HORIZON + 20} fill={SKY} />
-      <rect x="0" y="0" width={W} height={40} fill={SKY_LIGHT} />
+      {/* Sky — flat bands */}
+      <rect x="0" y="0" width={W} height={HORIZON} fill={SKY} />
+      <rect x="0" y="0" width={W} height={35} fill={SKY_TOP} />
 
       {/* Pixel clouds */}
       {[
-        { x: 40, y: 12, w: 35, h: 8 },
-        { x: 90, y: 18, w: 25, h: 6 },
-        { x: 200, y: 8, w: 40, h: 10 },
-        { x: 250, y: 20, w: 30, h: 7 },
-        { x: 140, y: 25, w: 20, h: 5 },
+        { x: 20, y: 8, w: 50, h: 14 },
+        { x: 85, y: 14, w: 35, h: 10 },
+        { x: 280, y: 6, w: 55, h: 16 },
+        { x: 350, y: 16, w: 40, h: 11 },
       ].map((c, i) => (
         <g key={`cloud-${i}`}>
-          <rect x={c.x} y={c.y} width={c.w} height={c.h} fill={CLOUD_A} />
-          <rect x={c.x + 2} y={c.y + 1} width={c.w - 4} height={c.h - 3} fill={CLOUD_B} />
+          <rect x={c.x} y={c.y + 3} width={c.w} height={c.h - 4} fill={CLOUD} />
+          <rect x={c.x + 4} y={c.y} width={c.w - 8} height={c.h} fill={CLOUD} />
         </g>
       ))}
 
-      {/* Distant mountains */}
-      <polygon points={`0,${HORIZON + 15} 60,55 120,${HORIZON + 10} 0,${HORIZON + 15}`} fill={MTN_FAR} />
-      <polygon points={`80,${HORIZON + 15} 140,45 200,${HORIZON + 10} 80,${HORIZON + 15}`} fill={MTN_MID} />
-      <polygon points={`170,${HORIZON + 15} 230,50 290,${HORIZON + 12} 170,${HORIZON + 15}`} fill={MTN_FAR} />
-      <polygon points={`250,${HORIZON + 15} 300,60 ${W},${HORIZON + 10} 250,${HORIZON + 15}`} fill={MTN_MID} />
-      {/* Near hills */}
-      <polygon points={`0,${HORIZON + 15} 80,${HORIZON - 5} 160,${HORIZON + 15}`} fill={MTN_NEAR} />
-      <polygon points={`160,${HORIZON + 15} 240,${HORIZON - 8} ${W},${HORIZON + 15}`} fill={MTN_NEAR} />
+      {/* Horizon divider */}
+      <rect x="0" y={HORIZON - 1} width={W} height={2} fill="#407020" />
 
-      {/* Tall cypress/pine trees — LEFT side */}
-      {treesLeft.map((t, i) => {
-        const tx = CX + t.x;
-        const baseY = HORIZON + 15;
-        const colors = [TREE_DARK, TREE_MID, TREE_LIGHT];
-        return (
-          <g key={`tl-${i}`}>
-            {/* Trunk */}
-            <rect x={tx - 1} y={baseY - t.h + 10} width={3} height={t.h - 8} fill="#2a1a0a" />
-            {/* Canopy — layered triangles */}
-            <polygon points={`${tx - t.w / 2},${baseY - 5} ${tx + t.w / 2},${baseY - 5} ${tx},${baseY - t.h}`}
-              fill={colors[i % 3]} />
-            <polygon points={`${tx - t.w / 2 + 2},${baseY - t.h * 0.4} ${tx + t.w / 2 - 2},${baseY - t.h * 0.4} ${tx},${baseY - t.h + 5}`}
-              fill={colors[(i + 1) % 3]} />
-          </g>
-        );
-      })}
-
-      {/* Tall cypress/pine trees — RIGHT side */}
-      {treesRight.map((t, i) => {
-        const tx = CX + t.x;
-        const baseY = HORIZON + 15;
-        const colors = [TREE_DARK, TREE_MID, TREE_LIGHT];
-        return (
-          <g key={`tr-${i}`}>
-            <rect x={tx - 1} y={baseY - t.h + 10} width={3} height={t.h - 8} fill="#2a1a0a" />
-            <polygon points={`${tx - t.w / 2},${baseY - 5} ${tx + t.w / 2},${baseY - 5} ${tx},${baseY - t.h}`}
-              fill={colors[i % 3]} />
-            <polygon points={`${tx - t.w / 2 + 2},${baseY - t.h * 0.4} ${tx + t.w / 2 - 2},${baseY - t.h * 0.4} ${tx},${baseY - t.h + 5}`}
-              fill={colors[(i + 1) % 3]} />
-          </g>
-        );
-      })}
-
-      {/* Golden bushes / autumn scrub along roadside */}
-      {[...Array(10)].map((_, i) => {
-        const side = i < 5 ? -1 : 1;
-        const idx = i % 5;
-        const yOff = HORIZON + 8 + idx * 8;
-        const dist = yOff - HORIZON;
-        const roadW = Math.floor(ROAD_K * dist);
-        const bxOff = curveOffset(yOff, curveFactor);
-        const edgeX = CX + bxOff + side * (roadW + 8 + idx * 6);
-        return (
-          <g key={`bush-${i}`}>
-            <rect x={edgeX - 8} y={yOff - 4} width={16} height={8}
-              fill={idx % 2 === 0 ? BUSH_A : BUSH_B} />
-            <rect x={edgeX - 6} y={yOff - 6} width={12} height={4}
-              fill={idx % 2 === 0 ? BUSH_B : BUSH_A} />
-          </g>
-        );
-      })}
-
-      {/* Animated green field bands + road */}
+      {/* Animated scanline road */}
       <g>
         <animateTransform attributeName="transform" type="translate"
           from="0 0" to={`0 ${SCANLINE_STEP * 2}`}
-          dur="0.14s" repeatCount="indefinite" />
+          dur="0.10s" repeatCount="indefinite" />
 
         {scanlines.map((sl, i) => {
-          const shoulderW = Math.floor(sl.roadW * 1.4);
+          const shoulderW = Math.floor(sl.roadW * SHOULDER_K);
           const stripeGroup = Math.floor(i / STRIPE_H);
           const isEven = stripeGroup % 2 === 0;
+          const cx = CX + sl.xOff;
 
           return (
             <g key={`sl-${i}`}>
-              {/* Green field background */}
-              <rect x="0" y={sl.y} width={W} height={SCANLINE_STEP} fill={isEven ? GRASS_A : GRASS_B} />
-              {/* Road shoulder (slightly different green) */}
-              <rect x={CX + sl.xOff - shoulderW} y={sl.y} width={shoulderW * 2} height={SCANLINE_STEP}
-                fill={isEven ? GRASS_B : GRASS_A} />
-              {/* Road edge stripe */}
-              <rect x={CX + sl.xOff - sl.roadW - 2} y={sl.y} width={4} height={SCANLINE_STEP} fill={ROAD_EDGE} />
-              <rect x={CX + sl.xOff + sl.roadW - 2} y={sl.y} width={4} height={SCANLINE_STEP} fill={ROAD_EDGE} />
+              {/* Green field */}
+              <rect x="0" y={sl.y} width={W} height={SCANLINE_STEP}
+                fill={isEven ? GRASS_A : GRASS_B} />
+              {/* Grey shoulder */}
+              <rect x={cx - shoulderW} y={sl.y} width={shoulderW * 2} height={SCANLINE_STEP}
+                fill={isEven ? SHOULDER_A : SHOULDER_B} />
               {/* Road surface */}
-              <rect x={CX + sl.xOff - sl.roadW} y={sl.y} width={sl.roadW * 2} height={SCANLINE_STEP}
-                fill={i % 8 < 4 ? ASPHALT : ASPHALT_B} />
+              <rect x={cx - sl.roadW} y={sl.y} width={sl.roadW * 2} height={SCANLINE_STEP}
+                fill={isEven ? ROAD_A : ROAD_B} />
+              {/* White edge marks (alternating) */}
+              {isEven && (
+                <>
+                  <rect x={cx - sl.roadW - 1} y={sl.y} width={3} height={SCANLINE_STEP} fill={EDGE_WHITE} />
+                  <rect x={cx + sl.roadW - 2} y={sl.y} width={3} height={SCANLINE_STEP} fill={EDGE_WHITE} />
+                </>
+              )}
             </g>
           );
         })}
       </g>
 
-      {/* Road posts */}
-      {[3, 8, 15, 25].map((idx, i) => {
-        if (idx >= scanlines.length) return null;
-        const sl = scanlines[idx];
-        const postH = 4 + idx * 0.3;
-        return (
-          <g key={`post-${i}`}>
-            <rect x={CX + sl.xOff - sl.roadW - 6} y={sl.y - postH} width={2} height={postH} fill={POST_COL} />
-            <rect x={CX + sl.xOff + sl.roadW + 4} y={sl.y - postH} width={2} height={postH} fill={POST_COL} />
-          </g>
-        );
-      })}
-
-      {/* Centre dashes — animated */}
+      {/* Centre dashes — animated orange/yellow */}
       <g>
         <animateTransform attributeName="transform" type="translate"
-          from="0 0" to={`0 ${ROAD_LINES / 14}`}
-          dur="0.25s" repeatCount="indefinite" />
-        {Array.from({ length: 18 }).map((_, i) => {
-          const t = (i - 2) / 14;
+          from="0 0" to={`0 ${ROAD_LINES / 12}`}
+          dur="0.18s" repeatCount="indefinite" />
+        {Array.from({ length: 16 }).map((_, i) => {
+          const t = (i - 2) / 12;
           const y = HORIZON + t * ROAD_LINES;
-          const dashH = (ROAD_LINES / 14) * 0.35;
-          const w = Math.max(1, Math.floor(1 + t * 3));
-          const dashXOff = curveOffset(y, curveFactor);
+          const dashH = (ROAD_LINES / 12) * 0.4;
+          const w = Math.max(1, Math.floor(2 + t * 5));
+          const dxOff = curveOffset(y, curveFactor);
           return (
-            <rect key={`dash-${i}`} x={CX + dashXOff - Math.floor(w / 2)} y={y}
+            <rect key={`dash-${i}`} x={CX + dxOff - Math.floor(w / 2)} y={y}
               width={w} height={dashH}
-              fill={DASH_COL} opacity={Math.min(1, 0.4 + t * 0.6)} />
+              fill={DASH_COL} opacity={Math.min(1, 0.3 + t * 0.7)} />
           );
         })}
       </g>
+
+      {/* Lane divider dashes — left and right of center */}
+      {[-0.35, 0.35].map((laneOffset, li) => (
+        <g key={`lane-${li}`}>
+          <animateTransform attributeName="transform" type="translate"
+            from="0 0" to={`0 ${ROAD_LINES / 12}`}
+            dur="0.18s" repeatCount="indefinite" />
+          {Array.from({ length: 16 }).map((_, i) => {
+            const t = (i - 2) / 12;
+            const y = HORIZON + t * ROAD_LINES;
+            const dashH = (ROAD_LINES / 12) * 0.3;
+            const dist = y - HORIZON;
+            const roadW = Math.floor(ROAD_K * dist);
+            const laneX = CX + curveOffset(y, curveFactor) + Math.floor(roadW * laneOffset);
+            const w = Math.max(1, Math.floor(1 + t * 3));
+            return (
+              <rect key={`ld-${li}-${i}`} x={laneX - Math.floor(w / 2)} y={y}
+                width={w} height={dashH}
+                fill={DASH_COL} opacity={Math.min(1, 0.2 + t * 0.6)} />
+            );
+          })}
+        </g>
+      ))}
     </svg>
   );
 }

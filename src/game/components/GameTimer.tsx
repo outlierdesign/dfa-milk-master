@@ -92,15 +92,7 @@ export function GameTimer({ fillStartTime, isFilling, usePiperSampling, useWeigh
       <div className={`text-xl md:text-3xl font-mono font-bold text-center ${timeStyles[timerState]}`}>
         {formatTime(elapsedTime)}
       </div>
-      {hasPenalties && roundPhase === "loading" && (
-        <div className="hidden md:block mt-2 pt-2 border-t border-slate-600/50">
-          <div className="text-xs text-amber-400 flex items-center justify-center gap-1 mb-1"><span>⚠️</span><span>PENDING:</span></div>
-          <div className="flex flex-col gap-0.5 text-xs">
-            {!usePiperSampling && <div className="flex justify-between text-amber-300/80"><span>Agitation</span><span className="font-mono">{formatPenalty(agitationPenalty)}</span></div>}
-            {useWeighbridge && <div className="flex justify-between text-amber-300/80"><span>Weighbridge</span><span className="font-mono">{formatPenalty(weighbridgePenalty)}</span></div>}
-          </div>
-        </div>
-      )}
+      {/* Penalties still calculated but hidden visually */}
     </div>
   );
 }

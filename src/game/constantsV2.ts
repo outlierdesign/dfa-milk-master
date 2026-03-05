@@ -20,6 +20,7 @@ export const GAME_DEFAULTS = {
   // Time Penalties (minutes)
   agitationMinutes: 20,
   weighScaleMinutes: 15,
+  agitationRealDurationMs: 5_000, // real-world ms the agitation lasts (timer shows agitationMinutes)
 
   // Flow Mechanics (lbs/min)
   flowRateLbsPerMin: 4_167,
@@ -57,6 +58,7 @@ export interface GameSettings {
   driverRatePerHour: number;
   agitationMinutes: number;
   weighScaleMinutes: number;
+  agitationRealDurationMs: number;
   flowRateLbsPerMin: number;
   flowJitterPercent: number;
   stopAutomaticallyAtMaxOverfill: boolean;
@@ -94,6 +96,7 @@ export interface GameConfig {
   // Time
   agitationMinutes: number;
   weighScaleMinutes: number;
+  agitationRealDurationMs: number;
 
   // Flow (lbs/min)
   flowRateLbsPerMin: number;
@@ -133,6 +136,7 @@ export function settingsToConfig(s: GameSettings): GameConfig {
     driverRatePerHour: s.driverRatePerHour,
     agitationMinutes: s.agitationMinutes,
     weighScaleMinutes: s.weighScaleMinutes,
+    agitationRealDurationMs: (s as any).agitationRealDurationMs ?? 5000,
     flowRateLbsPerMin: s.flowRateLbsPerMin,
     flowJitterPercent: s.flowJitterPercent,
     stopAutomaticallyAtMaxOverfill: s.stopAutomaticallyAtMaxOverfill,

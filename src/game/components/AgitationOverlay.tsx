@@ -11,10 +11,9 @@ export function AgitationOverlay({ config, startTime }: AgitationOverlayProps) {
   const [progressPercent, setProgressPercent] = useState(0);
   const [elapsedSimMins, setElapsedSimMins] = useState(0);
 
-  const speedMultiplier = config.gameSpeedMultiplier || 1;
   const totalSimMins = config.agitationMinutes;
-  // Total real milliseconds the agitation lasts
-  const totalRealMs = (totalSimMins / speedMultiplier) * 60 * 1000;
+  // Use the fixed real-world duration from config
+  const totalRealMs = config.agitationRealDurationMs || 5000;
 
   useEffect(() => {
     if (!startTime) return;

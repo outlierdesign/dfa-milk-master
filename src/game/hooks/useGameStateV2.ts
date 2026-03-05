@@ -103,9 +103,7 @@ export function useGameStateV2(config: GameConfig) {
   const startAgitationTimer = useCallback((onComplete: () => void) => {
     if (agitationTimerRef.current) clearTimeout(agitationTimerRef.current);
     const cfg = configRef.current;
-    const speedMultiplier = cfg.gameSpeedMultiplier || 1;
-    // agitationMinutes of simulated time → real ms = (agitationMinutes / speedMultiplier) * 60 * 1000
-    const realMs = (cfg.agitationMinutes / speedMultiplier) * 60 * 1000;
+    const realMs = cfg.agitationRealDurationMs || 5000;
     agitationTimerRef.current = window.setTimeout(onComplete, realMs);
   }, []);
 

@@ -120,9 +120,13 @@ export function FillTheTank() {
       {gameState === "leadCapture" && (
         <LeadCaptureScreen
           gameResults={handleLeadCaptureResults()}
-          onSubmit={(name) => { if (name) setPlayerName(name); showResults(); }}
-          onSkip={showResults}
+          onSubmit={(name) => { if (name) setPlayerName(name); showSavingsReveal(); }}
+          onSkip={showSavingsReveal}
         />
+      )}
+
+      {gameState === "savingsReveal" && (
+        <SavingsRevealScreen onComplete={showResults} />
       )}
 
       {gameState === "results" && (

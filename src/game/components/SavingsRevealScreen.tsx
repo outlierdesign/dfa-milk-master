@@ -1,29 +1,52 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 
-interface SavingsRevealScreenProps {
+export interface SavingsCosts {
+  underfillCost: number;
+  spillCost: number;
+  agitationCost: number;
+  weighbridgeCost: number;
+  currency: string;
+}
+
+interface SavingsRevealPopupProps {
+  costs: SavingsCosts;
   onComplete: () => void;
 }
 
-const STACKS = [
-  { label: "Milk Agitation Time", desc: "Lost time and energy spent mixing slurry." },
-  { label: "Trips to the Weighbridge", desc: "Transport time and administrative inefficiency." },
-  { label: "Fuel & Machine Wear", desc: "Extra tractor and pump usage." },
-  { label: "Labour Hours", desc: "Manual handling and time lost." },
+const STACKS_META = [
+  { key: "agitationCost" as const, label: "Agitation Time", desc: "Lost time mixing slurry each load." },
+  { key: "weighbridgeCost" as const, label: "Weighbridge Trips", desc: "Transport & admin inefficiency." },
+  { key: "underfillCost" as const, label: "Underfill Penalty", desc: "Extra loads to meet quota." },
+  { key: "spillCost" as const, label: "Overfill / Spill", desc: "Wasted milk from overfilling." },
 ];
 
-const AMOUNT_PER_STACK = 10_000;
-const TOTAL = STACKS.length * AMOUNT_PER_STACK;
+export function SavingsRevealPopup({ costs, onComplete }: SavingsRevealPopupProps) {
+  const stacks = STACKS_META.map((s) => ({
+    ...s,
+    amount: costs[s.key],
+  })).filter((s) => s.amount > 0);
 
-export function SavingsRevealScreen({ onComplete }: SavingsRevealScreenProps) {
-  const [activated, setActivated] = useState<boolean[]>([false, false, false, false]);
-  const [flyingBills, setFlyingBills] = useState<{ id: number; stackIdx: number }[]>([]);
+  // If no costs, skip
+  useEffect(() => {
+    if (stacks.length === 0) {
+      const t = setTimeout(onComplete, 500);
+      return () => clearTimeout(t);
+    }
+  }, [stacks.length, onComplete]);
+
+  const total = stacks.reduce((s, st) => s + st.amount, 0);
+  const [activated, setActivated] = useState<boolean[]>(() => stacks.map(() => false));
   const [showFinalMessage, setShowFinalMessage] = useState(false);
+  const [flyingBills, setFlyingBills] = useState<{ id: number; stackIdx: number }[]>([]);
   const billIdRef = useRef(0);
   const completedRef = useRef(false);
 
   const activatedCount = activated.filter(Boolean).length;
-  const remaining = TOTAL - activatedCount * AMOUNT_PER_STACK;
-  const allDone = activatedCount === STACKS.length;
+  const savedAmount = stacks.reduce((s, st, i) => s + (activated[i] ? st.amount : 0), 0);
+  const remaining = total - savedAmount;
+  const allDone = activatedCount === stacks.length && stacks.length > 0;
+
+  const fmt = (n: number) => Math.round(n).toLocaleString();
 
   const handleSwitch = useCallback((idx: number) => {
     if (activated[idx]) return;
@@ -32,169 +55,158 @@ export function SavingsRevealScreen({ onComplete }: SavingsRevealScreenProps) {
       next[idx] = true;
       return next;
     });
-
-    // Spawn flying bills
-    const newBills = Array.from({ length: 6 }, (_, i) => ({
+    const newBills = Array.from({ length: 6 }, () => ({
       id: billIdRef.current++,
       stackIdx: idx,
     }));
     setFlyingBills((prev) => [...prev, ...newBills]);
-
-    // Clean up bills after animation
     setTimeout(() => {
       setFlyingBills((prev) => prev.filter((b) => !newBills.find((nb) => nb.id === b.id)));
     }, 1200);
   }, [activated]);
 
-  // Auto-transition after all switches activated
   useEffect(() => {
     if (allDone && !completedRef.current) {
       completedRef.current = true;
       setShowFinalMessage(true);
-      const timer = setTimeout(onComplete, 3000);
+      const timer = setTimeout(onComplete, 4000);
       return () => clearTimeout(timer);
     }
   }, [allDone, onComplete]);
 
+  if (stacks.length === 0) return null;
+
   return (
-    <div className="w-full h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden select-none">
-      {/* Title */}
-      <div className="text-center mb-6 z-10">
-        <h1
-          className="text-3xl md:text-4xl font-bold tracking-wider mb-1"
-          style={{ fontFamily: "'Courier New', monospace", color: "#fbbf24", textShadow: "0 0 20px rgba(251,191,36,0.5)" }}
-        >
-          SWITCH ON TO PIPER
-        </h1>
-        <p className="text-slate-400 text-sm md:text-base">Flip the switches to recover your hidden costs</p>
-      </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="relative w-full max-w-4xl mx-4 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 rounded-2xl border border-amber-700/50 p-6 md:p-8 shadow-2xl overflow-hidden select-none">
+        {/* Title */}
+        <div className="text-center mb-6">
+          <h2
+            className="text-2xl md:text-3xl font-bold tracking-wider mb-1"
+            style={{ fontFamily: "'Courier New', monospace", color: "#fbbf24", textShadow: "0 0 20px rgba(251,191,36,0.5)" }}
+          >
+            SWITCH ON TO PIPER
+          </h2>
+          <p className="text-slate-400 text-sm">Flip the switches to recover your annual hidden costs</p>
+        </div>
 
-      {/* Main content area */}
-      <div className="flex items-end justify-center gap-4 md:gap-8 w-full max-w-5xl px-4 z-10">
-        {/* Four stacks */}
-        {STACKS.map((stack, idx) => (
-          <div key={idx} className="flex flex-col items-center gap-3 flex-1 max-w-[180px]">
-            {/* Cash stack */}
-            <div className={`relative transition-all duration-500 ${activated[idx] ? "opacity-0 scale-75 -translate-y-4" : "opacity-100"}`}>
-              <CashStack amount={AMOUNT_PER_STACK} />
+        {/* Stacks + Switches */}
+        <div className="flex items-end justify-center gap-4 md:gap-6 mb-6">
+          {stacks.map((stack, idx) => (
+            <div key={stack.key} className="flex flex-col items-center gap-2 flex-1 max-w-[180px]">
+              {/* Cash stack */}
+              <div className={`relative transition-all duration-500 ${activated[idx] ? "opacity-0 scale-75 -translate-y-4" : "opacity-100"}`}>
+                <CashStack amount={stack.amount} currency={costs.currency} />
+              </div>
+
+              {/* Label */}
+              <div className="text-center min-h-[48px]">
+                <p className="text-xs md:text-sm font-bold text-amber-400" style={{ fontFamily: "'Courier New', monospace" }}>
+                  {stack.label}
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">{stack.desc}</p>
+              </div>
+
+              {/* Switch */}
+              <IndustrialSwitch isOn={activated[idx]} onToggle={() => handleSwitch(idx)} />
+
+              {/* Caption */}
+              {activated[idx] && (
+                <p className="text-[10px] text-emerald-400 text-center animate-fade-in" style={{ fontFamily: "'Courier New', monospace" }}>
+                  {costs.currency}{fmt(stack.amount)} saved!
+                </p>
+              )}
             </div>
+          ))}
 
-            {/* Label */}
-            <div className="text-center min-h-[60px]">
-              <p className="text-xs md:text-sm font-bold text-amber-400" style={{ fontFamily: "'Courier New', monospace" }}>
-                {stack.label}
-              </p>
-              <p className="text-[10px] md:text-xs text-slate-500 mt-1">{stack.desc}</p>
-            </div>
-
-            {/* Switch */}
-            <IndustrialSwitch isOn={activated[idx]} onToggle={() => handleSwitch(idx)} />
-
-            {/* Caption */}
-            {activated[idx] && (
-              <p
-                className="text-[10px] md:text-xs text-emerald-400 text-center animate-fade-in"
-                style={{ fontFamily: "'Courier New', monospace" }}
-              >
-                Money back in your pocket!
-              </p>
-            )}
+          {/* Tanker */}
+          <div className="flex flex-col items-center ml-2 md:ml-6">
+            <TankerIcon fillLevel={stacks.length > 0 ? activatedCount / stacks.length : 0} />
           </div>
+        </div>
+
+        {/* Flying bills */}
+        {flyingBills.map((bill) => (
+          <FlyingBill key={bill.id} stackIdx={bill.stackIdx} totalStacks={stacks.length} />
         ))}
 
-        {/* Tanker */}
-        <div className="flex flex-col items-center ml-4 md:ml-8">
-          <div className={`relative transition-all duration-700 ${allDone ? "scale-105" : ""}`}>
-            <TankerIcon fillLevel={activatedCount / STACKS.length} />
-          </div>
-        </div>
-      </div>
-
-      {/* Flying bills */}
-      {flyingBills.map((bill) => (
-        <FlyingBill key={bill.id} stackIdx={bill.stackIdx} />
-      ))}
-
-      {/* Counter */}
-      <div className="mt-8 z-10">
-        <div
-          className="text-4xl md:text-5xl font-bold tabular-nums"
-          style={{
-            fontFamily: "'Courier New', monospace",
-            color: remaining > 0 ? "#ef4444" : "#22c55e",
-            textShadow: `0 0 30px ${remaining > 0 ? "rgba(239,68,68,0.5)" : "rgba(34,197,94,0.6)"}`,
-            transition: "color 0.5s, text-shadow 0.5s",
-          }}
-        >
-          ${remaining.toLocaleString()}
-        </div>
-        <p className="text-slate-500 text-xs text-center mt-1" style={{ fontFamily: "'Courier New', monospace" }}>
-          ANNUAL HIDDEN COSTS
-        </p>
-      </div>
-
-      {/* Final message */}
-      {showFinalMessage && (
-        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+        {/* Counter */}
+        <div className="text-center">
           <div
-            className="bg-slate-900/90 border-2 border-emerald-400 rounded-lg px-8 py-6 text-center animate-scale-in"
-            style={{ boxShadow: "0 0 60px rgba(34,197,94,0.4)" }}
+            className="text-3xl md:text-4xl font-bold tabular-nums"
+            style={{
+              fontFamily: "'Courier New', monospace",
+              color: remaining > 0 ? "#ef4444" : "#22c55e",
+              textShadow: `0 0 30px ${remaining > 0 ? "rgba(239,68,68,0.4)" : "rgba(34,197,94,0.5)"}`,
+              transition: "color 0.5s",
+            }}
           >
-            <p className="text-2xl md:text-3xl font-bold text-emerald-400 mb-2" style={{ fontFamily: "'Courier New', monospace" }}>
-              🎉 YOU SAVED $40,000/YEAR
-            </p>
-            <p className="text-slate-400 text-sm">with Piper Slurry Management</p>
+            {costs.currency}{fmt(remaining)}
           </div>
+          <p className="text-slate-500 text-xs mt-1" style={{ fontFamily: "'Courier New', monospace" }}>
+            ANNUAL HIDDEN COSTS
+          </p>
         </div>
-      )}
 
-      <style>{`
-        @keyframes flyToBill {
-          0% { opacity: 1; transform: translate(0, 0) scale(1); }
-          50% { opacity: 0.8; transform: translate(var(--tx), -60px) scale(0.8); }
-          100% { opacity: 0; transform: translate(var(--tx2), var(--ty)) scale(0.3); }
-        }
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes scale-in {
-          from { opacity: 0; transform: scale(0.8); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
-        .animate-scale-in { animation: scale-in 0.5s ease-out forwards; }
-      `}</style>
+        {/* Final message overlay */}
+        {showFinalMessage && (
+          <div className="absolute inset-0 flex items-center justify-center z-20 bg-slate-900/80 rounded-2xl">
+            <div
+              className="border-2 border-emerald-400 rounded-lg px-8 py-6 text-center animate-scale-in"
+              style={{ boxShadow: "0 0 60px rgba(34,197,94,0.4)" }}
+            >
+              <p className="text-xl md:text-2xl font-bold text-emerald-400 mb-2" style={{ fontFamily: "'Courier New', monospace" }}>
+                🎉 YOU SAVED {costs.currency}{fmt(total)}/YEAR
+              </p>
+              <p className="text-slate-400 text-sm">with Piper Slurry Management</p>
+            </div>
+          </div>
+        )}
+
+        <style>{`
+          @keyframes flyToBill {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            50% { opacity: 0.8; transform: translate(var(--tx), -60px) scale(0.8); }
+            100% { opacity: 0; transform: translate(var(--tx2), var(--ty)) scale(0.3); }
+          }
+          @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes scale-in { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+          .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
+          .animate-scale-in { animation: scale-in 0.5s ease-out forwards; }
+        `}</style>
+      </div>
     </div>
   );
 }
 
 /* ---- Sub-components ---- */
 
-function CashStack({ amount }: { amount: number }) {
+function CashStack({ amount, currency }: { amount: number; currency: string }) {
+  const billCount = Math.min(Math.max(3, Math.ceil(amount / 5000)), 6);
   return (
     <div className="flex flex-col items-center">
-      {/* Stack of pixel bills */}
       <div className="relative">
-        {[0, 1, 2, 3, 4].map((i) => (
+        {Array.from({ length: billCount }, (_, i) => (
           <div
             key={i}
-            className="w-16 h-4 md:w-20 md:h-5 rounded-sm border border-green-800"
+            className="w-14 h-3.5 md:w-18 md:h-4 rounded-sm border border-green-800"
             style={{
               background: `linear-gradient(135deg, #22c55e ${i * 5}%, #16a34a)`,
               marginTop: i === 0 ? 0 : -2,
               transform: `translateX(${(i % 2 === 0 ? 1 : -1) * 2}px)`,
               boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), 0 1px 2px rgba(0,0,0,0.3)",
+              width: "3.5rem",
+              height: "0.875rem",
             }}
           >
-            <span className="text-[8px] md:text-[10px] text-green-900 font-bold flex items-center justify-center h-full" style={{ fontFamily: "'Courier New', monospace" }}>
-              $$$
+            <span className="text-[7px] md:text-[9px] text-green-900 font-bold flex items-center justify-center h-full" style={{ fontFamily: "'Courier New', monospace" }}>
+              {currency}{currency}{currency}
             </span>
           </div>
         ))}
       </div>
-      <span className="text-xs font-bold text-green-400 mt-2" style={{ fontFamily: "'Courier New', monospace" }}>
-        ${amount.toLocaleString()}
+      <span className="text-[10px] font-bold text-green-400 mt-1.5" style={{ fontFamily: "'Courier New', monospace" }}>
+        {currency}{Math.round(amount).toLocaleString()}
       </span>
     </div>
   );
@@ -205,7 +217,7 @@ function IndustrialSwitch({ isOn, onToggle }: { isOn: boolean; onToggle: () => v
     <button
       onClick={onToggle}
       disabled={isOn}
-      className="relative w-14 h-24 md:w-16 md:h-28 rounded-md focus:outline-none transition-transform active:scale-95"
+      className="relative w-12 h-20 md:w-14 md:h-24 rounded-md focus:outline-none transition-transform active:scale-95"
       style={{
         background: "linear-gradient(180deg, #6b7280, #374151, #1f2937)",
         border: "2px solid #4b5563",
@@ -213,36 +225,28 @@ function IndustrialSwitch({ isOn, onToggle }: { isOn: boolean; onToggle: () => v
         cursor: isOn ? "default" : "pointer",
       }}
     >
-      {/* Switch track */}
-      <div className="absolute inset-x-2 inset-y-3 rounded-sm" style={{ background: "#111827", border: "1px solid #374151" }}>
-        {/* Indicator light */}
+      <div className="absolute inset-x-1.5 inset-y-2 rounded-sm" style={{ background: "#111827", border: "1px solid #374151" }}>
         <div
-          className="absolute top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full transition-all duration-300"
+          className="absolute top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full transition-all duration-300"
           style={{
             background: isOn ? "#22c55e" : "#374151",
             boxShadow: isOn ? "0 0 12px #22c55e" : "none",
           }}
         />
-
-        {/* Switch handle */}
         <div
-          className="absolute left-1/2 -translate-x-1/2 w-8 h-8 md:w-10 md:h-10 rounded-md transition-all duration-300"
+          className="absolute left-1/2 -translate-x-1/2 w-7 h-7 md:w-8 md:h-8 rounded-md transition-all duration-300"
           style={{
-            top: isOn ? "8px" : "calc(100% - 40px)",
-            background: isOn
-              ? "linear-gradient(180deg, #d1d5db, #9ca3af)"
-              : "linear-gradient(180deg, #9ca3af, #6b7280)",
+            top: isOn ? "6px" : "calc(100% - 34px)",
+            background: isOn ? "linear-gradient(180deg, #d1d5db, #9ca3af)" : "linear-gradient(180deg, #9ca3af, #6b7280)",
             border: "2px solid #9ca3af",
             boxShadow: "0 2px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3)",
           }}
         >
-          <div className="w-full h-1 bg-gray-500 rounded-full mt-3 mx-auto" style={{ width: "60%" }} />
+          <div className="w-3/5 h-0.5 bg-gray-500 rounded-full mt-2.5 mx-auto" />
         </div>
       </div>
-
-      {/* Label */}
       <span
-        className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] md:text-[10px] font-bold whitespace-nowrap"
+        className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] font-bold whitespace-nowrap"
         style={{ fontFamily: "'Courier New', monospace", color: isOn ? "#22c55e" : "#9ca3af" }}
       >
         {isOn ? "ON" : "OFF"}
@@ -254,9 +258,7 @@ function IndustrialSwitch({ isOn, onToggle }: { isOn: boolean; onToggle: () => v
 function TankerIcon({ fillLevel }: { fillLevel: number }) {
   return (
     <div className="flex flex-col items-center">
-      {/* Simple pixel tanker */}
-      <div className="relative w-24 h-32 md:w-32 md:h-40">
-        {/* Tanker body */}
+      <div className="relative w-20 h-28 md:w-28 md:h-36">
         <div
           className="absolute bottom-4 w-full h-3/4 rounded-lg overflow-hidden"
           style={{
@@ -265,7 +267,6 @@ function TankerIcon({ fillLevel }: { fillLevel: number }) {
             boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
           }}
         >
-          {/* Fill level */}
           <div
             className="absolute bottom-0 w-full transition-all duration-700 ease-out"
             style={{
@@ -274,47 +275,39 @@ function TankerIcon({ fillLevel }: { fillLevel: number }) {
               boxShadow: fillLevel > 0 ? "0 0 20px rgba(251,191,36,0.4)" : "none",
             }}
           />
-
-          {/* Piper label */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <span
-              className="text-[10px] md:text-xs font-bold text-white/70 tracking-wider"
-              style={{ fontFamily: "'Courier New', monospace" }}
-            >
+            <span className="text-[9px] md:text-xs font-bold text-white/70 tracking-wider" style={{ fontFamily: "'Courier New', monospace" }}>
               PIPER
             </span>
           </div>
         </div>
-
-        {/* Wheels */}
-        <div className="absolute bottom-0 left-2 w-4 h-4 md:w-5 md:h-5 rounded-full bg-gray-800 border-2 border-gray-600" />
-        <div className="absolute bottom-0 right-2 w-4 h-4 md:w-5 md:h-5 rounded-full bg-gray-800 border-2 border-gray-600" />
+        <div className="absolute bottom-0 left-1.5 w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-gray-800 border-2 border-gray-600" />
+        <div className="absolute bottom-0 right-1.5 w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-gray-800 border-2 border-gray-600" />
       </div>
-
-      <span className="text-xs text-slate-500 mt-1" style={{ fontFamily: "'Courier New', monospace" }}>
-        SAVINGS TANKER
+      <span className="text-[10px] text-slate-500 mt-0.5" style={{ fontFamily: "'Courier New', monospace" }}>
+        SAVINGS
       </span>
     </div>
   );
 }
 
-function FlyingBill({ stackIdx }: { stackIdx: number }) {
+function FlyingBill({ stackIdx, totalStacks }: { stackIdx: number; totalStacks: number }) {
+  const xSpread = totalStacks > 0 ? (12 + stackIdx * (60 / totalStacks)) : 30;
   const style: React.CSSProperties = {
     position: "absolute",
-    width: 20,
-    height: 12,
+    width: 16,
+    height: 10,
     background: "linear-gradient(135deg, #22c55e, #16a34a)",
     border: "1px solid #15803d",
     borderRadius: 2,
-    left: `${15 + stackIdx * 18}%`,
+    left: `${xSpread}%`,
     top: "40%",
     zIndex: 15,
-    ["--tx" as string]: `${(4 - stackIdx) * 40 + Math.random() * 40}px`,
-    ["--tx2" as string]: `${(4 - stackIdx) * 60 + Math.random() * 60}px`,
-    ["--ty" as string]: `${80 + Math.random() * 40}px`,
+    ["--tx" as string]: `${(totalStacks - stackIdx) * 30 + Math.random() * 40}px`,
+    ["--tx2" as string]: `${(totalStacks - stackIdx) * 50 + Math.random() * 50}px`,
+    ["--ty" as string]: `${60 + Math.random() * 40}px`,
     animation: `flyToBill ${0.8 + Math.random() * 0.4}s ease-in forwards`,
     animationDelay: `${Math.random() * 0.3}s`,
   };
-
   return <div style={style} />;
 }

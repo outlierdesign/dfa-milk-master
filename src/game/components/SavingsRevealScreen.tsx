@@ -14,7 +14,7 @@ interface SavingsRevealPopupProps {
 }
 
 const STACKS_META = [
-  { key: "agitationCost" as const, label: "Agitation Time", desc: "Lost time mixing slurry each load." },
+  { key: "agitationCost" as const, label: "Agitation Time", desc: "Lost time mixing milk each load." },
   { key: "weighbridgeCost" as const, label: "Weighbridge Trips", desc: "Transport & admin inefficiency." },
   { key: "underfillCost" as const, label: "Underfill Penalty", desc: "Extra loads to meet quota." },
   { key: "spillCost" as const, label: "Overfill / Spill", desc: "Wasted milk from overfilling." },

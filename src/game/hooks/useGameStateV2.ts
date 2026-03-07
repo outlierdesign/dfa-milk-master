@@ -413,6 +413,7 @@ export function useGameStateV2(config: GameConfig) {
     advanceFromWeighbridge,
     nextRound,
     showLeadCapture,
+    showSavingsReveal,
     showResults,
     resetToAttract,
     acknowledgeSpill,

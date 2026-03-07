@@ -151,7 +151,7 @@ export function settingsToConfig(s: GameSettings): GameConfig {
 }
 
 // Game states for v2 flow (now includes roundResult and fired)
-export type GameStateV2 = "attract" | "questions" | "playing" | "roundResult" | "penaltyReveal" | "leadCapture" | "results" | "fired";
+export type GameStateV2 = "attract" | "questions" | "playing" | "roundResult" | "penaltyReveal" | "leadCapture" | "savingsReveal" | "results" | "fired";
 
 // Round result data
 export interface RoundResult {

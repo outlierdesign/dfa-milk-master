@@ -5,6 +5,7 @@ import { useSoundEffects } from "../hooks/useSoundEffects";
 import { LeaderboardEntry } from "../types";
 import { LeaderboardDisplay } from "../hooks/useLeaderboard";
 import { ArcadeLeaderboard } from "./ArcadeLeaderboard";
+import { SavingsRevealPopup } from "./SavingsRevealScreen";
 import piperLogo from "@/assets/piper-logo.png";
 
 interface ResultsScreenV2Props {

@@ -386,6 +386,20 @@ export function ResultsScreenV2({
           </button>
         </div>
       </div>
+
+      {/* Savings Reveal Popup */}
+      {showSavingsPopup && (
+        <SavingsRevealPopup
+          costs={{
+            underfillCost: score.underfillCost,
+            spillCost: score.spillCost,
+            agitationCost: score.agitationCost,
+            weighbridgeCost: score.weighbridgeCost,
+            currency: currency,
+          }}
+          onComplete={() => setShowSavingsPopup(false)}
+        />
+      )}
     </div>
   );
 }

@@ -158,6 +158,7 @@ export function ResultsScreenV2({
   playerName,
 }: ResultsScreenV2Props) {
   const [showAnnualized, setShowAnnualized] = useState(false);
+  const [showSavingsPopup, setShowSavingsPopup] = useState(false);
   const { playSuccess, playFailure } = useSoundEffects();
   const entryAddedRef = useRef(false);
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
@@ -180,7 +181,11 @@ export function ResultsScreenV2({
   useEffect(() => {
     if (score.totalScore < 1000) playSuccess();
     else playFailure();
-    const t = setTimeout(() => setShowAnnualized(true), 1500);
+    const t = setTimeout(() => {
+      setShowAnnualized(true);
+      // Show savings popup 2 seconds after annualized costs appear
+      setTimeout(() => setShowSavingsPopup(true), 2000);
+    }, 1500);
     return () => clearTimeout(t);
   }, [score.totalScore, playSuccess, playFailure]);
 

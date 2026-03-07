@@ -383,7 +383,12 @@ export function useGameStateV2(config: GameConfig) {
     setGameState("leadCapture");
   }, []);
 
-  // Transition from lead capture to results
+  // Transition from lead capture to savings reveal
+  const showSavingsReveal = useCallback(() => {
+    setGameState("savingsReveal");
+  }, []);
+
+  // Transition from savings reveal to results
   const showResults = useCallback(() => {
     setGameState("results");
   }, []);
@@ -408,6 +413,7 @@ export function useGameStateV2(config: GameConfig) {
     advanceFromWeighbridge,
     nextRound,
     showLeadCapture,
+    showSavingsReveal,
     showResults,
     resetToAttract,
     acknowledgeSpill,

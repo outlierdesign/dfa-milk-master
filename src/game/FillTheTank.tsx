@@ -9,6 +9,7 @@ import { RoundResultScreen } from "./components/RoundResultScreen";
 import { PenaltyRevealScreen } from "./components/PenaltyRevealScreen";
 import { LeadCaptureScreen } from "./components/LeadCaptureScreen";
 import { ResultsScreenV2 } from "./components/ResultsScreenV2";
+import { SavingsRevealScreen } from "./components/SavingsRevealScreen";
 import { FiredScreen } from "./components/FiredScreen";
 import { calculateScore } from "./utils/scoringEngine";
 
@@ -18,7 +19,7 @@ export function FillTheTank() {
   const {
     gameState, session, isFilling,
     startGame, completeQuestions, startFilling, stopFilling,
-    completeLoad, advanceFromWeighbridge, nextRound, showLeadCapture, showResults, resetToAttract, acknowledgeSpill,
+    completeLoad, advanceFromWeighbridge, nextRound, showLeadCapture, showSavingsReveal, showResults, resetToAttract, acknowledgeSpill,
   } = useGameStateV2(config);
 
   const { entries, addEntry, getDisplayEntries } = useLeaderboard();
@@ -119,9 +120,13 @@ export function FillTheTank() {
       {gameState === "leadCapture" && (
         <LeadCaptureScreen
           gameResults={handleLeadCaptureResults()}
-          onSubmit={(name) => { if (name) setPlayerName(name); showResults(); }}
-          onSkip={showResults}
+          onSubmit={(name) => { if (name) setPlayerName(name); showSavingsReveal(); }}
+          onSkip={showSavingsReveal}
         />
+      )}
+
+      {gameState === "savingsReveal" && (
+        <SavingsRevealScreen onComplete={showResults} />
       )}
 
       {gameState === "results" && (

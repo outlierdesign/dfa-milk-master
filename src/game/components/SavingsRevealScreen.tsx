@@ -158,7 +158,7 @@ export function SavingsRevealPopup({ costs, onComplete }: SavingsRevealPopupProp
               <p className="text-xl md:text-2xl font-bold text-emerald-400 mb-2" style={{ fontFamily: "'Courier New', monospace" }}>
                 🎉 YOU SAVED {costs.currency}{fmt(total)}/YEAR
               </p>
-              <p className="text-slate-400 text-sm">with Piper Slurry Management</p>
+              <p className="text-slate-400 text-sm">with Piper Precision Metering</p>
             </div>
           </div>
         )}

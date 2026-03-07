@@ -9,6 +9,7 @@ import { RoundResultScreen } from "./components/RoundResultScreen";
 import { PenaltyRevealScreen } from "./components/PenaltyRevealScreen";
 import { LeadCaptureScreen } from "./components/LeadCaptureScreen";
 import { ResultsScreenV2 } from "./components/ResultsScreenV2";
+import { SavingsRevealScreen } from "./components/SavingsRevealScreen";
 import { FiredScreen } from "./components/FiredScreen";
 import { calculateScore } from "./utils/scoringEngine";
 

@@ -77,12 +77,12 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0 }: Weighbr
       <div
         className="absolute"
         style={{
-          top: meterVisible ? 30 : -220,
+          top: meterVisible ? 20 : -220,
           left: "50%",
           transform: "translateX(-50%)",
           transition: "top 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
           zIndex: 20,
-          width: 440,
+          width: 400,
         }}
       >
         <VeederRootMeter weightLbs={fillLbs} active={phase === "displaying" || phase === "banner"} />
@@ -92,7 +92,7 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0 }: Weighbr
       <div
         className="absolute text-center"
         style={{
-          bottom: 130,
+          bottom: 160,
           left: "50%",
           transform: "translateX(-50%)",
           opacity: bannerVisible ? 1 : 0,
@@ -101,15 +101,15 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0 }: Weighbr
           whiteSpace: "nowrap",
         }}
       >
-        <h2 className="font-black text-sky-300" style={{ fontSize: 28, letterSpacing: 2, textShadow: "0 0 20px rgba(125,211,252,0.6)" }}>
+        <h2 className="font-black text-sky-300" style={{ fontSize: 32, letterSpacing: 3, textShadow: "0 0 24px rgba(125,211,252,0.6)" }}>
           ⚖️ Gone to Weighbridge
         </h2>
-        <p className="text-slate-400" style={{ fontSize: 13, marginTop: 4 }}>
+        <p className="text-slate-400" style={{ fontSize: 14, marginTop: 6 }}>
           Tanker is being weighed&hellip; calculating result
         </p>
-        <div className="flex justify-center gap-2 mt-2">
+        <div className="flex justify-center gap-2 mt-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="rounded-full animate-bounce" style={{ width: 8, height: 8, background: "#7dd3fc", animationDelay: `${i * 0.2}s` }} />
+            <div key={i} className="rounded-full animate-bounce" style={{ width: 10, height: 10, background: "#7dd3fc", animationDelay: `${i * 0.2}s` }} />
           ))}
         </div>
       </div>
@@ -188,9 +188,9 @@ function VeederRootMeter({ weightLbs, active }: { weightLbs: number; active: boo
       }}
     >
       {/* Header plate */}
-      <div className="flex items-center justify-between mb-2">
-        <span style={{ fontSize: 9, letterSpacing: "0.35em", color: "#6b7280", fontWeight: 700 }}>VEEDER-ROOT</span>
-        <span style={{ fontSize: 9, letterSpacing: "0.35em", color: "#6b7280", fontWeight: 700 }}>SERIES 7000</span>
+      <div className="flex items-center justify-center gap-6 mb-2">
+        <span style={{ fontSize: 10, letterSpacing: "0.35em", color: "#6b7280", fontWeight: 700 }}>VEEDER-ROOT</span>
+        <span style={{ fontSize: 10, letterSpacing: "0.35em", color: "#6b7280", fontWeight: 700 }}>SERIES 7000</span>
       </div>
 
       {/* Main drum housing */}
@@ -198,12 +198,14 @@ function VeederRootMeter({ weightLbs, active }: { weightLbs: number; active: boo
         style={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "center",
           gap: 4,
           background: "#1c1917",
           border: "3px solid #292524",
           borderRadius: 4,
-          padding: "6px 10px",
+          padding: "8px 14px",
           boxShadow: "inset 0 4px 12px rgba(0,0,0,0.9)",
+          position: "relative",
         }}
       >
         {/* Amber backlight strip */}
@@ -231,9 +233,9 @@ function VeederRootMeter({ weightLbs, active }: { weightLbs: number; active: boo
       </div>
 
       {/* Status line below drums */}
-      <div className="flex justify-between mt-2 px-1">
-        <span style={{ fontSize: 9, color: "#6b7280", fontWeight: 600 }}>TARE: 28,460 LBS</span>
-        <span style={{ fontSize: 9, color: "#6b7280", fontWeight: 600 }}>
+      <div className="flex justify-center gap-8 mt-3 px-1">
+        <span style={{ fontSize: 10, color: "#6b7280", fontWeight: 600, letterSpacing: "0.05em" }}>TARE: 28,460 LBS</span>
+        <span style={{ fontSize: 10, color: "#6b7280", fontWeight: 600, letterSpacing: "0.05em" }}>
           GROSS: {(rounded + 28460).toLocaleString()} LBS
         </span>
       </div>

@@ -1,21 +1,32 @@
 
 
-## Plan: Two Changes
+# Infinite 8-Bit Road Animation
 
-### 1. Farm Tank Fan — Match Agitation Overlay Style
+Replace the static `road_scene_pixel.png` background with a fully procedural SVG scene that animates like a classic 8-bit driving game (Outrun / Rad Racer style). The entire road, sky, and fields will be drawn and animated in SVG, giving the illusion of driving forward down an endless road.
 
-In `src/game/components/FarmTank.tsx`, replace the current fan SVG (lines 28-43) with the overlay's styling:
-- Increase size from `w-10 h-10` to `w-14 h-14`
-- Change color from `text-slate-400/60` to `text-amber-400`
-- Speed up from `3s` to `1.2s` animation duration
-- Increase blade opacity from `0.7` to `0.9`
+## What You'll See
 
-### 2. Weighbridge Overlay — Clean Up Text Layout
+- A sky gradient (light blue to warm horizon glow)
+- Alternating green field bands (light green / dark green) that scroll toward the viewer from the vanishing point, creating the classic "infinite road" stripe effect
+- A grey road with white edge lines converging to a vanishing point
+- Animated yellow centre dashes rushing toward the camera
+- Simple 8-bit tree silhouettes on the horizon
+- The `driver_view.svg` windshield overlay on top (unchanged)
+- CRT scanline overlay (unchanged)
 
-In `src/game/components/WeighbridgeDepartureOverlay.tsx`:
-- Move the "Gone to Weighbridge" banner higher and increase font size for better readability
-- Center-align the Veeder-Root meter label text and status line more consistently
-- Adjust the meter panel width and positioning for cleaner alignment
-- Ensure the TARE/GROSS status line has consistent spacing and sizing
-- Increase bottom padding on the banner section so text doesn't crowd the road/truck area
+## Technical Details
 
+**File changed:** `src/game/components/AttractModeV2.tsx`
+
+1. **Remove the static PNG background** -- the `roadScene` import and `<img>` tag will be replaced by an inline SVG that fills the viewport.
+
+2. **Procedural SVG scene** built with these layers:
+   - **Sky**: A `<linearGradient>` rectangle from pale blue (#87CEEB) at top to warm peach (#FFD4A0) at the horizon line (~40% down).
+   - **Field bands**: ~20 horizontal trapezoid strips from the vanishing point downward, alternating between two greens (#3A7D2C and #4CA83A). These will be wrapped in a `<g>` with an `<animateTransform>` that translates them downward in a loop, making them appear to scroll toward the viewer.
+   - **Road**: A dark grey trapezoid (#555) narrowing from the bottom edge to the vanishing point, with white edge lines.
+   - **Centre dashes**: The existing animated yellow dash overlay (already working) stays as-is.
+   - **Horizon trees**: A few simple triangular tree shapes at the horizon line for depth.
+
+3. **Animation approach**: The field bands use `<animateTransform type="translate">` looping every ~0.6s, shifting bands downward by one band-height so they appear to stream toward the camera seamlessly. Each band is sized based on perspective (narrow at vanishing point, wide at bottom).
+
+4. **Cleanup**: Remove the `driveZoom` keyframe animation and `roadScene` image import since they're no longer needed. Keep `cardPulse` for the stats card.

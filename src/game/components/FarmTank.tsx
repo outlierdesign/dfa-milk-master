@@ -26,8 +26,8 @@ export function FarmTank({ currentLevel, initialLevel, showLeftBehind = false, c
           <div className="absolute -bottom-4 right-2 w-3 h-6 bg-slate-600 rounded-b" />
           {/* Agitator fan at base of tank */}
           <svg
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 w-10 h-10 text-slate-400/60 animate-spin"
-            style={{ animationDuration: "3s" }}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 w-14 h-14 text-amber-400 animate-spin"
+            style={{ animationDuration: "1.2s" }}
             viewBox="0 0 100 100"
             fill="currentColor"
           >
@@ -36,7 +36,7 @@ export function FarmTank({ currentLevel, initialLevel, showLeftBehind = false, c
                 key={angle}
                 transform={`rotate(${angle} 50 50)`}
                 d="M50 50 C50 30, 35 10, 50 10 C65 10, 50 30, 50 50Z"
-                opacity="0.7"
+                opacity="0.9"
               />
             ))}
             <circle cx="50" cy="50" r="6" fill="currentColor" />

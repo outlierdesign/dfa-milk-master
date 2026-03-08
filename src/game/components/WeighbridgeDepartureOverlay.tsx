@@ -188,9 +188,9 @@ function VeederRootMeter({ weightLbs, active }: { weightLbs: number; active: boo
       }}
     >
       {/* Header plate */}
-      <div className="flex items-center justify-between mb-2">
-        <span style={{ fontSize: 9, letterSpacing: "0.35em", color: "#6b7280", fontWeight: 700 }}>VEEDER-ROOT</span>
-        <span style={{ fontSize: 9, letterSpacing: "0.35em", color: "#6b7280", fontWeight: 700 }}>SERIES 7000</span>
+      <div className="flex items-center justify-center gap-6 mb-2">
+        <span style={{ fontSize: 10, letterSpacing: "0.35em", color: "#6b7280", fontWeight: 700 }}>VEEDER-ROOT</span>
+        <span style={{ fontSize: 10, letterSpacing: "0.35em", color: "#6b7280", fontWeight: 700 }}>SERIES 7000</span>
       </div>
 
       {/* Main drum housing */}
@@ -198,12 +198,14 @@ function VeederRootMeter({ weightLbs, active }: { weightLbs: number; active: boo
         style={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "center",
           gap: 4,
           background: "#1c1917",
           border: "3px solid #292524",
           borderRadius: 4,
-          padding: "6px 10px",
+          padding: "8px 14px",
           boxShadow: "inset 0 4px 12px rgba(0,0,0,0.9)",
+          position: "relative",
         }}
       >
         {/* Amber backlight strip */}
@@ -231,9 +233,9 @@ function VeederRootMeter({ weightLbs, active }: { weightLbs: number; active: boo
       </div>
 
       {/* Status line below drums */}
-      <div className="flex justify-between mt-2 px-1">
-        <span style={{ fontSize: 9, color: "#6b7280", fontWeight: 600 }}>TARE: 28,460 LBS</span>
-        <span style={{ fontSize: 9, color: "#6b7280", fontWeight: 600 }}>
+      <div className="flex justify-center gap-8 mt-3 px-1">
+        <span style={{ fontSize: 10, color: "#6b7280", fontWeight: 600, letterSpacing: "0.05em" }}>TARE: 28,460 LBS</span>
+        <span style={{ fontSize: 10, color: "#6b7280", fontWeight: 600, letterSpacing: "0.05em" }}>
           GROSS: {(rounded + 28460).toLocaleString()} LBS
         </span>
       </div>

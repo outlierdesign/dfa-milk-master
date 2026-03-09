@@ -5,7 +5,7 @@ import { useAdminSettings, AdminPanel } from "./components/AdminPanel";
 import { AttractModeV2 } from "./components/AttractModeV2";
 
 import { GameScreenV2 } from "./components/GameScreenV2";
-import { RoundResultScreen } from "./components/RoundResultScreen";
+
 import { PenaltyRevealScreen } from "./components/PenaltyRevealScreen";
 import { LeadCaptureScreen } from "./components/LeadCaptureScreen";
 import { ResultsScreenV2 } from "./components/ResultsScreenV2";
@@ -18,7 +18,7 @@ export function FillTheTank() {
   const {
     gameState, session, isFilling,
     startGame, completeQuestions, startFilling, stopFilling,
-    completeLoad, advanceFromWeighbridge, nextRound, showLeadCapture, showResults, resetToAttract, acknowledgeSpill,
+    completeLoad, advanceFromWeighbridge, showLeadCapture, showResults, resetToAttract, acknowledgeSpill,
   } = useGameStateV2(config);
 
   const { entries, addEntry, getDisplayEntries } = useLeaderboard();
@@ -93,14 +93,6 @@ export function FillTheTank() {
         />
       )}
 
-      {gameState === "roundResult" && session.rounds.length > 0 && (
-        <RoundResultScreen
-          round={session.rounds[session.rounds.length - 1]}
-          totalRounds={session.totalRounds}
-          config={config}
-          onContinue={nextRound}
-        />
-      )}
 
       {gameState === "fired" && (
         <FiredScreen onTryAgain={startGame} />

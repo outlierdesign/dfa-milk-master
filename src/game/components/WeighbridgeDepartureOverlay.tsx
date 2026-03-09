@@ -3,30 +3,37 @@ import milkTankerFullSvg from "@/assets/milk_tanker_full_v2.svg";
 interface WeighbridgeDepartureOverlayProps {
   onComplete: () => void;
   fillLbs?: number;
+  targetLbs?: number;
+  roundNumber?: number;
+  totalRounds?: number;
 }
 
-type Phase = "arriving" | "weighing" | "displaying" | "banner";
+type Phase = "arriving" | "weighing" | "displaying" | "result" | "banner";
 
-export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0 }: WeighbridgeDepartureOverlayProps) {
+export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0, targetLbs = 50000, roundNumber = 1, totalRounds = 3 }: WeighbridgeDepartureOverlayProps) {
   const [phase, setPhase] = useState<Phase>("arriving");
-  const [truckX, setTruckX] = useState(-520); // starts off-screen left
+  const [truckX, setTruckX] = useState(-520);
   const [platformSunk, setPlatformSunk] = useState(false);
   const [meterVisible, setMeterVisible] = useState(false);
+  const [resultVisible, setResultVisible] = useState(false);
   const [bannerVisible, setBannerVisible] = useState(false);
 
-  useEffect(() => {
-    // 0ms → truck drives in from left
-    const t1 = setTimeout(() => setTruckX(0), 50);
-    // 1200ms → truck stopped, platform compresses
-    const t2 = setTimeout(() => { setPlatformSunk(true); setPhase("weighing"); }, 1250);
-    // 1800ms → meter panel slides in
-    const t3 = setTimeout(() => { setMeterVisible(true); setPhase("displaying"); }, 1850);
-    // 4200ms → "Gone to Weighbridge" banner
-    const t4 = setTimeout(() => { setBannerVisible(true); setPhase("banner"); }, 4200);
-    // 5500ms → advance to round result
-    const t5 = setTimeout(() => onComplete(), 5500);
+  const isOver = fillLbs > targetLbs;
+  const diff = Math.abs(fillLbs - targetLbs);
+  const fillPercent = (fillLbs / targetLbs) * 100;
 
-    return () => { [t1, t2, t3, t4, t5].forEach(clearTimeout); };
+  useEffect(() => {
+    const t1 = setTimeout(() => setTruckX(0), 50);
+    const t2 = setTimeout(() => { setPlatformSunk(true); setPhase("weighing"); }, 1250);
+    const t3 = setTimeout(() => { setMeterVisible(true); setPhase("displaying"); }, 1850);
+    // Show round result after meter settles
+    const t4 = setTimeout(() => { setResultVisible(true); setPhase("result"); }, 4200);
+    // Show banner
+    const t5 = setTimeout(() => { setBannerVisible(true); setPhase("banner"); }, 5500);
+    // Auto-advance
+    const t6 = setTimeout(() => onComplete(), 7500);
+
+    return () => { [t1, t2, t3, t4, t5, t6].forEach(clearTimeout); };
   }, [onComplete]);
 
   return (
@@ -87,6 +94,37 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0 }: Weighbr
         <VeederRootMeter weightLbs={fillLbs} active={phase === "displaying" || phase === "banner"} />
       </div>
 
+      {/* Round result summary */}
+      <div
+        className="absolute text-center"
+        style={{
+          top: resultVisible ? "62%" : "120%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          transition: "top 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          zIndex: 25,
+          whiteSpace: "nowrap",
+        }}
+      >
+        <div className="text-slate-400 text-xs md:text-sm mb-1">
+          Round {roundNumber} of {totalRounds}
+        </div>
+        <h2 className="font-black text-white text-xl md:text-2xl mb-2">
+          {isOver ? "💥 Overfill!" : fillPercent >= 98 ? "🎯 Great Fill!" : "📦 Round Complete"}
+        </h2>
+        <div className="text-2xl md:text-3xl font-mono font-bold text-white">
+          {Math.round(fillLbs).toLocaleString()} lbs
+        </div>
+        <div className={`text-base md:text-lg font-semibold mt-1 ${isOver ? "text-red-400" : "text-emerald-400"}`}>
+          {isOver
+            ? `+${Math.round(diff).toLocaleString()} lbs over`
+            : `-${Math.round(diff).toLocaleString()} lbs under`}
+        </div>
+        <div className="text-slate-500 text-xs mt-1">
+          {fillPercent.toFixed(1)}% of target
+        </div>
+      </div>
+
       {/* "Gone to Weighbridge" banner */}
       <div
         className="absolute text-center bottom-[280px] md:bottom-[300px]"
@@ -99,12 +137,9 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0 }: Weighbr
           whiteSpace: "nowrap",
         }}
       >
-        <h2 className="font-black text-sky-300 text-xl md:text-2xl" style={{ letterSpacing: 3, textShadow: "0 0 24px rgba(125,211,252,0.6)" }}>
-          ⚖️ Gone to Weighbridge
+        <h2 className="font-black text-sky-300 text-lg md:text-xl" style={{ letterSpacing: 3, textShadow: "0 0 24px rgba(125,211,252,0.6)" }}>
+          ⚖️ {roundNumber < totalRounds ? "Next round loading…" : "See your results…"}
         </h2>
-        <p className="text-slate-400 text-xs md:text-sm" style={{ marginTop: 6 }}>
-          Tanker is being weighed&hellip; calculating result
-        </p>
         <div className="flex justify-center gap-2 mt-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="rounded-full animate-bounce" style={{ width: 10, height: 10, background: "#7dd3fc", animationDelay: `${i * 0.2}s` }} />

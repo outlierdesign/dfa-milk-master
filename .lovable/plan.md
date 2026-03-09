@@ -1,32 +1,31 @@
 
 
-# Infinite 8-Bit Road Animation
+## Plan: Three Changes
 
-Replace the static `road_scene_pixel.png` background with a fully procedural SVG scene that animates like a classic 8-bit driving game (Outrun / Rad Racer style). The entire road, sky, and fields will be drawn and animated in SVG, giving the illusion of driving forward down an endless road.
+### 1. Farm Tank Fan — Fix to Rotate in Place (Not Translate)
 
-## What You'll See
+The fan in `FarmTank.tsx` already uses `animate-spin` which rotates in place (same as the agitation overlay). The fan is identical to the overlay version. Both use the same SVG, same `animate-spin`, same `1.2s` duration. The fan is stationary and spinning — it does not move left/right.
 
-- A sky gradient (light blue to warm horizon glow)
-- Alternating green field bands (light green / dark green) that scroll toward the viewer from the vanishing point, creating the classic "infinite road" stripe effect
-- A grey road with white edge lines converging to a vanishing point
-- Animated yellow centre dashes rushing toward the camera
-- Simple 8-bit tree silhouettes on the horizon
-- The `driver_view.svg` windshield overlay on top (unchanged)
-- CRT scanline overlay (unchanged)
+**Action**: Verify on device. If there's a perceived left-right movement, it may be due to the SVG center not being perfectly centered. I'll ensure the fan SVG is properly centered within the tank by anchoring it with `left-1/2 -translate-x-1/2` and confirming the viewBox origin. No substantive code change expected — both fans already match.
 
-## Technical Details
+### 2. Weighbridge Overlay — Reposition Counter and Banner
 
-**File changed:** `src/game/components/AttractModeV2.tsx`
+**`src/game/components/WeighbridgeDepartureOverlay.tsx`**:
 
-1. **Remove the static PNG background** -- the `roadScene` import and `<img>` tag will be replaced by an inline SVG that fills the viewport.
+- **Veeder-Root meter**: Move from `top: 20` to vertical center of the screen (`top: 50%, transform: translateY(-50%)`) so the counter sits mid-screen
+- **"Gone to Weighbridge" banner**: Move up from `bottom: 160` to roughly `bottom: 280` (~120px higher), so it's more visible above the truck
+- Add responsive adjustments: on smaller screens (via media query or responsive classes), scale down the meter panel width and adjust positioning for tablet/mobile
 
-2. **Procedural SVG scene** built with these layers:
-   - **Sky**: A `<linearGradient>` rectangle from pale blue (#87CEEB) at top to warm peach (#FFD4A0) at the horizon line (~40% down).
-   - **Field bands**: ~20 horizontal trapezoid strips from the vanishing point downward, alternating between two greens (#3A7D2C and #4CA83A). These will be wrapped in a `<g>` with an `<animateTransform>` that translates them downward in a loop, making them appear to scroll toward the viewer.
-   - **Road**: A dark grey trapezoid (#555) narrowing from the bottom edge to the vanishing point, with white edge lines.
-   - **Centre dashes**: The existing animated yellow dash overlay (already working) stays as-is.
-   - **Horizon trees**: A few simple triangular tree shapes at the horizon line for depth.
+### 3. Agitation Overlay — Add Ticking Clock Sound
 
-3. **Animation approach**: The field bands use `<animateTransform type="translate">` looping every ~0.6s, shifting bands downward by one band-height so they appear to stream toward the camera seamlessly. Each band is sized based on perspective (narrow at vanishing point, wide at bottom).
+**`src/game/hooks/useSoundEffects.ts`**:
+- Add `startTickLoop()` and `stopTickLoop()` methods — a rhythmic tick sound using Web Audio API (short high-frequency click at ~2 ticks/second, like a clock)
+- Expose in the `SoundEffects` interface
 
-4. **Cleanup**: Remove the `driveZoom` keyframe animation and `roadScene` image import since they're no longer needed. Keep `cardPulse` for the stats card.
+**`src/game/components/AgitationOverlay.tsx`**:
+- Import and use `useSoundEffects` 
+- Call `startTickLoop()` on mount, `stopTickLoop()` on unmount/completion
+- The tick creates urgency and reinforces the "wasted time" message
+
+**Tick sound implementation**: Short 1000Hz sine tone (30ms duration) fired every 500ms via a `setInterval`, creating a clock-tick rhythm. Volume-controlled and mute-aware like all other sounds.
+

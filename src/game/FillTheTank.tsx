@@ -5,7 +5,7 @@ import { useAdminSettings, AdminPanel } from "./components/AdminPanel";
 import { AttractModeV2 } from "./components/AttractModeV2";
 
 import { GameScreenV2 } from "./components/GameScreenV2";
-import { RoundResultScreen } from "./components/RoundResultScreen";
+
 import { PenaltyRevealScreen } from "./components/PenaltyRevealScreen";
 import { LeadCaptureScreen } from "./components/LeadCaptureScreen";
 import { ResultsScreenV2 } from "./components/ResultsScreenV2";

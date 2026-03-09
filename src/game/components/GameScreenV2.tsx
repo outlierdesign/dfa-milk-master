@@ -105,6 +105,9 @@ export function GameScreenV2({
         <WeighbridgeDepartureOverlay
           onComplete={onAdvanceFromWeighbridge}
           fillLbs={Math.min(session.currentFill, config.targetLoadLbs)}
+          targetLbs={config.targetLoadLbs}
+          roundNumber={session.currentRound}
+          totalRounds={session.totalRounds}
         />
       )}
 

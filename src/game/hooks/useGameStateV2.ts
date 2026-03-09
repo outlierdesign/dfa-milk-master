@@ -290,7 +290,7 @@ export function useGameStateV2(config: GameConfig) {
     setSession((prev) => ({ ...prev, roundPhase: "weighbridge" }));
   }, []);
 
-  // Called by WeighbridgeDepartureOverlay after animation — calculate results & go to roundResult
+  // Called by WeighbridgeDepartureOverlay after animation — calculate results & advance directly
   const advanceFromWeighbridge = useCallback(() => {
     setIsFilling(false);
 
@@ -322,18 +322,40 @@ export function useGameStateV2(config: GameConfig) {
       };
 
       const rounds = [...prev.rounds, roundResult];
+      const nextRoundNum = prev.currentRound + 1;
 
-      return {
-        ...prev,
-        roundPhase: "complete",
-        totalFillDuration,
-        averageFlowRate,
-        rounds,
-      };
+      // Check if all rounds done
+      if (nextRoundNum > prev.totalRounds) {
+        const overfillCount = rounds.filter((r) => r.isOverfill).length;
+        if (cfg.fireOnThreeOverfills && overfillCount >= 3) {
+          return { ...prev, rounds, roundPhase: "complete" as RoundPhase, totalFillDuration, averageFlowRate, currentRound: nextRoundNum, isFired: true };
+        }
+        return { ...prev, rounds, roundPhase: "complete" as RoundPhase, totalFillDuration, averageFlowRate, currentRound: nextRoundNum };
+      }
+
+      // Reset for next round
+      return resetRoundState(
+        { ...prev, rounds, currentRound: nextRoundNum },
+        getRandomFlowRate()
+      );
     });
 
-    setGameState("roundResult");
-  }, []);
+    // Determine next game state after session update
+    setTimeout(() => {
+      setSession((prev) => {
+        if (prev.isFired) {
+          setGameState("fired");
+          return prev;
+        }
+        if (prev.currentRound > prev.totalRounds) {
+          setGameState("penaltyReveal");
+          return prev;
+        }
+        setGameState("playing");
+        return prev;
+      });
+    }, 0);
+  }, [getRandomFlowRate]);
 
   // Advance to next round or to scoring
   const nextRound = useCallback(() => {

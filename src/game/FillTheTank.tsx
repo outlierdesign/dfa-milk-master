@@ -93,14 +93,6 @@ export function FillTheTank() {
         />
       )}
 
-      {gameState === "roundResult" && session.rounds.length > 0 && (
-        <RoundResultScreen
-          round={session.rounds[session.rounds.length - 1]}
-          totalRounds={session.totalRounds}
-          config={config}
-          onContinue={nextRound}
-        />
-      )}
 
       {gameState === "fired" && (
         <FiredScreen onTryAgain={startGame} />

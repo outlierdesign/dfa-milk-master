@@ -32,6 +32,8 @@ interface SoundEffects {
   playSuccess: () => void;
   playFailure: () => void;
   playOverfillWarning: () => void;
+  startTickLoop: () => void;
+  stopTickLoop: () => void;
   setVolume: (volume: number) => void;
   isMuted: boolean;
   toggleMute: () => void;

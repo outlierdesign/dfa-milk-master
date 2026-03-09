@@ -7,7 +7,7 @@ interface TankerV2Props {
   maxFill?: number;
   isFilling: boolean;
   spillTriggered: boolean;
-  spillAmount: number;
+  spillAmount: number
   config: GameConfig;
   isBlindMode?: boolean;
 }
@@ -40,10 +40,10 @@ const SVG_H = 200;
 // Barrel opening bounds (pixels at SVG_W × SVG_H render size)
 // Tweak these if the fill doesn't align perfectly
 const BARREL = {
-  left: 10,
-  top: 30,
-  right: 170,
-  bottom: 70,
+  left: 36,
+  top: 68,
+  right: 151,
+  bottom: 63,
 };
 
 export function TankerV2({

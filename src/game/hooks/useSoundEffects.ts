@@ -141,6 +141,7 @@ export function useSoundEffects(): SoundEffects {
   // Refs for looping sounds
   const fillLoopRef = useRef<{ oscillator: OscillatorNode; gain: GainNode } | null>(null);
   const alarmLoopRef = useRef<{ oscillator: OscillatorNode; gain: GainNode; interval: number } | null>(null);
+  const tickLoopRef = useRef<{ interval: number } | null>(null);
 
   // Persist mute state
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { GameConfig } from "../constantsV2";
 import { Progress } from "@/components/ui/progress";
+import { useSoundEffects } from "../hooks/useSoundEffects";
 
 interface AgitationOverlayProps {
   config: GameConfig;
@@ -10,10 +11,18 @@ interface AgitationOverlayProps {
 export function AgitationOverlay({ config, startTime }: AgitationOverlayProps) {
   const [progressPercent, setProgressPercent] = useState(0);
   const [elapsedSimMins, setElapsedSimMins] = useState(0);
+  const { startTickLoop, stopTickLoop } = useSoundEffects();
 
   const totalSimMins = config.agitationMinutes;
   // Use the fixed real-world duration from config
   const totalRealMs = config.agitationRealDurationMs || 5000;
+
+  // Start ticking sound when agitation begins, stop when done
+  useEffect(() => {
+    if (!startTime) return;
+    startTickLoop();
+    return () => stopTickLoop();
+  }, [startTime, startTickLoop, stopTickLoop]);
 
   useEffect(() => {
     if (!startTime) return;

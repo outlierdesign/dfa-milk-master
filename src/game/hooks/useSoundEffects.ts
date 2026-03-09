@@ -378,6 +378,10 @@ export function useSoundEffects(): SoundEffects {
         alarmLoopRef.current.oscillator.stop();
         alarmLoopRef.current = null;
       }
+      if (tickLoopRef.current) {
+        clearInterval(tickLoopRef.current.interval);
+        tickLoopRef.current = null;
+      }
     };
   }, []);
 

@@ -1,32 +1,60 @@
 
 
-# Infinite 8-Bit Road Animation
+## What I Need You to Generate
 
-Replace the static `road_scene_pixel.png` background with a fully procedural SVG scene that animates like a classic 8-bit driving game (Outrun / Rad Racer style). The entire road, sky, and fields will be drawn and animated in SVG, giving the illusion of driving forward down an endless road.
+Here is exactly what to create for the transparent tanker cutaway:
 
-## What You'll See
+### Asset: "Tanker Shell" SVG or PNG
 
-- A sky gradient (light blue to warm horizon glow)
-- Alternating green field bands (light green / dark green) that scroll toward the viewer from the vanishing point, creating the classic "infinite road" stripe effect
-- A grey road with white edge lines converging to a vanishing point
-- Animated yellow centre dashes rushing toward the camera
-- Simple 8-bit tree silhouettes on the horizon
-- The `driver_view.svg` windshield overlay on top (unchanged)
-- CRT scanline overlay (unchanged)
+**What it should look like:**
+A semi-realistic side-view illustration of a milk tanker trailer (no cab/truck — just the cylindrical tank on wheels/chassis). The tank body should be rendered as a **transparent glass/x-ray cutaway** — you can see through the walls. Think of it like a cross-section or a technical blueprint view.
 
-## Technical Details
+**Specific requirements:**
 
-**File changed:** `src/game/components/AttractModeV2.tsx`
+1. **Dimensions**: 512px wide x 200px tall (or similar ~2.5:1 aspect ratio)
+2. **Tank barrel interior**: Completely **transparent (alpha = 0)** — this is the area where I will layer the animated milk fill behind it
+3. **What to render opaque:**
+   - The tank's outer shell outline/frame (thin semi-transparent steel border, like frosted glass edges)
+   - Wheels and axle assembly at the bottom
+   - The rear valve/outlet
+   - Top hatch(es) — one or two circular hatches on top of the barrel
+   - Any structural ribs or bands around the barrel (rendered as thin lines, not solid)
+4. **What must be transparent:**
+   - The entire interior area of the barrel — from the inner bottom curve to the inner top curve
+   - This transparent zone should follow the **curved inner contour** of a cylindrical tank (rounded top and bottom, not rectangular)
+5. **Style**: Semi-realistic with subtle metallic shading on the frame elements, industrial look. Not cartoonish, not photorealistic — like a technical illustration you'd see in a training manual
+6. **Background**: Fully transparent PNG (or SVG with no background fill)
+7. **Single continuous tank**: No internal compartment dividers — one open volume
 
-1. **Remove the static PNG background** -- the `roadScene` import and `<img>` tag will be replaced by an inline SVG that fills the viewport.
+### How I Will Use It
 
-2. **Procedural SVG scene** built with these layers:
-   - **Sky**: A `<linearGradient>` rectangle from pale blue (#87CEEB) at top to warm peach (#FFD4A0) at the horizon line (~40% down).
-   - **Field bands**: ~20 horizontal trapezoid strips from the vanishing point downward, alternating between two greens (#3A7D2C and #4CA83A). These will be wrapped in a `<g>` with an `<animateTransform>` that translates them downward in a loop, making them appear to scroll toward the viewer.
-   - **Road**: A dark grey trapezoid (#555) narrowing from the bottom edge to the vanishing point, with white edge lines.
-   - **Centre dashes**: The existing animated yellow dash overlay (already working) stays as-is.
-   - **Horizon trees**: A few simple triangular tree shapes at the horizon line for depth.
+The component layers three things:
+```text
+┌─────────────────────────────────┐
+│  Layer 3: Tanker shell PNG/SVG  │  ← Your asset (frame only, interior transparent)
+│  Layer 2: Target line overlay   │  ← Green line at target fill height
+│  Layer 1: Milk fill div         │  ← White/cream rectangle that rises from bottom
+│  Layer 0: Dark background       │  ← Dark interior behind everything
+└─────────────────────────────────┘
+```
 
-3. **Animation approach**: The field bands use `<animateTransform type="translate">` looping every ~0.6s, shifting bands downward by one band-height so they appear to stream toward the camera seamlessly. Each band is sized based on perspective (narrow at vanishing point, wide at bottom).
+The milk fill (Layer 1) rises from the bottom behind the transparent shell. The curved edges of your shell asset naturally clip the visual, making the milk appear to follow the barrel's cylindrical shape.
 
-4. **Cleanup**: Remove the `driveZoom` keyframe animation and `roadScene` image import since they're no longer needed. Keep `cardPulse` for the stats card.
+### What I Will Add in Code
+
+Once you provide the asset:
+- **Fluid surface animation**: Ripple/wave effect on the milk surface using CSS keyframes
+- **Sloshing on stop**: When filling stops, a brief sine-wave wobble on the surface
+- **Fill gradient**: Creamy white gradient with subtle foam/froth at the top
+- **Compartment ribs**: Faint overlay lines if desired (already in code)
+
+### Summary
+
+Generate **one PNG** (preferred for semi-realistic style) at **512x200px** or **1024x400px** (2x for retina):
+- Side view of a milk tanker trailer
+- Glass/cutaway barrel with **transparent interior**
+- Opaque: frame outline, wheels, hatches, structural bands
+- Transparent: entire barrel interior following the curved tank shape
+- Semi-realistic industrial illustration style
+- Transparent background
+

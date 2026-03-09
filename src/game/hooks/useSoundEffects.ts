@@ -32,6 +32,8 @@ interface SoundEffects {
   playSuccess: () => void;
   playFailure: () => void;
   playOverfillWarning: () => void;
+  startTickLoop: () => void;
+  stopTickLoop: () => void;
   setVolume: (volume: number) => void;
   isMuted: boolean;
   toggleMute: () => void;
@@ -139,6 +141,7 @@ export function useSoundEffects(): SoundEffects {
   // Refs for looping sounds
   const fillLoopRef = useRef<{ oscillator: OscillatorNode; gain: GainNode } | null>(null);
   const alarmLoopRef = useRef<{ oscillator: OscillatorNode; gain: GainNode; interval: number } | null>(null);
+  const tickLoopRef = useRef<{ interval: number } | null>(null);
 
   // Persist mute state
   useEffect(() => {
@@ -342,6 +345,27 @@ export function useSoundEffects(): SoundEffects {
     setTimeout(() => playTone(1500, 0.12, "square", 0.3 * volume), 240);
   }, [isMuted, volume]);
 
+  // Clock ticking loop for agitation overlay
+  const startTickLoop = useCallback(() => {
+    if (isMuted || tickLoopRef.current) return;
+    // Play tick immediately then every 500ms
+    const playTick = () => {
+      playTone(1000, 0.03, "sine", 0.18 * volume);
+      // Add a softer "tock" 250ms later for clock-like rhythm
+      setTimeout(() => playTone(800, 0.025, "sine", 0.12 * volume), 250);
+    };
+    playTick();
+    const interval = window.setInterval(playTick, 500);
+    tickLoopRef.current = { interval };
+  }, [isMuted, volume]);
+
+  const stopTickLoop = useCallback(() => {
+    if (tickLoopRef.current) {
+      clearInterval(tickLoopRef.current.interval);
+      tickLoopRef.current = null;
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -353,6 +377,10 @@ export function useSoundEffects(): SoundEffects {
         clearInterval(alarmLoopRef.current.interval);
         alarmLoopRef.current.oscillator.stop();
         alarmLoopRef.current = null;
+      }
+      if (tickLoopRef.current) {
+        clearInterval(tickLoopRef.current.interval);
+        tickLoopRef.current = null;
       }
     };
   }, []);
@@ -370,6 +398,8 @@ export function useSoundEffects(): SoundEffects {
     playSuccess,
     playFailure,
     playOverfillWarning,
+    startTickLoop,
+    stopTickLoop,
     setVolume,
     isMuted,
     toggleMute,

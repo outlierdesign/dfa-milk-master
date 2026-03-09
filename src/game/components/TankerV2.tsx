@@ -1,4 +1,4 @@
-import tankerSvg from "@/assets/milk_tanker_v2.svg";
+import tankerShell from "@/assets/tanker_shell_cutaway.png";
 import { GameConfig } from "../constantsV2";
 
 interface TankerV2Props {
@@ -13,37 +13,30 @@ interface TankerV2Props {
 }
 
 /**
- * TankerV2 — renders the uploaded milk-tanker SVG with a live milk-fill level.
+ * TankerV2 — renders the cutaway tanker shell with animated milk fill.
  *
- * The SVG has a transparent "window" in the tank barrel.
- * We layer:
- *   1. Milk fill div (rises from bottom, clipped to the barrel opening)
- *   2. SVG overlay on top (acts as the tank shell / frame)
- *   3. Target line & spill flash rendered as absolutely-positioned overlays
+ * Layers (bottom to top):
+ *   0. Dark barrel interior background (clipped to barrel shape)
+ *   1. Milk fill (rises from bottom with fluid surface animation)
+ *   2. Target line
+ *   3. Tanker shell PNG overlay (transparent barrel, opaque frame)
+ *   4. Spill / overfill effects
  *
- * SVG natural size: 384 × 150 (viewBox "0 0 384 150")
- * We render it at 512 × 200 (scale ≈ 1.333×).
- *
- * Transparent barrel opening in SVG coords (approximate, measured from the image):
- *   x: 5  →  297   (width ≈ 292)
- *   y: 12 →  118   (height ≈ 106)
- * Scaled to 512 × 200:
- *   left  : 5   / 384 * 512 ≈ 6.67  → 6px
- *   right  : (384 - 297) / 384 * 512 ≈ 116px from right → width = 512-6-116 = 390px
- *   top   : 12  / 150 * 200 ≈ 16px
- *   bottom: (150 - 118) / 150 * 200 ≈ 42px from bottom → height = 200-16-42 = 142px
+ * The barrel interior zone is measured from the generated asset.
+ * Asset is 1024×512. We render at 512×256 (or scale to fit).
  */
 
-const SVG_W = 512;
-const SVG_H = 200;
+const RENDER_W = 540;
+const RENDER_H = 270;
 
-// Barrel opening bounds (pixels at SVG_W × SVG_H render size)
-// Tweak these if the fill doesn't align perfectly
+// Barrel interior bounds (px at RENDER_W × RENDER_H)
+// These define the rectangular region where milk fill is visible
+// Tuned to match the transparent barrel area in the cutaway asset
 const BARREL = {
-  left: 10,
-  top: 30,
-  right: 170,
-  bottom: 70,
+  left: 52,
+  top: 24,
+  right: 38,
+  bottom: 100,
 };
 
 export function TankerV2({
@@ -59,8 +52,8 @@ export function TankerV2({
   const fillPct = Math.min((currentFill / capacity) * 100, 100);
   const targetPct = (targetFill / capacity) * 100;
 
-  const barrelW = SVG_W - BARREL.left - BARREL.right;
-  const barrelH = SVG_H - BARREL.top - BARREL.bottom;
+  const barrelW = RENDER_W - BARREL.left - BARREL.right;
+  const barrelH = RENDER_H - BARREL.top - BARREL.bottom;
 
   // Height of the milk column in pixels
   const milkH = (fillPct / 100) * barrelH;
@@ -69,8 +62,8 @@ export function TankerV2({
 
   return (
     <div
-      className="relative select-none"
-      style={{ width: SVG_W, height: SVG_H, imageRendering: "pixelated" }}
+      className="relative select-none mx-auto"
+      style={{ width: RENDER_W, height: RENDER_H }}
     >
       {/* ── Layer 0: dark barrel interior background ── */}
       <div
@@ -80,51 +73,92 @@ export function TankerV2({
           top: BARREL.top,
           width: barrelW,
           height: barrelH,
-          background: "#0c1521",
+          background: "linear-gradient(180deg, #0a1628 0%, #0c1a2e 100%)",
+          borderRadius: "50% / 12%",
           overflow: "hidden",
         }}
       >
         {/* ── Layer 1: milk fill (rises from bottom) ── */}
         {!isBlindMode && milkH > 0 && (
           <div
-            className="absolute left-0 right-0 bottom-0 transition-all duration-75"
-            style={{
-              height: milkH,
-              background:
-                "linear-gradient(180deg, #FDFFF5 0%, #F5F7E8 50%, #EDF0DC 100%)",
-            }}
+            className="absolute left-0 right-0 bottom-0 transition-all duration-100"
+            style={{ height: milkH }}
           >
-            {/* surface shimmer while filling */}
-            {isFilling && (
-              <div
-                className="absolute top-0 left-0 right-0 animate-pulse"
-                style={{ height: 3, background: "rgba(255,255,255,0.85)" }}
-              />
-            )}
-            {/* body sheen */}
+            {/* Main milk body */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, #FEFFF8 0%, #F8FAE8 30%, #F0F3DC 60%, #E8ECCC 100%)",
+              }}
+            />
+
+            {/* Foam/froth layer at top */}
             <div
               className="absolute top-0 left-0 right-0"
-              style={{ height: "28%", background: "rgba(255,255,255,0.12)" }}
+              style={{
+                height: Math.min(8, milkH),
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,240,0.6) 100%)",
+              }}
             />
+
+            {/* Fluid surface wave animation while filling */}
+            {isFilling && (
+              <div
+                className="absolute top-0 left-0 right-0"
+                style={{ height: 6, overflow: "hidden" }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: "-100%",
+                    width: "300%",
+                    height: "100%",
+                    background:
+                      "repeating-linear-gradient(90deg, transparent 0px, rgba(255,255,255,0.5) 8px, transparent 16px)",
+                    animation: "milkWave 0.8s linear infinite",
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Subtle body sheen / reflection */}
+            <div
+              className="absolute left-0 right-0"
+              style={{
+                top: "10%",
+                height: "25%",
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%)",
+              }}
+            />
+
+            {/* Subtle ripple circles while filling */}
+            {isFilling && (
+              <div className="absolute top-0 left-0 right-0" style={{ height: 12 }}>
+                {[20, 45, 70].map((leftPct, i) => (
+                  <div
+                    key={i}
+                    className="absolute rounded-full"
+                    style={{
+                      left: `${leftPct}%`,
+                      top: 0,
+                      width: 10,
+                      height: 4,
+                      border: "1px solid rgba(255,255,255,0.4)",
+                      animation: `milkRipple 1.2s ease-out infinite`,
+                      animationDelay: `${i * 0.4}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {/* ── Layer 2: compartment rib dividers ── */}
-        {[25, 50, 75].map((pct) => (
-          <div
-            key={pct}
-            className="absolute top-0 bottom-0"
-            style={{
-              left: `${pct}%`,
-              width: 3,
-              background: "rgba(30,58,95,0.55)",
-              borderLeft: "1px solid rgba(96,165,250,0.18)",
-              zIndex: 2,
-            }}
-          />
-        ))}
-
-        {/* ── Layer 3: target line ── */}
+        {/* ── Layer 2: target line ── */}
         {!isBlindMode && !spillTriggered && targetFromBottom > 0 && (
           <div
             className="absolute left-0 right-0"
@@ -132,21 +166,34 @@ export function TankerV2({
               bottom: targetFromBottom,
               height: 2,
               background: "#34d399",
-              boxShadow: "0 0 5px #34d399",
+              boxShadow: "0 0 6px #34d399, 0 0 12px rgba(52,211,153,0.3)",
               zIndex: 3,
             }}
-          />
+          >
+            {/* Target line label */}
+            <div
+              className="absolute font-mono text-[9px] font-bold"
+              style={{
+                right: 4,
+                top: -12,
+                color: "#34d399",
+                textShadow: "0 0 4px rgba(0,0,0,0.8)",
+              }}
+            >
+              TARGET
+            </div>
+          </div>
         )}
 
-        {/* ── Layer 4: overfill flash ── */}
+        {/* ── Overfill flash ── */}
         {spillTriggered && (
           <div
             className="absolute inset-0 animate-pulse"
-            style={{ background: "rgba(239,68,68,0.38)", zIndex: 4 }}
+            style={{ background: "rgba(239,68,68,0.35)", zIndex: 4 }}
           />
         )}
 
-        {/* ── Layer 5: blind-mode spill indicator ── */}
+        {/* ── Blind-mode spill indicator ── */}
         {isBlindMode && spillTriggered && (
           <div
             className="absolute inset-0 flex items-center justify-center animate-pulse"
@@ -157,44 +204,58 @@ export function TankerV2({
         )}
       </div>
 
-      {/* ── Layer 6: SVG tanker shell on top ── */}
+      {/* ── Layer 3: Tanker shell overlay ── */}
       <img
-        src={tankerSvg}
-        alt="Milk tanker"
-        width={SVG_W}
-        height={SVG_H}
+        src={tankerShell}
+        alt="Milk tanker cutaway"
         className="absolute inset-0 pointer-events-none"
-        style={{ imageRendering: "auto" }}
+        style={{
+          width: RENDER_W,
+          height: RENDER_H,
+          objectFit: "fill",
+        }}
         draggable={false}
       />
 
-      {/* ── Layer 7: spill drips above the cab ── */}
+      {/* ── Layer 4: spill drips from top ── */}
       {spillTriggered && (
         <div
-          className="absolute"
+          className="absolute flex"
           style={{
-            top: BARREL.top - 10,
-            left: BARREL.left + barrelW * 0.3,
-            display: "flex",
-            gap: 5,
+            top: BARREL.top - 8,
+            left: BARREL.left + barrelW * 0.2,
+            gap: 8,
             zIndex: 10,
           }}
         >
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1, 2, 3, 4].map((i) => (
             <div
               key={i}
               className="animate-bounce"
               style={{
-                width: 4,
-                height: 16,
-                background: "linear-gradient(180deg, #bae6fd 0%, transparent 100%)",
-                animationDelay: `${i * 0.14}s`,
+                width: 3,
+                height: 14,
+                background:
+                  "linear-gradient(180deg, #FEFFF8 0%, rgba(254,255,248,0) 100%)",
+                animationDelay: `${i * 0.12}s`,
                 animationDuration: "0.5s",
               }}
             />
           ))}
         </div>
       )}
+
+      {/* CSS keyframes for fluid animations */}
+      <style>{`
+        @keyframes milkWave {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(16px); }
+        }
+        @keyframes milkRipple {
+          0% { transform: scale(1); opacity: 0.6; }
+          100% { transform: scale(3, 1.5); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }

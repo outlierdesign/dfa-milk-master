@@ -345,6 +345,27 @@ export function useSoundEffects(): SoundEffects {
     setTimeout(() => playTone(1500, 0.12, "square", 0.3 * volume), 240);
   }, [isMuted, volume]);
 
+  // Clock ticking loop for agitation overlay
+  const startTickLoop = useCallback(() => {
+    if (isMuted || tickLoopRef.current) return;
+    // Play tick immediately then every 500ms
+    const playTick = () => {
+      playTone(1000, 0.03, "sine", 0.18 * volume);
+      // Add a softer "tock" 250ms later for clock-like rhythm
+      setTimeout(() => playTone(800, 0.025, "sine", 0.12 * volume), 250);
+    };
+    playTick();
+    const interval = window.setInterval(playTick, 500);
+    tickLoopRef.current = { interval };
+  }, [isMuted, volume]);
+
+  const stopTickLoop = useCallback(() => {
+    if (tickLoopRef.current) {
+      clearInterval(tickLoopRef.current.interval);
+      tickLoopRef.current = null;
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {

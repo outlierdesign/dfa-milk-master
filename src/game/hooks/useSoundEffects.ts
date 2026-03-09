@@ -398,6 +398,8 @@ export function useSoundEffects(): SoundEffects {
     playSuccess,
     playFailure,
     playOverfillWarning,
+    startTickLoop,
+    stopTickLoop,
     setVolume,
     isMuted,
     toggleMute,

@@ -89,9 +89,8 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0 }: Weighbr
 
       {/* "Gone to Weighbridge" banner */}
       <div
-        className="absolute text-center"
+        className="absolute text-center bottom-[280px] md:bottom-[300px]"
         style={{
-          bottom: 160,
           left: "50%",
           transform: "translateX(-50%)",
           opacity: bannerVisible ? 1 : 0,
@@ -100,10 +99,10 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0 }: Weighbr
           whiteSpace: "nowrap",
         }}
       >
-        <h2 className="font-black text-sky-300" style={{ fontSize: 32, letterSpacing: 3, textShadow: "0 0 24px rgba(125,211,252,0.6)" }}>
+        <h2 className="font-black text-sky-300 text-xl md:text-2xl" style={{ letterSpacing: 3, textShadow: "0 0 24px rgba(125,211,252,0.6)" }}>
           ⚖️ Gone to Weighbridge
         </h2>
-        <p className="text-slate-400" style={{ fontSize: 14, marginTop: 6 }}>
+        <p className="text-slate-400 text-xs md:text-sm" style={{ marginTop: 6 }}>
           Tanker is being weighed&hellip; calculating result
         </p>
         <div className="flex justify-center gap-2 mt-3">

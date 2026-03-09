@@ -1,4 +1,4 @@
-import tankerSvg from "@/assets/milk_tanker_v2.svg";
+import tankerSvg from "@/assets/milk_tanker_transparent.svg";
 import { GameConfig } from "../constantsV2";
 
 interface TankerV2Props {

@@ -25,22 +25,24 @@ export function FarmTank({ currentLevel, initialLevel, showLeftBehind = false, c
           <div className="absolute -bottom-4 left-2 w-3 h-6 bg-slate-600 rounded-b" />
           <div className="absolute -bottom-4 right-2 w-3 h-6 bg-slate-600 rounded-b" />
           {/* Agitator fan at base of tank */}
-          <svg
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 w-14 h-14 text-amber-400 animate-spin"
-            style={{ animationDuration: "1.2s" }}
-            viewBox="0 0 100 100"
-            fill="currentColor"
-          >
-            {[0, 90, 180, 270].map((angle) => (
-              <path
-                key={angle}
-                transform={`rotate(${angle} 50 50)`}
-                d="M50 50 C50 30, 35 10, 50 10 C65 10, 50 30, 50 50Z"
-                opacity="0.9"
-              />
-            ))}
-            <circle cx="50" cy="50" r="6" fill="currentColor" />
-          </svg>
+          <div className="absolute bottom-2 left-1/2 w-10 h-10" style={{ transform: 'translateX(-50%)' }}>
+            <svg
+              className="w-full h-full text-amber-400"
+              style={{ animation: 'spin 1.2s linear infinite' }}
+              viewBox="0 0 100 100"
+              fill="currentColor"
+            >
+              {[0, 90, 180, 270].map((angle) => (
+                <path
+                  key={angle}
+                  transform={`rotate(${angle} 50 50)`}
+                  d="M50 50 C50 30, 35 10, 50 10 C65 10, 50 30, 50 50Z"
+                  opacity="0.9"
+                />
+              ))}
+              <circle cx="50" cy="50" r="6" fill="currentColor" />
+            </svg>
+          </div>
         </div>
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-20 h-6 bg-gradient-to-b from-slate-300 to-slate-400 rounded-t-full border-2 border-slate-500 border-b-0" />
         <div className="absolute bottom-8 -right-6 w-8 h-3 bg-slate-500 rounded-r" />

@@ -94,6 +94,37 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0, targetLbs
         <VeederRootMeter weightLbs={fillLbs} active={phase === "displaying" || phase === "banner"} />
       </div>
 
+      {/* Round result summary */}
+      <div
+        className="absolute text-center"
+        style={{
+          top: resultVisible ? "62%" : "120%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          transition: "top 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          zIndex: 25,
+          whiteSpace: "nowrap",
+        }}
+      >
+        <div className="text-slate-400 text-xs md:text-sm mb-1">
+          Round {roundNumber} of {totalRounds}
+        </div>
+        <h2 className="font-black text-white text-xl md:text-2xl mb-2">
+          {isOver ? "💥 Overfill!" : fillPercent >= 98 ? "🎯 Great Fill!" : "📦 Round Complete"}
+        </h2>
+        <div className="text-2xl md:text-3xl font-mono font-bold text-white">
+          {Math.round(fillLbs).toLocaleString()} lbs
+        </div>
+        <div className={`text-base md:text-lg font-semibold mt-1 ${isOver ? "text-red-400" : "text-emerald-400"}`}>
+          {isOver
+            ? `+${Math.round(diff).toLocaleString()} lbs over`
+            : `-${Math.round(diff).toLocaleString()} lbs under`}
+        </div>
+        <div className="text-slate-500 text-xs mt-1">
+          {fillPercent.toFixed(1)}% of target
+        </div>
+      </div>
+
       {/* "Gone to Weighbridge" banner */}
       <div
         className="absolute text-center bottom-[280px] md:bottom-[300px]"
@@ -106,12 +137,9 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0, targetLbs
           whiteSpace: "nowrap",
         }}
       >
-        <h2 className="font-black text-sky-300 text-xl md:text-2xl" style={{ letterSpacing: 3, textShadow: "0 0 24px rgba(125,211,252,0.6)" }}>
-          ⚖️ Gone to Weighbridge
+        <h2 className="font-black text-sky-300 text-lg md:text-xl" style={{ letterSpacing: 3, textShadow: "0 0 24px rgba(125,211,252,0.6)" }}>
+          ⚖️ {roundNumber < totalRounds ? "Next round loading…" : "See your results…"}
         </h2>
-        <p className="text-slate-400 text-xs md:text-sm" style={{ marginTop: 6 }}>
-          Tanker is being weighed&hellip; calculating result
-        </p>
         <div className="flex justify-center gap-2 mt-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="rounded-full animate-bounce" style={{ width: 10, height: 10, background: "#7dd3fc", animationDelay: `${i * 0.2}s` }} />

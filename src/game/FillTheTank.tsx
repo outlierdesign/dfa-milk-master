@@ -18,7 +18,7 @@ export function FillTheTank() {
   const {
     gameState, session, isFilling,
     startGame, completeQuestions, startFilling, stopFilling,
-    completeLoad, advanceFromWeighbridge, nextRound, showLeadCapture, showResults, resetToAttract, acknowledgeSpill,
+    completeLoad, advanceFromWeighbridge, showLeadCapture, showResults, resetToAttract, acknowledgeSpill,
   } = useGameStateV2(config);
 
   const { entries, addEntry, getDisplayEntries } = useLeaderboard();

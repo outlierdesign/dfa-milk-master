@@ -73,16 +73,15 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0 }: Weighbr
         <MiniPixelTruck />
       </div>
 
-      {/* Veeder-Root meter — slides down from top */}
+      {/* Veeder-Root meter — slides to vertical center */}
       <div
-        className="absolute"
+        className="absolute w-[90vw] max-w-[400px] md:max-w-[400px]"
         style={{
-          top: meterVisible ? 20 : -220,
+          top: meterVisible ? "40%" : -220,
           left: "50%",
-          transform: "translateX(-50%)",
+          transform: "translate(-50%, -50%)",
           transition: "top 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
           zIndex: 20,
-          width: 400,
         }}
       >
         <VeederRootMeter weightLbs={fillLbs} active={phase === "displaying" || phase === "banner"} />

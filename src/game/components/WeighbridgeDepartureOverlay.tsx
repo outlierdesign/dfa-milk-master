@@ -3,30 +3,37 @@ import milkTankerFullSvg from "@/assets/milk_tanker_full_v2.svg";
 interface WeighbridgeDepartureOverlayProps {
   onComplete: () => void;
   fillLbs?: number;
+  targetLbs?: number;
+  roundNumber?: number;
+  totalRounds?: number;
 }
 
-type Phase = "arriving" | "weighing" | "displaying" | "banner";
+type Phase = "arriving" | "weighing" | "displaying" | "result" | "banner";
 
-export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0 }: WeighbridgeDepartureOverlayProps) {
+export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0, targetLbs = 50000, roundNumber = 1, totalRounds = 3 }: WeighbridgeDepartureOverlayProps) {
   const [phase, setPhase] = useState<Phase>("arriving");
-  const [truckX, setTruckX] = useState(-520); // starts off-screen left
+  const [truckX, setTruckX] = useState(-520);
   const [platformSunk, setPlatformSunk] = useState(false);
   const [meterVisible, setMeterVisible] = useState(false);
+  const [resultVisible, setResultVisible] = useState(false);
   const [bannerVisible, setBannerVisible] = useState(false);
 
-  useEffect(() => {
-    // 0ms → truck drives in from left
-    const t1 = setTimeout(() => setTruckX(0), 50);
-    // 1200ms → truck stopped, platform compresses
-    const t2 = setTimeout(() => { setPlatformSunk(true); setPhase("weighing"); }, 1250);
-    // 1800ms → meter panel slides in
-    const t3 = setTimeout(() => { setMeterVisible(true); setPhase("displaying"); }, 1850);
-    // 4200ms → "Gone to Weighbridge" banner
-    const t4 = setTimeout(() => { setBannerVisible(true); setPhase("banner"); }, 4200);
-    // 5500ms → advance to round result
-    const t5 = setTimeout(() => onComplete(), 5500);
+  const isOver = fillLbs > targetLbs;
+  const diff = Math.abs(fillLbs - targetLbs);
+  const fillPercent = (fillLbs / targetLbs) * 100;
 
-    return () => { [t1, t2, t3, t4, t5].forEach(clearTimeout); };
+  useEffect(() => {
+    const t1 = setTimeout(() => setTruckX(0), 50);
+    const t2 = setTimeout(() => { setPlatformSunk(true); setPhase("weighing"); }, 1250);
+    const t3 = setTimeout(() => { setMeterVisible(true); setPhase("displaying"); }, 1850);
+    // Show round result after meter settles
+    const t4 = setTimeout(() => { setResultVisible(true); setPhase("result"); }, 4200);
+    // Show banner
+    const t5 = setTimeout(() => { setBannerVisible(true); setPhase("banner"); }, 5500);
+    // Auto-advance
+    const t6 = setTimeout(() => onComplete(), 7500);
+
+    return () => { [t1, t2, t3, t4, t5, t6].forEach(clearTimeout); };
   }, [onComplete]);
 
   return (

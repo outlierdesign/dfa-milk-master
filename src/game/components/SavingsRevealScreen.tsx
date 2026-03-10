@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useSoundEffects } from '../hooks/useSoundEffects';
 
 export interface SavingsCosts {
   underfillCost: number;
@@ -37,6 +38,7 @@ export function SavingsRevealPopup({ costs, onComplete }: SavingsRevealPopupProp
   const total = stacks.reduce((s, st) => s + st.amount, 0);
   const [activated, setActivated] = useState<boolean[]>(() => stacks.map(() => false));
   const [showFinalMessage, setShowFinalMessage] = useState(false);
+  const { playMoo, playChaChing } = useSoundEffects();
   const [flyingBills, setFlyingBills] = useState<{ id: number; stackIdx: number }[]>([]);
   const billIdRef = useRef(0);
   const completedRef = useRef(false);
@@ -55,10 +57,12 @@ export function SavingsRevealPopup({ costs, onComplete }: SavingsRevealPopupProp
       next[idx] = true;
       return next;
     });
+    playMoo();
     const newBills = Array.from({ length: 6 }, () => ({
       id: billIdRef.current++,
       stackIdx: idx,
     }));
+    playChaChing();
     setFlyingBills((prev) => [...prev, ...newBills]);
     setTimeout(() => {
       setFlyingBills((prev) => prev.filter((b) => !newBills.find((nb) => nb.id === b.id)));
@@ -216,41 +220,83 @@ function IndustrialSwitch({ isOn, onToggle }: { isOn: boolean; onToggle: () => v
   return (
     <button
       onClick={onToggle}
-      disabled={isOn}
-      className="relative w-12 h-20 md:w-14 md:h-24 rounded-md focus:outline-none transition-transform active:scale-95"
-      style={{
-        background: "linear-gradient(180deg, #6b7280, #374151, #1f2937)",
-        border: "2px solid #4b5563",
-        boxShadow: "inset 0 2px 4px rgba(255,255,255,0.1), 0 4px 8px rgba(0,0,0,0.4)",
-        cursor: isOn ? "default" : "pointer",
-      }}
+      className="relative flex flex-col items-center gap-1 group"
+      style={{ width: 72, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
     >
-      <div className="absolute inset-x-1.5 inset-y-2 rounded-sm" style={{ background: "#111827", border: "1px solid #374151" }}>
-        <div
-          className="absolute top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full transition-all duration-300"
-          style={{
-            background: isOn ? "#22c55e" : "#374151",
-            boxShadow: isOn ? "0 0 12px #22c55e" : "none",
-          }}
-        />
-        <div
-          className="absolute left-1/2 -translate-x-1/2 w-7 h-7 md:w-8 md:h-8 rounded-md transition-all duration-300"
-          style={{
-            top: isOn ? "6px" : "calc(100% - 34px)",
-            background: isOn ? "linear-gradient(180deg, #d1d5db, #9ca3af)" : "linear-gradient(180deg, #9ca3af, #6b7280)",
-            border: "2px solid #9ca3af",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3)",
-          }}
-        >
-          <div className="w-3/5 h-0.5 bg-gray-500 rounded-full mt-2.5 mx-auto" />
+      {/* Metal mounting plate */}
+      <div style={{
+        width: 64, height: 88,
+        background: 'linear-gradient(180deg, #6b7280 0%, #4b5563 50%, #374151 100%)',
+        borderRadius: 6,
+        border: '2px solid #1f2937',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 4px rgba(0,0,0,0.5)',
+        display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
+        justifyContent: 'center', position: 'relative' as const, padding: '4px 0',
+      }}>
+        {/* Corner rivets */}
+        {[[6,6],[52,6],[6,76],[52,76]].map(([x,y], i) => (
+          <div key={i} style={{
+            position: 'absolute' as const, left: x, top: y, width: 6, height: 6,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 35% 35%, #9ca3af, #4b5563)',
+            boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.4)',
+          }} />
+        ))}
+        {/* Status LED */}
+        <div style={{
+          width: 8, height: 8, borderRadius: '50%', marginBottom: 4,
+          background: isOn ? '#22c55e' : '#991b1b',
+          boxShadow: isOn ? '0 0 6px #22c55e, 0 0 12px rgba(34,197,94,0.4)' : 'none',
+          border: '1px solid rgba(0,0,0,0.3)',
+          transition: 'all 0.2s',
+        }} />
+        {/* Switch track */}
+        <div style={{
+          width: 28, height: 48, borderRadius: 4,
+          background: '#111827',
+          border: '2px solid #000',
+          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.8)',
+          position: 'relative' as const,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {/* Switch lever */}
+          <div style={{
+            width: 22, height: 20, borderRadius: 3,
+            position: 'absolute' as const,
+            top: isOn ? 4 : 24,
+            transition: 'top 0.15s ease-in-out',
+            background: isOn
+              ? 'linear-gradient(180deg, #34d399 0%, #059669 100%)'
+              : 'linear-gradient(180deg, #9ca3af 0%, #6b7280 100%)',
+            boxShadow: isOn
+              ? '0 2px 0 #047857, inset 0 1px 0 rgba(255,255,255,0.3)'
+              : '0 2px 0 #4b5563, inset 0 1px 0 rgba(255,255,255,0.2)',
+            border: '1px solid rgba(0,0,0,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {/* Grip lines */}
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 2 }}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{
+                  width: 12, height: 1,
+                  background: 'rgba(0,0,0,0.25)',
+                  borderBottom: '1px solid rgba(255,255,255,0.15)',
+                }} />
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* ON/OFF label */}
+        <div style={{
+          fontFamily: "'Courier New', monospace",
+          fontSize: 8, fontWeight: 700, letterSpacing: 1,
+          color: isOn ? '#34d399' : '#6b7280',
+          marginTop: 2, transition: 'color 0.2s',
+          textShadow: isOn ? '0 0 4px rgba(52,211,153,0.5)' : 'none',
+        }}>
+          {isOn ? 'ON' : 'OFF'}
         </div>
       </div>
-      <span
-        className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] font-bold whitespace-nowrap"
-        style={{ fontFamily: "'Courier New', monospace", color: isOn ? "#22c55e" : "#9ca3af" }}
-      >
-        {isOn ? "ON" : "OFF"}
-      </span>
     </button>
   );
 }

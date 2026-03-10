@@ -37,6 +37,8 @@ interface SoundEffects {
   setVolume: (volume: number) => void;
   isMuted: boolean;
   toggleMute: () => void;
+  playMoo: () => void;
+  playChaChing: () => void;
 }
 
 // Web Audio API synthetic sound generators
@@ -345,6 +347,135 @@ export function useSoundEffects(): SoundEffects {
     setTimeout(() => playTone(1500, 0.12, "square", 0.3 * volume), 240);
   }, [isMuted, volume]);
 
+
+
+  // Cow moo sound - low frequency with vibrato for 16-bit feel
+  const playMoo = useCallback(() => {
+    if (isMuted) return;
+    try {
+      (async () => {
+        const ctx = await ensureAudioContextResumed();
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = "sawtooth";
+        osc1.frequency.setValueAtTime(150, ctx.currentTime);
+        osc1.frequency.linearRampToValueAtTime(120, ctx.currentTime + 0.15);
+        osc1.frequency.linearRampToValueAtTime(140, ctx.currentTime + 0.4);
+        osc1.frequency.linearRampToValueAtTime(100, ctx.currentTime + 0.7);
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        lfo.type = "sine";
+        lfo.frequency.value = 5;
+        lfoGain.gain.value = 8;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc1.frequency);
+        const filter = ctx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(400, ctx.currentTime);
+        filter.frequency.linearRampToValueAtTime(250, ctx.currentTime + 0.7);
+        filter.Q.value = 2;
+        gain1.gain.setValueAtTime(0, ctx.currentTime);
+        gain1.gain.linearRampToValueAtTime(0.35 * volume, ctx.currentTime + 0.05);
+        gain1.gain.setValueAtTime(0.35 * volume, ctx.currentTime + 0.5);
+        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+        osc1.connect(filter);
+        filter.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(ctx.currentTime);
+        lfo.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 0.8);
+        lfo.stop(ctx.currentTime + 0.8);
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(300, ctx.currentTime);
+        osc2.frequency.linearRampToValueAtTime(240, ctx.currentTime + 0.15);
+        osc2.frequency.linearRampToValueAtTime(280, ctx.currentTime + 0.4);
+        osc2.frequency.linearRampToValueAtTime(200, ctx.currentTime + 0.7);
+        gain2.gain.setValueAtTime(0, ctx.currentTime);
+        gain2.gain.linearRampToValueAtTime(0.15 * volume, ctx.currentTime + 0.05);
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.7);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(ctx.currentTime);
+        osc2.stop(ctx.currentTime + 0.7);
+      })();
+    } catch (e) { console.warn("Moo sound failed:", e); }
+  }, [isMuted, volume]);
+
+
+
+  // Cash register cha-ching sound - metallic bell with coin jingle
+  const playChaChing = useCallback(() => {
+    if (isMuted) return;
+    try {
+      (async () => {
+        const ctx = await ensureAudioContextResumed();
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.value = 2200;
+        gain1.gain.setValueAtTime(0.25 * volume, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 0.3);
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = "sine";
+        osc2.frequency.value = 3300;
+        gain2.gain.setValueAtTime(0.15 * volume, ctx.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(ctx.currentTime);
+        osc2.stop(ctx.currentTime + 0.25);
+        const osc3 = ctx.createOscillator();
+        const gain3 = ctx.createGain();
+        osc3.type = "square";
+        osc3.frequency.value = 800;
+        gain3.gain.setValueAtTime(0.2 * volume, ctx.currentTime);
+        gain3.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.04);
+        osc3.connect(gain3);
+        gain3.connect(ctx.destination);
+        osc3.start(ctx.currentTime);
+        osc3.stop(ctx.currentTime + 0.04);
+        setTimeout(() => {
+          (async () => {
+            const osc4 = ctx.createOscillator();
+            const gain4 = ctx.createGain();
+            osc4.type = "sine";
+            osc4.frequency.value = 4400;
+            gain4.gain.setValueAtTime(0.2 * volume, ctx.currentTime);
+            gain4.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+            osc4.connect(gain4);
+            gain4.connect(ctx.destination);
+            osc4.start(ctx.currentTime);
+            osc4.stop(ctx.currentTime + 0.4);
+            const bufferSize = ctx.sampleRate * 0.15;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            const hipass = ctx.createBiquadFilter();
+            hipass.type = "highpass";
+            hipass.frequency.value = 6000;
+            const gnoise = ctx.createGain();
+            gnoise.gain.setValueAtTime(0.12 * volume, ctx.currentTime);
+            gnoise.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+            noise.connect(hipass);
+            hipass.connect(gnoise);
+            gnoise.connect(ctx.destination);
+            noise.start(ctx.currentTime);
+            noise.stop(ctx.currentTime + 0.15);
+          })();
+        }, 100);
+      })();
+    } catch (e) { console.warn("ChaChing sound failed:", e); }
+  }, [isMuted, volume]);
+
   // Clock ticking loop for agitation overlay
   const startTickLoop = useCallback(() => {
     if (isMuted || tickLoopRef.current) return;
@@ -403,5 +534,7 @@ export function useSoundEffects(): SoundEffects {
     setVolume,
     isMuted,
     toggleMute,
+    playMoo,
+    playChaChing,
   };
 }

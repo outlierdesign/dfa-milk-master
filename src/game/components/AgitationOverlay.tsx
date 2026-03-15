@@ -47,33 +47,17 @@ export function AgitationOverlay({ config, startTime }: AgitationOverlayProps) {
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-900/75 backdrop-blur-sm">
       <div className="bg-slate-800 border-2 border-amber-500 rounded-2xl p-6 md:p-10 max-w-sm w-full mx-4 text-center shadow-2xl">
-        {/* Spinning gear */}
+        {/* Hourglass icon */}
         <div className="flex justify-center mb-4">
-          <svg
-            className="w-20 h-20 md:w-24 md:h-24 animate-spin text-amber-400"
-            style={{ animationDuration: "1.2s" }}
-            viewBox="0 0 100 100"
-            fill="currentColor"
-          >
-            {/* 4-blade fan */}
-            {[0, 90, 180, 270].map((angle) => (
-              <path
-                key={angle}
-                transform={`rotate(${angle} 50 50)`}
-                d="M50 50 C50 30, 35 10, 50 10 C65 10, 50 30, 50 50Z"
-                opacity="0.9"
-              />
-            ))}
-            <circle cx="50" cy="50" r="6" fill="currentColor" />
-          </svg>
+          <span className="text-5xl md:text-6xl animate-pulse">⏳</span>
         </div>
 
         <h2 className="text-xl md:text-2xl font-black text-amber-300 mb-1">
           ⚙️ Agitation in Progress
         </h2>
         <p className="text-slate-400 text-sm mb-5">
-          The milk is being agitated before loading.<br />
-          Please wait&hellip;
+          You'''re going to have to agitate this tank for {totalSimMins} minutes<br />
+          before you can take your sample.
         </p>
 
         {/* Progress bar */}

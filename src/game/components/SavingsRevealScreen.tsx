@@ -73,7 +73,7 @@ export function SavingsRevealPopup({ costs, onComplete }: SavingsRevealPopupProp
     if (allDone && !completedRef.current) {
       completedRef.current = true;
       setShowFinalMessage(true);
-      const timer = setTimeout(onComplete, 4000);
+      const timer = setTimeout(onComplete, 6000);
       return () => clearTimeout(timer);
     }
   }, [allDone, onComplete]);
@@ -86,12 +86,12 @@ export function SavingsRevealPopup({ costs, onComplete }: SavingsRevealPopupProp
         {/* Title */}
         <div className="text-center mb-6">
           <h2
-            className="text-2xl md:text-3xl font-bold tracking-wider mb-1"
+            className="text-2xl md:text-4xl font-bold tracking-wider mb-2"
             style={{ fontFamily: "'Courier New', monospace", color: "#fbbf24", textShadow: "0 0 20px rgba(251,191,36,0.5)" }}
           >
             SWITCH ON TO PIPER
           </h2>
-          <p className="text-slate-400 text-sm">Flip the switches to recover your annual hidden costs</p>
+          <p className="text-slate-300 text-sm md:text-base">Want to make savings? Invest in Piper and recover wasted transportation costs</p>
         </div>
 
         {/* Stacks + Switches */}
@@ -105,10 +105,10 @@ export function SavingsRevealPopup({ costs, onComplete }: SavingsRevealPopupProp
 
               {/* Label */}
               <div className="text-center min-h-[48px]">
-                <p className="text-xs md:text-sm font-bold text-amber-400" style={{ fontFamily: "'Courier New', monospace" }}>
+                <p className="text-sm md:text-base font-black text-amber-400 uppercase tracking-wide" style={{ fontFamily: "'Courier New', monospace" }}>
                   {stack.label}
                 </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">{stack.desc}</p>
+                <p className="text-[10px] md:text-xs text-slate-400 mt-0.5">{stack.desc}</p>
               </div>
 
               {/* Switch */}
@@ -117,7 +117,7 @@ export function SavingsRevealPopup({ costs, onComplete }: SavingsRevealPopupProp
               {/* Caption */}
               {activated[idx] && (
                 <p className="text-[10px] text-emerald-400 text-center animate-fade-in" style={{ fontFamily: "'Courier New', monospace" }}>
-                  {costs.currency}{fmt(stack.amount)} saved!
+                  {costs.currency}{fmt(stack.amount)} recovered with Piper!
                 </p>
               )}
             </div>
@@ -147,7 +147,7 @@ export function SavingsRevealPopup({ costs, onComplete }: SavingsRevealPopupProp
           >
             {costs.currency}{fmt(remaining)}
           </div>
-          <p className="text-slate-500 text-xs mt-1" style={{ fontFamily: "'Courier New', monospace" }}>
+          <p className="text-slate-400 text-xs md:text-sm mt-1 font-bold" style={{ fontFamily: "'Courier New', monospace" }}>
             ANNUAL HIDDEN COSTS
           </p>
         </div>
@@ -159,10 +159,10 @@ export function SavingsRevealPopup({ costs, onComplete }: SavingsRevealPopupProp
               className="border-2 border-emerald-400 rounded-lg px-8 py-6 text-center animate-scale-in"
               style={{ boxShadow: "0 0 60px rgba(34,197,94,0.4)" }}
             >
-              <p className="text-xl md:text-2xl font-bold text-emerald-400 mb-2" style={{ fontFamily: "'Courier New', monospace" }}>
-                🎉 YOU SAVED {costs.currency}{fmt(total)}/YEAR
+              <p className="text-xl md:text-3xl font-bold text-emerald-400 mb-2" style={{ fontFamily: "'Courier New', monospace" }}>
+                🎉 RECOVER {costs.currency}{fmt(total)}/YEAR
               </p>
-              <p className="text-slate-400 text-sm">with Piper Precision Metering</p>
+              <p className="text-slate-300 text-sm md:text-base">Invest in Piper — precision metering that pays for itself</p>
             </div>
           </div>
         )}
@@ -330,7 +330,7 @@ function TankerIcon({ fillLevel }: { fillLevel: number }) {
         <div className="absolute bottom-0 left-1.5 w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-gray-800 border-2 border-gray-600" />
         <div className="absolute bottom-0 right-1.5 w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-gray-800 border-2 border-gray-600" />
       </div>
-      <span className="text-[10px] text-slate-500 mt-0.5" style={{ fontFamily: "'Courier New', monospace" }}>
+      <span className="text-[10px] md:text-xs text-slate-400 mt-0.5" style={{ fontFamily: "'Courier New', monospace" }}>
         SAVINGS
       </span>
     </div>

@@ -26,8 +26,8 @@ export function PenaltyRevealScreen({ rounds, usePiperSampling, useWeighbridge, 
 
   const penalties = useMemo(() => {
     const list: Penalty[] = [];
-    if (!usePiperSampling) list.push({ id: "agitation", label: "Agitation Required", minutes: config.agitationMinutes, icon: "⚠️", isWarning: true });
-    if (useWeighbridge) list.push({ id: "weighbridge", label: "Weighbridge Stop", minutes: config.weighScaleMinutes, icon: "⚠️", isWarning: true });
+    if (!usePiperSampling) list.push({ id: "agitation", label: "Uh oh! Agitation Required", minutes: config.agitationMinutes, icon: "⏳", isWarning: true });
+    if (useWeighbridge) list.push({ id: "weighbridge", label: `Uh oh! Heading to Weigh Station — add ${config.weighScaleMinutes} mins per load`, minutes: config.weighScaleMinutes, icon: "⚖️", isWarning: true });
     return list;
   }, [usePiperSampling, useWeighbridge, config]);
 
@@ -50,12 +50,12 @@ export function PenaltyRevealScreen({ rounds, usePiperSampling, useWeighbridge, 
 
   useEffect(() => {
     const timers: number[] = [];
-    timers.push(window.setTimeout(() => setPhase(1), 500));
-    timers.push(window.setTimeout(() => setPhase(2), 1500));
-    penalties.forEach((_, i) => timers.push(window.setTimeout(() => setVisiblePenalties(i + 1), 2000 + i * 600)));
-    const totalTime = 2000 + penalties.length * 600 + 800;
+    timers.push(window.setTimeout(() => setPhase(1), 800));
+    timers.push(window.setTimeout(() => setPhase(2), 2500));
+    penalties.forEach((_, i) => timers.push(window.setTimeout(() => setVisiblePenalties(i + 1), 3200 + i * 1000)));
+    const totalTime = 3200 + penalties.length * 1000 + 1500;
     timers.push(window.setTimeout(() => setPhase(3), totalTime));
-    timers.push(window.setTimeout(() => onComplete(), totalTime + 2500));
+    timers.push(window.setTimeout(() => onComplete(), totalTime + 4000));
     return () => timers.forEach(clearTimeout);
   }, [penalties.length, onComplete]);
 

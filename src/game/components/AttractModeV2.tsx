@@ -263,10 +263,10 @@ export function AttractModeV2({ onStartGame, config }: AttractModeV2Props) {
         style={{ animation: "cardPulse 3s ease-in-out infinite", fontFamily: "'Press Start 2P', monospace" }}>
         <h2 className="text-emerald-400 text-xs md:text-sm mb-3 text-center">This is your farm:</h2>
         <ul className="space-y-2 text-slate-200 text-[10px] md:text-xs">
-          <li className="flex items-center gap-2"><span>🚛</span>{config.loadsPerDay} loads a day</li>
+          <li className="flex items-center gap-2"><span>🚚</span>{config.loadsPerDay} loads a day</li>
           <li className="flex items-center gap-2"><span>⚖️</span>{(config.targetLoadLbs / 1000).toFixed(0)},000 lb loads</li>
-          <li className="flex items-center gap-2"><span>🏗️</span>23,000 gallon silo</li>
-          <li className="flex items-center gap-2"><span>📏</span>Scaling in and out</li>
+          <li className="flex items-center gap-2"><span>🏭</span>23,000 gallon silo</li>
+          <li className="flex items-center gap-2"><span>⚖️</span>Scaling in and out</li>
           <li className="flex items-center gap-2"><span>🧪</span>Sampling manually</li>
         </ul>
       </div>

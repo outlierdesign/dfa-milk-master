@@ -20,6 +20,16 @@ export function RoundResultScreen({ round, totalRounds, config, onContinue }: Ro
   const fillPercent = (round.fillLbs / config.targetLoadLbs) * 100;
   const isOver = round.isOverfill;
   const diff = Math.abs(round.fillLbs - config.targetLoadLbs);
+  const underUtilisation = isOver ? 0 : ((config.targetLoadLbs - round.fillLbs) / config.targetLoadLbs) * 100;
+
+  // Fill quality tiers: Bad (<80%), OK (80-90%), Good (90%+)
+  const getFillQuality = () => {
+    if (isOver) return { emoji: "💥", label: "Overfill!", color: "text-red-400", message: "" };
+    if (fillPercent >= 90) return { emoji: "🎯", label: "Good Fill!", color: "text-emerald-400", message: `But you're still at ${underUtilisation.toFixed(1)}% under utilisation` };
+    if (fillPercent >= 80) return { emoji: "📦", label: "OK Fill!", color: "text-amber-400", message: "But we think you can get closer" };
+    return { emoji: "⚠️", label: "Bad Fill!", color: "text-red-400", message: "Try harder next time" };
+  };
+  const quality = getFillQuality();
 
   return (
     <div className="fixed inset-0 bg-slate-900/95 flex flex-col items-center justify-center z-50" onClick={onContinue}>
@@ -29,8 +39,11 @@ export function RoundResultScreen({ round, totalRounds, config, onContinue }: Ro
         </div>
 
         <h2 className="text-4xl md:text-5xl font-bold text-white">
-          {isOver ? "💥 Overfill!" : fillPercent >= 98 ? "🎯 Great Fill!" : "📦 Round Complete"}
+          {quality.emoji} {quality.label}
         </h2>
+        {quality.message && (
+          <p className={`text-lg ${quality.color}`}>{quality.message}</p>
+        )}
 
         {showDetails && (
           <div className="space-y-3 animate-fade-in">
@@ -40,10 +53,10 @@ export function RoundResultScreen({ round, totalRounds, config, onContinue }: Ro
             <div className={`text-xl font-semibold ${isOver ? "text-red-400" : "text-emerald-400"}`}>
               {isOver
                 ? `+${Math.round(diff).toLocaleString()} lbs over`
-                : `-${Math.round(diff).toLocaleString()} lbs under`}
+                : `${Math.round(diff).toLocaleString()} lbs under filled`}
             </div>
-            <div className="text-slate-400">
-              {fillPercent.toFixed(1)}% of target
+            <div className={`text-sm ${isOver ? "text-red-300" : "text-slate-400"}`}>
+              {isOver ? `${(fillPercent - 100).toFixed(1)}% over target` : `${underUtilisation.toFixed(1)}% under utilisation`}
             </div>
           </div>
         )}

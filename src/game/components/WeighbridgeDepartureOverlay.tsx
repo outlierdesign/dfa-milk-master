@@ -21,6 +21,16 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0, targetLbs
   const isOver = fillLbs > targetLbs;
   const diff = Math.abs(fillLbs - targetLbs);
   const fillPercent = (fillLbs / targetLbs) * 100;
+  const underUtilisation = isOver ? 0 : ((targetLbs - fillLbs) / targetLbs) * 100;
+
+  // Fill quality tiers: Bad (<80%), OK (80-90%), Good (90%+)
+  const getFillQuality = () => {
+    if (isOver) return { emoji: "💥", label: "Overfill!", message: "" };
+    if (fillPercent >= 90) return { emoji: "🎯", label: "Good Fill!", message: `But you're still at ${underUtilisation.toFixed(1)}% under utilisation` };
+    if (fillPercent >= 80) return { emoji: "📦", label: "OK Fill!", message: "But we think you can get closer" };
+    return { emoji: "⚠️", label: "Bad Fill!", message: "Try harder next time" };
+  };
+  const quality = getFillQuality();
 
   useEffect(() => {
     const t1 = setTimeout(() => setTruckX(0), 50);
@@ -109,19 +119,24 @@ export function WeighbridgeDepartureOverlay({ onComplete, fillLbs = 0, targetLbs
         <div className="text-slate-400 text-xs md:text-sm mb-1">
           Round {roundNumber} of {totalRounds}
         </div>
-        <h2 className="font-black text-white text-xl md:text-2xl mb-2">
-          {isOver ? "💥 Overfill!" : fillPercent >= 98 ? "🎯 Great Fill!" : "📦 Round Complete"}
+        <h2 className="font-black text-white text-xl md:text-2xl mb-1">
+          {quality.emoji} {quality.label}
         </h2>
+        {quality.message && (
+          <p className={`text-sm mb-2 ${isOver ? "text-red-400" : fillPercent >= 90 ? "text-emerald-400" : fillPercent >= 80 ? "text-amber-400" : "text-red-400"}`}>
+            {quality.message}
+          </p>
+        )}
         <div className="text-2xl md:text-3xl font-mono font-bold text-white">
           {Math.round(fillLbs).toLocaleString()} lbs
         </div>
         <div className={`text-base md:text-lg font-semibold mt-1 ${isOver ? "text-red-400" : "text-emerald-400"}`}>
           {isOver
             ? `+${Math.round(diff).toLocaleString()} lbs over`
-            : `-${Math.round(diff).toLocaleString()} lbs under`}
+            : `${Math.round(diff).toLocaleString()} lbs under filled`}
         </div>
-        <div className="text-slate-500 text-xs mt-1">
-          {fillPercent.toFixed(1)}% of target
+        <div className={`text-slate-500 text-xs mt-1`}>
+          {isOver ? `${(fillPercent - 100).toFixed(1)}% over target` : `${underUtilisation.toFixed(1)}% under utilisation`}
         </div>
       </div>
 
@@ -174,14 +189,14 @@ function WeighStation({ sunk }: { sunk: boolean }) {
           borderRadius: 2,
         }}
       >
-        {/* WEIGHBRIDGE stencil text */}
+        {/* YE OLDE WEIGH STATION stencil text */}
         <div className="absolute inset-0 flex items-center justify-center">
           <span style={{
             fontSize: 11, fontWeight: 900, letterSpacing: "0.3em",
             color: "#fbbf24", opacity: 0.85,
             textShadow: "0 1px 3px rgba(0,0,0,0.8)",
           }}>
-            WEIGHBRIDGE
+            YE OLDE WEIGH STATION
           </span>
         </div>
 

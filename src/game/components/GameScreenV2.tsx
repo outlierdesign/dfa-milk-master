@@ -166,7 +166,7 @@ export function GameScreenV2({
 
       {/* Main Game Area */}
       <div className="flex-1 flex items-center justify-center min-h-0">
-        <div className="flex items-center gap-1 md:gap-2 scale-50 md:scale-75 lg:scale-90 origin-center">
+        <div className="flex items-center gap-0 scale-50 md:scale-75 lg:scale-90 origin-center">
           <FarmTank currentLevel={farmTankLevel} initialLevel={farmTankCapacity} config={config} />
           <ConnectionPipe isFlowing={isFilling && !session.fillLocked} />
           <TankerV2

@@ -4,28 +4,35 @@ interface ConnectionPipeProps {
 
 export function ConnectionPipe({ isFlowing }: ConnectionPipeProps) {
   return (
-    <div className="flex items-center justify-center px-4">
-      {/* Pipe structure */}
-      <div className="relative w-24 h-4">
+    <div className="flex items-center" style={{ margin: '0 -6px', zIndex: 5 }}>
+      <div className="relative w-20 h-5">
         {/* Pipe body */}
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-400 to-slate-500 rounded-full border-2 border-slate-600 overflow-hidden">
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{
+            background: 'linear-gradient(180deg, #94a3b8 0%, #64748b 40%, #475569 100%)',
+            borderTop: '2px solid #94a3b8',
+            borderBottom: '2px solid #334155',
+          }}
+        >
           {/* Flow animation inside pipe */}
           {isFlowing && (
             <div className="absolute inset-0 overflow-hidden">
               <div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-sky-300/60 to-transparent animate-pulse"
+                className="absolute inset-0"
                 style={{
-                  animation: "flowRight 0.5s linear infinite",
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(186,230,253,0.5) 40%, rgba(125,211,252,0.6) 50%, rgba(186,230,253,0.5) 60%, transparent 100%)',
+                  animation: 'flowRight 0.6s linear infinite',
                 }}
               />
-              {/* Moving dots to show flow direction */}
-              {[...Array(3)].map((_, i) => (
+              {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-sky-400/80"
+                  className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full"
                   style={{
-                    animation: "flowDot 0.8s linear infinite",
-                    animationDelay: `${i * 0.25}s`,
+                    background: 'rgba(125,211,252,0.8)',
+                    animation: 'flowDot 0.7s linear infinite',
+                    animationDelay: `${i * 0.175}s`,
                   }}
                 />
               ))}
@@ -33,21 +40,33 @@ export function ConnectionPipe({ isFlowing }: ConnectionPipeProps) {
           )}
         </div>
 
-        {/* Left connector (from farm tank) */}
-        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-6 bg-slate-500 rounded-l border-2 border-slate-600 border-r-0" />
+        {/* Left flange (flush against farm tank) */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2"
+          style={{
+            left: -3,
+            width: 6,
+            height: 10,
+            background: 'linear-gradient(180deg, #94a3b8, #475569)',
+            borderRadius: '2px 0 0 2px',
+            borderLeft: '2px solid #64748b',
+          }}
+        />
 
-        {/* Right connector (to tanker) */}
-        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-6 bg-slate-500 rounded-r border-2 border-slate-600 border-l-0" />
-
-        {/* Flow direction arrow when flowing */}
-        {isFlowing && (
-          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-sky-400 text-lg animate-pulse">
-            →
-          </div>
-        )}
+        {/* Right flange (flush against tanker) */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2"
+          style={{
+            right: -3,
+            width: 6,
+            height: 10,
+            background: 'linear-gradient(180deg, #94a3b8, #475569)',
+            borderRadius: '0 2px 2px 0',
+            borderRight: '2px solid #64748b',
+          }}
+        />
       </div>
 
-      {/* CSS for animations */}
       <style>{`
         @keyframes flowRight {
           0% { transform: translateX(-100%); }
